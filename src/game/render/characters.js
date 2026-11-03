@@ -3,10 +3,11 @@
 // emblem, so colour is never the only signal. Snowballs carried show on the back.
 import {
   Group, Mesh, MeshLambertMaterial, SphereGeometry, CapsuleGeometry, CylinderGeometry, ConeGeometry, BoxGeometry,
-  TorusGeometry, CanvasTexture, SRGBColorSpace, Sprite, SpriteMaterial, RingGeometry, MeshBasicMaterial, Color,
+  TorusGeometry, CanvasTexture, BackSide, SRGBColorSpace, Sprite, SpriteMaterial, RingGeometry, MeshBasicMaterial, Color,
 } from 'three';
 import { CONFIG } from '../../config.js';
 import { emblemSVG } from '../../emblems.js';
+import { makeMaterial, styleOf } from './style.js';
 
 const JACKETS = ['#3d5a80', '#8d6e63', '#5c6bc0', '#26a69a', '#ef8354', '#7e57c2', '#546e7a', '#c0ca33'];
 const SKIN = ['#f1c7a3', '#e0a87e', '#c68863', '#a86f4d', '#f6d5bb'];
@@ -18,7 +19,15 @@ const geo = {
   nose: new ConeGeometry(0.06, 0.28, 6), ring: new RingGeometry(0.62, 0.8, 24),
 };
 const mats = new Map();
-const mat = hex => { if (!mats.has(hex)) mats.set(hex, new MeshLambertMaterial({ color: hex })); return mats.get(hex); };
+let STYLE = 'toybox';
+export function setCharacterStyle(style) { STYLE = style; mats.clear(); }
+const mat = hex => { if (!mats.has(hex)) mats.set(hex, makeMaterial(STYLE, { color: hex, noGrain: true })); return mats.get(hex); };
+// Outline hull for cartoon/paper styles: a slightly larger back-face copy of each part.
+function outlineGroup(group, scale = 1.12) {
+  const o = styleOf(STYLE).outline; if (!o) return;
+  const m = new MeshBasicMaterial({ color: o.color, side: BackSide });
+  for (const part of [...group.children]) { if (!part.isMesh) continue; const h = new Mesh(part.geometry, m); h.position.copy(part.position); h.rotation.copy(part.rotation); h.scale.copy(part.scale).multiplyScalar(scale); group.add(h); part.userData.hull = h; }
+}
 
 // Emblem image for warmth-bar labels, drawn once per team.
 const emblemCache = new Map();
@@ -51,6 +60,7 @@ export class CharacterView {
     // carried snowballs on the back (up to 8)
     this.ammo = []; for (let i = 0; i < CONFIG.fight.ammoMax; i++) { const b = new Mesh(geo.ball, mat('#ffffff')); const row = Math.floor(i / 4), col = i % 4; b.position.set(-0.24 + col * 0.16, 0.62 + row * 0.18, -0.4); k.add(b); this.ammo.push(b); }
     for (const m of k.children) m.castShadow = true;
+    outlineGroup(k);
 
     // snowman (hidden until frozen)
     const sm = this.snowman = new Group(); sm.visible = false; g.add(sm);
@@ -60,6 +70,7 @@ export class CharacterView {
     const nose = add(geo.nose, mat('#f08a24'), 1.66); nose.rotation.x = Math.PI / 2; nose.position.z = 0.36;
     for (const x of [-0.11, 0.11]) { const e = add(geo.eye, mat('#1d2733'), 1.74); e.position.set(x, 1.74, 0.29); }
     sm.scale.setScalar(s);
+    outlineGroup(sm, 1.06);
 
     // ground ring: team colour, brighter for the student
     const ring = new Mesh(geo.ring, new MeshBasicMaterial({ color: isPlayer ? '#ffffff' : this.team.color, transparent: true, opacity: isPlayer ? 0.95 : 0.6 }));
@@ -117,7 +128,8 @@ export class CharacterView {
     if (thaw && a.shake < 0.35 && !reduceMotion) this.kid.rotation.y = (1 - a.shake / 0.35) * Math.PI * 2; else this.kid.rotation.y = 0;
     // invulnerable after a thaw: blink
     this.root.visible = !(c.invuln > 0 && !frozen && Math.floor(c.invuln * 12) % 2 === 1 && c.dodge <= 0);
-    this.ammo.forEach((b, i) => { b.visible = i < c.ammo; });
+    this.ammo.forEach((b, i) => { b.visible = i < c.ammo; if (b.userData.hull) b.userData.hull.visible = b.visible; });
+    for (const part of [...this.legs, ...this.arms]) if (part.userData.hull) part.userData.hull.rotation.copy(part.rotation);
     const wq = Math.round((c.warmth / c.maxWarmth) * 40);
     if (wq !== this.lastWarmth) { this.lastWarmth = wq; this.drawBar(); }
     this.bar.visible = !frozen;

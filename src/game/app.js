@@ -10,7 +10,8 @@ import { loadSave, writeSave } from '../save.mjs';
 import { createMatch } from './match.mjs';
 import { GRID } from './grid.mjs';
 import { buildWorld } from './render/world.js';
-import { CharacterView } from './render/characters.js';
+import { CharacterView, setCharacterStyle } from './render/characters.js';
+import { styleOf, STYLES } from './render/style.js';
 import { Fx } from './render/fx.js';
 import { CUT } from './render/cutout.js';
 import { AutoQuality, guessLevel, LEVELS } from './quality.js';
@@ -62,15 +63,18 @@ async function startGame(myTeam, pace) {
   // renderer + scene
   const canvas = $('#scene');
   const level = params.has('quality') ? Math.max(0, LEVELS.findIndex(l => l.name === params.get('quality'))) : guessLevel();
+  const styleName = STYLES[params.get('style')] ? params.get('style') : 'toybox', ST = styleOf(styleName);
+  document.body.dataset.style = styleName;
   const renderer = new WebGLRenderer({ canvas, antialias: level >= 1, powerPreference: 'high-performance' });
   renderer.shadowMap.type = PCFSoftShadowMap;
-  const scene = new Scene(); scene.background = new Color('#cfe0ee');
-  const hemi = new HemisphereLight('#f2f8ff', '#dfe7ef', 1.9); scene.add(hemi);
-  const sun = new DirectionalLight('#fff1d8', 1.25); sun.castShadow = true;
+  const scene = new Scene(); scene.background = new Color(ST.sky);
+  const hemi = new HemisphereLight(ST.hemi[0], ST.hemi[1], ST.hemi[2]); scene.add(hemi);
+  const sun = new DirectionalLight(ST.sun[0], ST.sun[1]); sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -32, right: 32, top: 32, bottom: -32, near: 1, far: 140 });
   sun.shadow.bias = -0.0008; scene.add(sun, sun.target);
 
-  const world = buildWorld(arena, { quality: LEVELS[level].name });
+  setCharacterStyle(styleName);
+  const world = buildWorld(arena, { quality: LEVELS[level].name, style: styleName });
   scene.add(world.group);
   const views = new Map(sim.chars.map(c => [c.id, new CharacterView(c, { isPlayer: c === player })]));
   for (const v of views.values()) scene.add(v.root);
@@ -93,7 +97,7 @@ async function startGame(myTeam, pace) {
   }
   const quality = new AutoQuality(level, L => {
     renderer.setPixelRatio(Math.min(devicePixelRatio || 1, L.maxDpr));
-    renderer.shadowMap.enabled = L.shadows; sun.castShadow = L.shadows;
+    const sh = L.shadows || (ST.shadows && L.name !== 'low'); renderer.shadowMap.enabled = sh; sun.castShadow = sh;
     fx.setSnow(L.snow); resize();
     scene.traverse(o => { if (o.material) o.material.needsUpdate = true; });
   }, { forced: params.has('quality') ? level : null });
@@ -150,12 +154,45 @@ async function startGame(myTeam, pace) {
   hud.toast(`Rivals today: ${rivalName}`, 3);
   const outpost = arena.places.find(p => p.kind === 'outpost');
 
+  // Photo pose: the same fight moment for every style sample (no simulation running).
+  const pose = params.has('pose');
+  if (pose) {
+    const R = { x: Math.SQRT1_2, z: -Math.SQRT1_2 }, D = { x: Math.SQRT1_2, z: Math.SQRT1_2 };
+    // a free, open spot the camera can see (no tall building between it and the camera)
+    const seen = (x, z) => { for (let t = 0.8; t < 8; t += 0.8) if (sim.grid.blocked(x + D.x * t, z + D.z * t)) return false; return true; };
+    const spot = (x, z) => { for (let r = 0; r < 14; r += 0.5) for (let a = 0; a < 6.28; a += 0.3) { const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (sim.grid.freeCircle(px, pz, 0.8) && !sim.grid.has(px, pz, GRID.ZONE) && seen(px, pz)) return [px, pz]; } return [x, z]; };
+    const at = (c, rx, dz) => { [c.x, c.z] = spot(player.x + R.x * rx + D.x * dz, player.z + R.z * rx + D.z * dz); };
+    const home = sim.chars.filter(c => c.side === 'home'), riv = sim.chars.filter(c => c.side === 'rival');
+    [player.x, player.z] = spot(match.base.x + R.x * 1 + D.x * 2, match.base.z + R.z * 1 + D.z * 2);
+    at(home[1], -1.6, -1.4); at(home[2], -0.4, 1.8);
+    at(riv[0], 5.5, -1.2); at(riv[1], 6.8, 1.0); at(riv[2], 4.2, 2.6);
+    riv[2].frozen = 999; riv[1].warmth = 45;
+    const face = (c, t) => { c.face = Math.atan2(t.x - c.x, t.z - c.z); };
+    for (const c of home) face(c, riv[0]); for (const c of riv) face(c, player);
+    views.get(player.id).anim.throw = 0.15; views.get(riv[1].id).anim.throw = 0.12;
+    const ball = (from, to, t, big = false) => { const x = from.x + (to.x - from.x) * t, z = from.z + (to.z - from.z) * t; sim.balls.push({ x, z, y: 1.3 + 2.6 * t * (1 - t) * 4 * 0.5, big, vx: 0, vz: 0, vy: 0, life: 9, side: from.side }); };
+    ball(player, riv[0], 0.55); ball(riv[1], home[2], 0.4); ball(home[1], riv[1], 0.75, true);
+    fx.burst(riv[0].x - 0.3, 1.2, riv[0].z + 0.2, 26, 3.2);
+    player.ammo = 5; home[1].ammo = 3;
+    const all = [...home, ...riv]; focus.set(all.reduce((a, c) => a + c.x, 0) / all.length, 0, all.reduce((a, c) => a + c.z, 0) / all.length);
+  }
   let last = performance.now(), aimTarget = null;
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     requestAnimationFrame(frame);
     quality.tick(dt);
     if (paused) { renderer.render(scene, camera); return; }
+    if (pose) {
+      for (const v of views.values()) v.update(0, true);
+      fx.update(0, sim.balls, focus);
+      camera.position.set(focus.x + camOffset.x, camOffset.y, focus.z + camOffset.z); camera.lookAt(focus.x, 0, focus.z); camera.updateMatrixWorld();
+      sun.position.set(focus.x + 16, 50, focus.z + 30); sun.target.position.set(focus.x, 0, focus.z); sun.target.updateMatrixWorld();
+      const pv = new Vector3(player.x, 1, player.z), pr = renderer.getPixelRatio(), ndc = pv.clone().project(camera);
+      CUT.center.value.set((ndc.x + 1) / 2 * innerWidth * pr, (ndc.y + 1) / 2 * innerHeight * pr); CUT.radius.value = 2.6 * pxPerUnit * pr; CUT.depth.value = pv.applyMatrix4(camera.matrixWorldInverse).z + 1.2;
+      hud.coach.hidden = true; hud.toastEl.hidden = true;
+      hud.drawMini(sim.chars, player, arena.places); hud.setAmmo(player.ammo, CONFIG.fight.ammoMax, 0, false);
+      renderer.render(scene, camera); return;
+    }
 
     // ---- input → simulation input
     const r = input.read();
