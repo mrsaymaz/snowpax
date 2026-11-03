@@ -26,8 +26,9 @@ export function buildSnowtown(ctx) {
     yard: paint(256, (g, S) => { g.fillStyle = '#c8c3dd'; g.fillRect(0, 0, S, S); for (let b = 0; b < 4; b++) for (let a = 0; a < 4; a++) { const v = 205 + Math.floor(rnd(a, b) * 25); g.fillStyle = `rgb(${v - 5},${v - 8},${v + 10})`; g.beginPath(); g.roundRect(a * S / 4 + 3, b * S / 4 + 3, S / 4 - 6, S / 4 - 6, 8); g.fill(); } for (let k = 0; k < 8; k++) blot(g, rnd(k, 5) * S, rnd(k, 6) * S, 50, '255,255,255', 0.55); }),
     ice: paint(256, (g, S) => { // drawn wrapped so the tiles meet without seams
       const wrap = fn => { for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) fn(ox, oy); };
-      g.fillStyle = '#a9cdea'; g.fillRect(0, 0, S, S);
-      for (let k = 0; k < 18; k++) wrap((ox, oy) => blot(g, rnd(k, 11) * S + ox, rnd(k, 12) * S + oy, 30 + rnd(k, 13) * 60, '255,255,255', 0.5));
+      g.fillStyle = '#6aa3d4'; g.fillRect(0, 0, S, S); // clearly bluer than the snow: frozen sea, not a snowfield
+      for (let k = 0; k < 14; k++) wrap((ox, oy) => blot(g, rnd(k, 21) * S + ox, rnd(k, 22) * S + oy, 30 + rnd(k, 23) * 50, '40,95,160', 0.22));
+      for (let k = 0; k < 12; k++) wrap((ox, oy) => blot(g, rnd(k, 11) * S + ox, rnd(k, 12) * S + oy, 25 + rnd(k, 13) * 45, '220,240,255', 0.28));
       g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 1.5;
       for (let k = 0; k < 10; k++) wrap((ox, oy) => { g.beginPath(); let x = rnd(k, 14) * S + ox, y = rnd(k, 15) * S + oy; g.moveTo(x, y); for (let s = 0; s < 4; s++) { x += (rnd(k, s) - 0.5) * 60; y += (rnd(s, k) - 0.5) * 60; g.lineTo(x, y); } g.stroke(); });
     }),
@@ -49,7 +50,9 @@ export function buildSnowtown(ctx) {
     for (const [i, j] of list) {
       const [x0, z0] = at(i, j).map(v => v - 0.5);
       const v = [[x0, z0, i, j], [x0 + 1, z0, i + 1, j], [x0 + 1, z0 + 1, i + 1, j + 1], [x0, z0 + 1, i, j + 1]];
-      const ao = v.map(([, , ci, cj]) => (name === 'ice' ? 1 : 1 - corner(ci, cj) * 0.09));
+      // ice: lighter, shallow ice along the shore, deeper blue further out
+      const shore = (ci, cj) => [[ci - 1, cj - 1], [ci, cj - 1], [ci - 1, cj], [ci, cj]].some(([a, b]) => !'Wj'.includes(ch(a, b)));
+      const ao = v.map(([, , ci, cj]) => (name === 'ice' ? (shore(ci, cj) ? 1.12 : 0.9) : 1 - corner(ci, cj) * 0.09));
       const w = v.map(([, , ci, cj]) => (name === 'snow' ? wear(ci, cj) : 0));
       const mine = name === 'snow' ? trod(ch(i, j)) : 0;
       if (name === 'snow' && w.some(q => Math.abs(q - mine) > 0.01)) { // an edge cell: fan from the centre for a softer edge
@@ -63,7 +66,7 @@ export function buildSnowtown(ctx) {
         if (j === 0) out.push([x0, z0 - E, x0 + 1, z0]); if (j === H - 1) out.push([x0, z0 + 1, x0 + 1, z0 + 1 + E]);
         if (i === 0 && j === 0) out.push([x0 - E, z0 - E, x0, z0]); if (i === W - 1 && j === 0) out.push([x0 + 1, z0 - E, x0 + 1 + E, z0]);
         if (i === 0 && j === H - 1) out.push([x0 - E, z0 + 1, x0, z0 + 1 + E]); if (i === W - 1 && j === H - 1) out.push([x0 + 1, z0 + 1, x0 + 1 + E, z0 + 1 + E]);
-        for (const [ax, az, bx, bz] of out) for (const [x, z] of [[ax, az], [bx, bz], [bx, az], [ax, az], [ax, bz], [bx, bz]]) vert(x, z, 1, 0);
+        for (const [ax, az, bx, bz] of out) for (const [x, z] of [[ax, az], [bx, bz], [bx, az], [ax, az], [ax, bz], [bx, bz]]) vert(x, z, name === 'ice' ? 0.9 : 1, 0);
       }
     }
     const geo = new BufferGeometry(); geo.setAttribute('position', new Float32BufferAttribute(P, 3)); geo.setAttribute('normal', new Float32BufferAttribute(N, 3)); geo.setAttribute('uv', new Float32BufferAttribute(U, 2)); geo.setAttribute('color', new Float32BufferAttribute(Cc, 3));

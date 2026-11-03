@@ -128,7 +128,7 @@ async function startGame(myTeam, kit, pace) {
   // mini-map (top left) and the big map: tap a place to walk there
   const FAM = { answer: 'B', sort: 'C', match: 'A', listen: 'E', build: 'D' };
   const mapImg = document.createElement('canvas'), MP = 4; mapImg.width = arena.w * MP; mapImg.height = arena.h * MP;
-  const TILE_COL = { H: '#5e6888', S: '#d9cfa6', K: '#f4f8ff', Q: '#a99bd2', C: '#8e86b8', W: '#9cc3e6', G: '#b98a6a', O: '#24304f', c: '#7c84a8', t: '#2d5a5d', '_': '#ffffff', '=': '#eef0fa', '+': '#e3dcf6', q: '#ece6fb', P: '#d5c79c', f: '#d5c79c', '#': '#d5c79c', d: '#ffffff', Y: '#eadfc0', h: '#eadfc0', r: '#f4f8ff', j: '#b98a6a', p: '#dfeee3', '.': '#e7edf8' };
+  const TILE_COL = { H: '#5e6888', S: '#d9cfa6', K: '#f4f8ff', Q: '#a99bd2', C: '#8e86b8', W: '#5f9bd0', G: '#b98a6a', O: '#24304f', c: '#7c84a8', t: '#2d5a5d', '_': '#ffffff', '=': '#eef0fa', '+': '#e3dcf6', q: '#ece6fb', P: '#d5c79c', f: '#d5c79c', '#': '#d5c79c', d: '#ffffff', Y: '#eadfc0', h: '#eadfc0', r: '#f4f8ff', j: '#b98a6a', p: '#dfeee3', '.': '#e7edf8' };
   function drawMap() {
     const g = mapImg.getContext('2d');
     for (let j = 0; j < arena.h; j++) for (let i = 0; i < arena.w; i++) { g.fillStyle = TILE_COL[arena.rows[j][i]] || '#e7edf8'; g.fillRect(i * MP, j * MP, MP, MP); }
