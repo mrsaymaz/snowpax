@@ -75,7 +75,7 @@ Each cell shows Arena 1 · 2 · 3. A unit is fully playable when every family is
 | Sub-task | Family | From arena | Units ok or good (A1 / A2 / A3) | Needs |
 |---|---|:-:|:-:|---|
 | A1 English ↔ Turkish | Matching | 1 | 44 / 44 / 44 | words with Turkish |
-| A2 Word ↔ picture | Matching | 1 | 28 / 17 / 8 | words with a licensed picture |
+| A2 Word ↔ picture | Matching | 1 | 40 / 31 / 22 | words with a licensed picture |
 | A3 Word ↔ definition | Matching | 2 | · / 40 / 39 | word definitions or clues |
 | A4 Numbers ↔ number words | Matching | 2 | · / 2 / 2 | units with numbers (numberProfile) |
 | A5 Sentence halves | Matching | 2 | · / 1 / 0 | sentence halves with reviewed wrong endings |
@@ -109,7 +109,7 @@ Numbers are usable items (capacity) for each arena; the symbol is the state.
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 45 | ● 45 | ● 45 |
-| A2 Word ↔ picture | ○ 7 | ○ 7 | ○ 7 |
+| A2 Word ↔ picture | ◐ 9 | ○ 9 | ○ 9 |
 | A3 Word ↔ definition | · | ● 50 | ● 50 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -141,7 +141,7 @@ Sentence blocks: 3 blocks: 67, 4 blocks: 4, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 42 | ● 42 | ● 42 |
-| A2 Word ↔ picture | ◐ 9 | ○ 9 | ○ 9 |
+| A2 Word ↔ picture | ◐ 9 | ◐ 12 | ○ 12 |
 | A3 Word ↔ definition | · | ● 45 | ● 45 |
 | A4 Numbers ↔ number words | · | ● 51 | ● 51 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -173,7 +173,7 @@ Sentence blocks: 3 blocks: 64, 4 blocks: 7, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 66 | ● 66 | ● 66 |
-| A2 Word ↔ picture | ● 22 | ◐ 22 | ◐ 22 |
+| A2 Word ↔ picture | ● 21 | ◐ 21 | ◐ 21 |
 | A3 Word ↔ definition | · | ● 72 | ● 72 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 9 | ○ 9 |
@@ -205,7 +205,7 @@ Sentence blocks: 3 blocks: 93, 4 blocks: 6, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 49 | ● 49 | ● 49 |
-| A2 Word ↔ picture | ◐ 14 | ◐ 14 | ○ 14 |
+| A2 Word ↔ picture | ◐ 12 | ◐ 12 | ◐ 21 |
 | A3 Word ↔ definition | · | ● 51 | ● 51 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -237,7 +237,7 @@ Sentence blocks: 3 blocks: 64, 4 blocks: 5, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 47 | ● 47 | ● 47 |
-| A2 Word ↔ picture | ◐ 17 | ◐ 17 | ◐ 17 |
+| A2 Word ↔ picture | ◐ 15 | ◐ 15 | ◐ 15 |
 | A3 Word ↔ definition | · | ● 49 | ● 49 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -269,7 +269,7 @@ Sentence blocks: 3 blocks: 66, 4 blocks: 5, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 43 | ● 43 | ● 43 |
-| A2 Word ↔ picture | ● 20 | ◐ 20 | ◐ 20 |
+| A2 Word ↔ picture | ● 18 | ◐ 18 | ◐ 18 |
 | A3 Word ↔ definition | · | ● 45 | ● 45 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -301,7 +301,7 @@ Sentence blocks: 3 blocks: 63, 4 blocks: 7, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 41 | ● 41 | ● 41 |
-| A2 Word ↔ picture | ◐ 17 | ◐ 17 | ◐ 17 |
+| A2 Word ↔ picture | ◐ 15 | ◐ 15 | ◐ 15 |
 | A3 Word ↔ definition | · | ● 41 | ● 41 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -333,7 +333,7 @@ Sentence blocks: 3 blocks: 68, 4 blocks: 1, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 40 | ● 40 | ● 40 |
-| A2 Word ↔ picture | ◐ 17 | ◐ 17 | ◐ 17 |
+| A2 Word ↔ picture | ◐ 15 | ◐ 15 | ◐ 15 |
 | A3 Word ↔ definition | · | ● 40 | ● 40 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -365,7 +365,7 @@ Sentence blocks: 3 blocks: 65, 4 blocks: 3, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 18 | ◐ 18 | ◐ 18 |
-| A2 Word ↔ picture | ◐ 10 | ○ 10 | ○ 10 |
+| A2 Word ↔ picture | ◐ 9 | ◐ 15 | ◐ 15 |
 | A3 Word ↔ definition | · | ○ 7 | ○ 7 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 3 | ○ 3 |
@@ -397,7 +397,7 @@ Sentence blocks: 3 blocks: 22, 4 blocks: 3, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ◐ 16 | ◐ 16 | ◐ 16 |
-| A2 Word ↔ picture | ◐ 9 | ○ 9 | ○ 9 |
+| A2 Word ↔ picture | ◐ 9 | ◐ 12 | ○ 12 |
 | A3 Word ↔ definition | · | ○ 9 | ○ 9 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -431,7 +431,7 @@ Sentence blocks: 3 blocks: 16, 4 blocks: 0, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 46 | ● 46 | ● 46 |
-| A2 Word ↔ picture | ○ 7 | ○ 7 | ○ 7 |
+| A2 Word ↔ picture | ◐ 9 | ○ 9 | ○ 9 |
 | A3 Word ↔ definition | · | ● 51 | ● 51 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -463,7 +463,7 @@ Sentence blocks: 3 blocks: 66, 4 blocks: 4, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 45 | ● 45 | ● 45 |
-| A2 Word ↔ picture | ○ 8 | ○ 8 | ○ 8 |
+| A2 Word ↔ picture | ◐ 12 | ◐ 12 | ○ 12 |
 | A3 Word ↔ definition | · | ● 49 | ● 49 |
 | A4 Numbers ↔ number words | · | ● 101 | ● 101 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -495,7 +495,7 @@ Sentence blocks: 3 blocks: 65, 4 blocks: 4, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 43 | ● 43 | ● 43 |
-| A2 Word ↔ picture | ○ 8 | ○ 8 | ○ 8 |
+| A2 Word ↔ picture | ◐ 12 | ◐ 12 | ○ 12 |
 | A3 Word ↔ definition | · | ● 47 | ● 47 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -527,7 +527,7 @@ Sentence blocks: 3 blocks: 68, 4 blocks: 3, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 48 | ● 48 | ● 48 |
-| A2 Word ↔ picture | ○ 7 | ○ 7 | ○ 7 |
+| A2 Word ↔ picture | ◐ 9 | ○ 9 | ○ 9 |
 | A3 Word ↔ definition | · | ● 54 | ● 54 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -559,7 +559,7 @@ Sentence blocks: 3 blocks: 68, 4 blocks: 3, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 42 | ● 42 | ● 42 |
-| A2 Word ↔ picture | ◐ 13 | ◐ 13 | ○ 13 |
+| A2 Word ↔ picture | ◐ 12 | ◐ 12 | ◐ 18 |
 | A3 Word ↔ definition | · | ● 46 | ● 46 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -591,7 +591,7 @@ Sentence blocks: 3 blocks: 65, 4 blocks: 6, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 49 | ● 49 | ● 49 |
-| A2 Word ↔ picture | ○ 6 | ○ 6 | ○ 6 |
+| A2 Word ↔ picture | ◐ 9 | ○ 9 | ○ 9 |
 | A3 Word ↔ definition | · | ● 55 | ● 55 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -623,7 +623,7 @@ Sentence blocks: 3 blocks: 68, 4 blocks: 3, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 48 | ● 48 | ● 48 |
-| A2 Word ↔ picture | ○ 6 | ○ 6 | ○ 6 |
+| A2 Word ↔ picture | ◐ 9 | ○ 9 | ○ 9 |
 | A3 Word ↔ definition | · | ● 51 | ● 51 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -687,7 +687,7 @@ Sentence blocks: 3 blocks: 72, 4 blocks: 3, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ◐ 17 | ◐ 17 | ◐ 17 |
-| A2 Word ↔ picture | ◐ 14 | ◐ 14 | ○ 14 |
+| A2 Word ↔ picture | ◐ 12 | ◐ 12 | ○ 9 |
 | A3 Word ↔ definition | · | ◐ 12 | ○ 12 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -719,7 +719,7 @@ Sentence blocks: 3 blocks: 16, 4 blocks: 0, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 34 | ● 34 | ● 34 |
-| A2 Word ↔ picture | ◐ 17 | ◐ 17 | ◐ 17 |
+| A2 Word ↔ picture | ◐ 15 | ◐ 15 | ◐ 15 |
 | A3 Word ↔ definition | · | ◐ 19 | ◐ 19 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -753,7 +753,7 @@ Sentence blocks: 3 blocks: 49, 4 blocks: 5, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 40 | ● 40 | ● 40 |
-| A2 Word ↔ picture | ○ 5 | ○ 5 | ○ 5 |
+| A2 Word ↔ picture | ○ 6 | ○ 6 | ○ 6 |
 | A3 Word ↔ definition | · | ● 44 | ● 44 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -785,7 +785,7 @@ Sentence blocks: 3 blocks: 70, 4 blocks: 5, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 43 | ● 43 | ● 43 |
-| A2 Word ↔ picture | ◐ 9 | ○ 9 | ○ 9 |
+| A2 Word ↔ picture | ◐ 9 | ◐ 12 | ○ 12 |
 | A3 Word ↔ definition | · | ● 45 | ● 45 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -817,7 +817,7 @@ Sentence blocks: 3 blocks: 67, 4 blocks: 4, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 47 | ● 47 | ● 47 |
-| A2 Word ↔ picture | ◐ 13 | ◐ 13 | ○ 13 |
+| A2 Word ↔ picture | ◐ 12 | ◐ 12 | ◐ 18 |
 | A3 Word ↔ definition | · | ● 57 | ● 57 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -849,7 +849,7 @@ Sentence blocks: 3 blocks: 70, 4 blocks: 3, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 44 | ● 44 | ● 44 |
-| A2 Word ↔ picture | ◐ 14 | ◐ 14 | ○ 14 |
+| A2 Word ↔ picture | ◐ 12 | ◐ 12 | ◐ 21 |
 | A3 Word ↔ definition | · | ● 47 | ● 47 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -881,7 +881,7 @@ Sentence blocks: 3 blocks: 66, 4 blocks: 6, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 47 | ● 47 | ● 47 |
-| A2 Word ↔ picture | ◐ 10 | ○ 10 | ○ 10 |
+| A2 Word ↔ picture | ◐ 9 | ◐ 15 | ◐ 15 |
 | A3 Word ↔ definition | · | ● 53 | ● 53 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 9 | ○ 9 |
@@ -913,7 +913,7 @@ Sentence blocks: 3 blocks: 77, 4 blocks: 4, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 40 | ● 40 | ● 40 |
-| A2 Word ↔ picture | ◐ 9 | ○ 9 | ○ 9 |
+| A2 Word ↔ picture | ◐ 9 | ◐ 12 | ○ 12 |
 | A3 Word ↔ definition | · | ● 40 | ● 40 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -945,7 +945,7 @@ Sentence blocks: 3 blocks: 70, 4 blocks: 4, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 43 | ● 43 | ● 43 |
-| A2 Word ↔ picture | ◐ 11 | ○ 11 | ○ 11 |
+| A2 Word ↔ picture | ◐ 9 | ◐ 15 | ◐ 15 |
 | A3 Word ↔ definition | · | ● 54 | ● 54 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -977,7 +977,7 @@ Sentence blocks: 3 blocks: 68, 4 blocks: 3, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 43 | ● 43 | ● 43 |
-| A2 Word ↔ picture | ◐ 13 | ◐ 13 | ○ 13 |
+| A2 Word ↔ picture | ◐ 12 | ◐ 12 | ◐ 18 |
 | A3 Word ↔ definition | · | ● 44 | ● 44 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 9 | ○ 9 |
@@ -1009,7 +1009,7 @@ Sentence blocks: 3 blocks: 76, 4 blocks: 4, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 48 | ● 48 | ● 48 |
-| A2 Word ↔ picture | ○ 5 | ○ 5 | ○ 5 |
+| A2 Word ↔ picture | ○ 6 | ○ 6 | ○ 6 |
 | A3 Word ↔ definition | · | ● 55 | ● 55 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -1041,7 +1041,7 @@ Sentence blocks: 3 blocks: 66, 4 blocks: 5, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 40 | ● 40 | ● 40 |
-| A2 Word ↔ picture | ◐ 12 | ◐ 12 | ○ 12 |
+| A2 Word ↔ picture | ◐ 12 | ◐ 12 | ◐ 18 |
 | A3 Word ↔ definition | · | ● 41 | ● 41 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -1073,7 +1073,7 @@ Sentence blocks: 3 blocks: 65, 4 blocks: 5, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 19 | ◐ 19 | ◐ 19 |
-| A2 Word ↔ picture | ○ 6 | ○ 6 | ○ 6 |
+| A2 Word ↔ picture | ◐ 9 | ○ 9 | ○ 9 |
 | A3 Word ↔ definition | · | ○ 10 | ○ 10 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 3 | ○ 3 |
@@ -1105,7 +1105,7 @@ Sentence blocks: 3 blocks: 21, 4 blocks: 4, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 20 | ◐ 20 | ◐ 20 |
-| A2 Word ↔ picture | ◐ 11 | ○ 11 | ○ 11 |
+| A2 Word ↔ picture | ◐ 9 | ◐ 15 | ◐ 15 |
 | A3 Word ↔ definition | · | ○ 10 | ○ 10 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 3 | ○ 3 |
@@ -1139,7 +1139,7 @@ Sentence blocks: 3 blocks: 21, 4 blocks: 4, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 41 | ● 41 | ● 41 |
-| A2 Word ↔ picture | ○ 6 | ○ 6 | ○ 6 |
+| A2 Word ↔ picture | ◐ 9 | ○ 9 | ○ 9 |
 | A3 Word ↔ definition | · | ● 45 | ● 45 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -1171,7 +1171,7 @@ Sentence blocks: 3 blocks: 65, 4 blocks: 4, 5 blocks: 1, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 84 | ● 84 | ● 84 |
-| A2 Word ↔ picture | ● 23 | ◐ 23 | ◐ 23 |
+| A2 Word ↔ picture | ● 21 | ◐ 21 | ◐ 21 |
 | A3 Word ↔ definition | · | ● 102 | ● 102 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ◐ 12 | ○ 12 |
@@ -1203,7 +1203,7 @@ Sentence blocks: 3 blocks: 114, 4 blocks: 15, 5 blocks: 0, 6 blocks: 0. Sled-run
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 40 | ● 40 | ● 40 |
-| A2 Word ↔ picture | ○ 8 | ○ 8 | ○ 8 |
+| A2 Word ↔ picture | ◐ 12 | ◐ 12 | ○ 12 |
 | A3 Word ↔ definition | · | ● 43 | ● 43 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -1235,7 +1235,7 @@ Sentence blocks: 3 blocks: 68, 4 blocks: 5, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 42 | ● 42 | ● 42 |
-| A2 Word ↔ picture | ◐ 9 | ○ 9 | ○ 9 |
+| A2 Word ↔ picture | ◐ 9 | ◐ 12 | ○ 12 |
 | A3 Word ↔ definition | · | ● 43 | ● 43 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -1267,7 +1267,7 @@ Sentence blocks: 3 blocks: 61, 4 blocks: 9, 5 blocks: 1, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 41 | ● 41 | ● 41 |
-| A2 Word ↔ picture | ○ 6 | ○ 6 | ○ 6 |
+| A2 Word ↔ picture | ◐ 9 | ○ 9 | ○ 9 |
 | A3 Word ↔ definition | · | ● 41 | ● 41 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -1299,7 +1299,7 @@ Sentence blocks: 3 blocks: 69, 4 blocks: 5, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 40 | ● 40 | ● 40 |
-| A2 Word ↔ picture | ◐ 14 | ◐ 14 | ○ 14 |
+| A2 Word ↔ picture | ◐ 12 | ◐ 12 | ◐ 21 |
 | A3 Word ↔ definition | · | ● 42 | ● 42 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -1331,7 +1331,7 @@ Sentence blocks: 3 blocks: 67, 4 blocks: 4, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 43 | ● 43 | ● 43 |
-| A2 Word ↔ picture | ◐ 10 | ○ 10 | ○ 10 |
+| A2 Word ↔ picture | ◐ 9 | ◐ 15 | ◐ 15 |
 | A3 Word ↔ definition | · | ● 47 | ● 47 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -1363,7 +1363,7 @@ Sentence blocks: 3 blocks: 66, 4 blocks: 4, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 40 | ● 40 | ● 40 |
-| A2 Word ↔ picture | ○ 4 | ○ 4 | ○ 4 |
+| A2 Word ↔ picture | ○ 6 | ○ 6 | ○ 6 |
 | A3 Word ↔ definition | · | ● 43 | ● 43 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -1395,7 +1395,7 @@ Sentence blocks: 3 blocks: 69, 4 blocks: 5, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 40 | ● 40 | ● 40 |
-| A2 Word ↔ picture | ◐ 10 | ○ 10 | ○ 10 |
+| A2 Word ↔ picture | ◐ 9 | ◐ 15 | ◐ 15 |
 | A3 Word ↔ definition | · | ● 43 | ● 43 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -1427,7 +1427,7 @@ Sentence blocks: 3 blocks: 69, 4 blocks: 3, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 42 | ● 42 | ● 42 |
-| A2 Word ↔ picture | ◐ 12 | ◐ 12 | ○ 12 |
+| A2 Word ↔ picture | ◐ 12 | ◐ 12 | ◐ 18 |
 | A3 Word ↔ definition | · | ● 42 | ● 42 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 6 | ○ 6 |
@@ -1459,7 +1459,7 @@ Sentence blocks: 3 blocks: 66, 4 blocks: 5, 5 blocks: 0, 6 blocks: 0. Sled-run w
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 24 | ● 24 | ◐ 24 |
-| A2 Word ↔ picture | ○ 7 | ○ 7 | ○ 7 |
+| A2 Word ↔ picture | ◐ 9 | ○ 9 | ○ 9 |
 | A3 Word ↔ definition | · | ◐ 17 | ◐ 17 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 3 | ○ 3 |
@@ -1491,7 +1491,7 @@ Sentence blocks: 3 blocks: 6, 4 blocks: 0, 5 blocks: 0, 6 blocks: 0. Sled-run wo
 | Sub-task | Arena 1 | Arena 2 | Arena 3 |
 |---|:-:|:-:|:-:|
 | A1 English ↔ Turkish | ● 24 | ● 24 | ◐ 24 |
-| A2 Word ↔ picture | ○ 5 | ○ 5 | ○ 5 |
+| A2 Word ↔ picture | ○ 6 | ○ 6 | ○ 6 |
 | A3 Word ↔ definition | · | ◐ 21 | ◐ 21 |
 | A4 Numbers ↔ number words | · | ✕ 0 | ✕ 0 |
 | A5 Sentence halves | · | ○ 3 | ○ 3 |

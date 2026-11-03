@@ -230,9 +230,28 @@ def('A1', 'match', 1, 'English ↔ Turkish', 'Tap a word, then its Turkish meani
   pool: u => tileWords(u),
   round: (u, a, ctx) => { const w = choose(tileWords(u), PER, ctx, wordsCompatible); return w && matchBoard('Match each word to its Turkish meaning.', w, x => ({ text: x.en, lang: 'en' }), x => ({ text: x.tr, lang: 'tr' })); },
 });
-def('A2', 'match', 1, 'Word ↔ picture', 'Tap a word, then its picture.', {
+// Pictures and words mixed: a board shows a picture for every word that has a licensed one,
+// and the Turkish meaning for the rest, so units with few pictures still use them.
+// At least 2 pictures per board; 3 when the unit has enough for a whole visit.
+const picsPerBoard = (u, a) => (pictureWords(u).length >= needFor(a) ? PER : 2);
+def('A2', 'match', 1, 'Word ↔ picture', 'Tap a word, then its picture or meaning.', {
   pool: u => pictureWords(u),
-  round: (u, a, ctx) => { const w = choose(pictureWords(u), PER, ctx, wordsCompatible); return w && matchBoard('Match each word to its picture.', w, x => ({ text: x.en, lang: 'en' }), x => ({ pic: x.pic, alt: x.en })); },
+  capacity: (u, a) => {
+    const pics = pictureWords(u).length, per = picsPerBoard(u, a);
+    if (pics < per) return 0;
+    const fill = tileWords(u).filter(w => !w.pic).length;
+    return Math.min(Math.floor(pics / per), per === PER ? Infinity : Math.floor(fill / (PER - per))) * PER;
+  },
+  round: (u, a, ctx) => {
+    const per = picsPerBoard(u, a);
+    const pics = choose(pictureWords(u), per, ctx, wordsCompatible);
+    if (!pics) return null;
+    const fill = per < PER ? choose(tileWords(u).filter(w => !w.pic && pics.every(p => wordsCompatible(p, w))), PER - per, ctx, wordsCompatible) : [];
+    if (!fill) return null;
+    const board = shuffle([...pics, ...fill], ctx.rng);
+    return matchBoard(fill.length ? 'Match each word to its picture or meaning.' : 'Match each word to its picture.', board,
+      x => ({ text: x.en, lang: 'en' }), x => (x.pic && pics.includes(x) ? { pic: x.pic, alt: x.en } : { text: x.tr, lang: 'tr' }));
+  },
 });
 def('A3', 'match', 2, 'Word ↔ definition', 'Tap a word, then what it means.', {
   pool: u => definitionItems(u),
