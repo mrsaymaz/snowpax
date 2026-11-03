@@ -34,6 +34,10 @@ export const CONFIG = {
     builder: { speed: 0.9,  range: 1.0, throwRate: 0.9, wallChance: 0.6, flank: 0.0 },
   },
 
+  // World: 1 world unit = 1/scale metres. A smaller scale makes the real streets shorter to cross
+  // (the arenas are real places, simplified so they are playable).
+  world: { scale: 0.5 },
+
   arenas: [
     { id: 'home-turf',   name: 'Home Turf',   area: 'Kaptanpaşa and Kasımpaşa', finale: 'Schoolyard Showdown',
       // Team base and final battle. Shown only as "Our School" (confirmed by Mr. Saymaz, OSM point).
