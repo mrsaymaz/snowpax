@@ -8,7 +8,8 @@
 //   t  tree   L  street lamp   F  fence   B  snowy hedge (walk in to hide)
 //   H  house (edge)   S  Our School   K  rivals' snow fort   M  mosque grounds (scenery, quiet zone)
 //   d  snowdrift (refills snowballs)   i  ice (slippery)
-//   o  capture zone   h  home start   r  rival start
+//   O  the outpost lodge (centre of the capture zone)   f  fire barrel (cover)
+//   h  home start   r  rival start
 // The rival half is mirrored to make the bottom half, so both sides are fair.
 const TOP = [
   'HHHHHHHHHKKKKKKKKHHHHHHHHH', // 0
@@ -26,12 +27,12 @@ const TOP = [
   'H...t.....bb..bb.....t...H', // 12
   'H.FFFF..............FFFF.H', // 13
   'H........................H', // 14
-  'H..L......L....L......L..H', // 15
+  'H..L......f....f......L..H', // 15
 ];
 const STREET = [
   'H______c___________c___FMM', // 16
-  'H_______ii__o__________FMM', // 17
-  'H_______ii__o__________FMM', // 18
+  'H_______ii__OO_________FMM', // 17
+  'H_______ii__OO_________FMM', // 18
   'H___c___________c______FMM', // 19
 ];
 // Bottom rows replaced by Our School and its yard (instead of the mirrored fort).
@@ -56,5 +57,5 @@ export const SCHOOLYARD = {
   name: 'Schoolyard Snow Day',
   theme: 'home-turf',
   rows: schoolyardRows(),
-  zoneRadius: 2.3,
+  zoneRadius: 3.4,
 };

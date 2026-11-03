@@ -42,7 +42,7 @@ function duel(kit = 'thrower') {
   const sim = m.sim, p = m.player, r = sim.chars.find(c => c.side === 'rival');
   for (const c of sim.chars) if (c !== p && c !== r) { c.x = 999; c.z = 999; }
   // stand on an open stretch of the street, 4 tiles apart
-  p.x = -2.5; p.z = -0.5; r.x = 1.5; r.z = -0.5;
+  p.x = -2.5; p.z = -1.5; r.x = 1.5; r.z = -1.5;
   return { m, sim, p, r };
 }
 const run = (sim, s, inp = new Map()) => { for (let i = 0; i < s * 60; i++) sim.step(1 / 60, inp); };
@@ -59,9 +59,9 @@ test('a straight snowball hits for the kit\'s damage and charges the super', () 
 test('snowballs reload by themselves: three in hand, one comes back each reload time', () => {
   const { sim, p, r } = duel();
   r.x = 999;
-  for (let i = 0; i < 3; i++) { sim.attack(p, 5, -0.5); p.attackCd = 0; }
+  for (let i = 0; i < 3; i++) { sim.attack(p, 5, -1.5); p.attackCd = 0; }
   assert.ok(p.ammo < 1);
-  assert.equal(sim.attack(p, 5, -0.5), false, 'no snowball in hand');
+  assert.equal(sim.attack(p, 5, -1.5), false, 'no snowball in hand');
   run(sim, K.thrower.reload + 0.05);
   assert.ok(p.ammo >= 1);
 });
@@ -90,7 +90,7 @@ test('four hits freeze a kid into a snowman for 3 seconds; they come back at the
 
 test('the super boulder rolls through several rivals and knocks them back', () => {
   const { sim, p, r } = duel();
-  const r2 = sim.chars.filter(c => c.side === 'rival')[1]; r2.x = 3.5; r2.z = -0.5;
+  const r2 = sim.chars.filter(c => c.side === 'rival')[1]; r2.x = 3.5; r2.z = -1.5;
   p.super = 1;
   assert.equal(sim.attack(p, r.x, r.z, { isSuper: true }), true);
   run(sim, 1.2);
@@ -140,10 +140,10 @@ test('snowballs stop at walls and vanish in the quiet zone; nobody throws from i
 
 test('standing in the zone with nobody from the other side captures it; a rival inside stops the capture', () => {
   const { sim, p, r } = duel();
-  const z = sim.zone; p.x = z.x; p.z = z.z; r.x = 999;
+  const z = sim.zone; p.x = z.x - 2.2; p.z = z.z + 2.0; r.x = 999;
   run(sim, 3);
   assert.ok(z.progress > 0.3);
-  r.x = z.x + 1; r.z = z.z; const before = z.progress; r.warmth = 9999; r.maxWarmth = 9999;
+  r.x = z.x + 2.2; r.z = z.z - 2.0; const before = z.progress; r.warmth = 9999; r.maxWarmth = 9999;
   sim.step(1 / 60);
   assert.equal(z.progress, before, 'contested: no progress');
   r.x = 999;
@@ -163,8 +163,8 @@ test('a full bot match runs for two minutes: everyone fights, kids freeze, someo
   const counts = {};
   for (let i = 0; i < 60 * 120; i++) {
     const p = m.player, z = m.sim.zone;
-    const dx = z.x - p.x, dz = z.z - p.z, d = Math.hypot(dx, dz);
-    if (!p.travel && d > 1.2) m.sim.travelTo(p, z.x, z.z);
+    const gx = z.x - 2.2, gz = z.z + 2.0, d = Math.hypot(gx - p.x, gz - p.z);
+    if (!p.travel && d > 1.2) m.sim.travelTo(p, gx, gz);
     const t = m.sim.autoTarget(p);
     m.step(1 / 60, t && p.ammo >= 1 ? { attack: { x: t.x, z: t.z } } : {});
     for (const e of m.sim.drainEvents()) counts[e.type] = (counts[e.type] || 0) + 1;

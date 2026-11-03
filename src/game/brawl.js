@@ -9,7 +9,7 @@ import { createMatch } from './match.mjs';
 import { buildTileArena } from './tilemap.mjs';
 import { SCHOOLYARD } from './arenas/schoolyard.mjs';
 import { GRID } from './grid.mjs';
-import { buildArena } from './render/arena.js';
+import { buildVillage, LIGHTING } from './render/village.js';
 import { Kid } from './render/kids.js';
 import { BrawlFx } from './render/brawlfx.js';
 import { CUT } from './render/cutout.js';
@@ -63,25 +63,26 @@ async function startGame(myTeam, kit, pace) {
   const level = params.has('quality') ? Math.max(0, LEVELS.findIndex(l => l.name === params.get('quality'))) : guessLevel();
   const renderer = new WebGLRenderer({ canvas, antialias: level >= 1, powerPreference: 'high-performance' });
   renderer.shadowMap.type = PCFSoftShadowMap;
-  const scene = new Scene(); scene.background = new Color('#cfe6f7'); scene.fog = new Fog('#cfe6f7', 30, 60);
-  scene.add(new HemisphereLight('#ffffff', '#cfdced', 1.9));
-  const sun = new DirectionalLight('#fff3e0', 1.6); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
+  const scene = new Scene(); scene.background = new Color(LIGHTING.sky); scene.fog = new Fog(LIGHTING.fog[0], LIGHTING.fog[1], LIGHTING.fog[2]);
+  scene.add(new HemisphereLight(LIGHTING.hemi[0], LIGHTING.hemi[1], LIGHTING.hemi[2]));
+  const sun = new DirectionalLight(LIGHTING.sun[0], LIGHTING.sun[1]); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.radius = 4;
   Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 60 }); sun.shadow.bias = -0.0006; scene.add(sun, sun.target);
 
-  const world = buildArena(arena, { rivalTeam, quality: LEVELS[level].name }); scene.add(world.group);
+  const world = buildVillage(arena, { rivalTeam, homeTeam: myTeam, quality: LEVELS[level].name }); scene.add(world.group);
   const kids = new Map(sim.chars.map(c => [c.id, new Kid(c, { isPlayer: c === player })]));
   for (const k of kids.values()) scene.add(k.root);
-  const camera = new PerspectiveCamera(30, innerWidth / innerHeight, 0.5, 120);
+  const camera = new PerspectiveCamera(24, innerWidth / innerHeight, 0.5, 140); // restrained perspective
   const fx = new BrawlFx(scene, $('#fx-layer'), camera);
 
   // steep follow camera looking north
   // about 50° down: kids show their faces, the arena reads like a stage
-  const off = new Vector3(0, 13.4, 11.4); let zoom = 1, shake = 0;
+  const off = new Vector3(0, 17.6, 16.0); let zoom = 1, shake = 0;
   const focus = new Vector3(player.x, 0, player.z - 1.2);
   function resize() {
     const w = innerWidth, h = innerHeight; camera.aspect = w / h;
-    zoom = Math.min(1.35, Math.max(1, Math.min(w, h) / 390)) * (w / h < 1.5 ? 1.12 : 1);
+    zoom = Math.min(1.35, Math.max(1, Math.min(w, h) / 390)) * (w / h < 1.5 ? 1.12 : 1) * (Number(params.get('zoom')) || 1);
     camera.updateProjectionMatrix(); renderer.setSize(w, h, false);
+    const dist = off.length() * zoom; scene.fog.near = dist * 1.25; scene.fog.far = dist * 2.9; // haze only beyond the arena
   }
   const quality = new AutoQuality(level, L => { renderer.setPixelRatio(Math.min(devicePixelRatio || 1, L.maxDpr)); renderer.shadowMap.enabled = L.name !== 'low'; sun.castShadow = L.name !== 'low'; resize(); scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); }, { forced: params.has('quality') ? level : null });
   addEventListener('resize', resize); resize();
@@ -211,19 +212,20 @@ async function startGame(myTeam, kit, pace) {
     // camera
     const tx = player.x, tz = player.z - 1.2;
     focus.x += (tx - focus.x) * Math.min(1, dt * 5); focus.z += (tz - focus.z) * Math.min(1, dt * 5);
-    const halfW = Math.tan(15 * Math.PI / 180) * off.length() * zoom * camera.aspect, lim = Math.max(0, arena.w / 2 - halfW + 0.5);
+    const halfW = Math.tan(12 * Math.PI / 180) * off.length() * zoom * camera.aspect, lim = params.has('zoom') ? 0 : Math.max(0, arena.w / 2 - halfW + 0.5);
     focus.x = Math.max(-lim, Math.min(lim, focus.x));
-    focus.z = Math.max(arena.z0 + 5, Math.min(arena.z0 + arena.h - 3.5, focus.z));
+    if (!params.has('zoom')) focus.z = Math.max(arena.z0 + 5, Math.min(arena.z0 + arena.h - 3.5, focus.z));
     shake = Math.max(0, shake - dt);
     const j = shake > 0 ? shake * 0.6 : 0;
     camera.position.set(focus.x + off.x * zoom + (Math.random() - 0.5) * j, off.y * zoom, focus.z + off.z * zoom + (Math.random() - 0.5) * j);
     camera.lookAt(focus.x, 0, focus.z); camera.updateMatrixWorld();
-    sun.position.set(focus.x + 6, 22, focus.z + 10); sun.target.position.set(focus.x, 0, focus.z - 2); sun.target.updateMatrixWorld();
+    sun.position.set(focus.x + LIGHTING.sunDir[0], LIGHTING.sunDir[1], focus.z + LIGHTING.sunDir[2]); sun.target.position.set(focus.x, 0, focus.z - 2); sun.target.updateMatrixWorld();
+    world.tick(dt, focus, reduceMotion, camera);
     // see-through: anything between the camera and the player dissolves
     const pv = new Vector3(player.x, 1, player.z), pr = renderer.getPixelRatio(), ndc = pv.clone().project(camera);
     CUT.center.value.set((ndc.x + 1) / 2 * innerWidth * pr, (ndc.y + 1) / 2 * innerHeight * pr);
-    CUT.radius.value = Math.min(innerWidth, innerHeight) * 0.22 * pr;
-    CUT.depth.value = pv.applyMatrix4(camera.matrixWorldInverse).z + 1.5;
+    CUT.radius.value = Math.min(innerWidth, innerHeight) * 0.13 * pr;   // just around the player
+    CUT.depth.value = pv.applyMatrix4(camera.matrixWorldInverse).z + 2.6; // only things clearly in front
 
     // HUD
     const p = Math.round(Math.abs(z.progress) * 100);

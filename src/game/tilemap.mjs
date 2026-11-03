@@ -2,11 +2,11 @@
 // navigation and renderer use. One tile = one world unit; x = east (columns), z = south (rows).
 import { GRID } from './grid.mjs';
 
-const SOLID = 'HSKMFctLb#n';              // tiles you cannot walk through
+const SOLID = 'HSKMFctLb#nOf';            // tiles you cannot walk through
 const TALL = 'HSKM';                      // edge buildings
 export const TILE = {
   '.': 'snow', '_': 'street', Y: 'yard', '#': 'wall', b: 'bench', c: 'car', n: 'snowman', t: 'tree', L: 'lamp', F: 'fence',
-  B: 'bush', H: 'house', S: 'school', K: 'fort', M: 'mosque', d: 'drift', i: 'ice', o: 'zone', h: 'home', r: 'rival',
+  B: 'bush', H: 'house', S: 'school', K: 'fort', M: 'mosque', d: 'drift', i: 'ice', o: 'zone', O: 'outpost', f: 'fire', h: 'home', r: 'rival',
 };
 
 export function buildTileArena(def) {
@@ -24,7 +24,7 @@ export function buildTileArena(def) {
     if (ch === 'B') grid[k] |= GRID.BUSH;
     if (ch === 'i') grid[k] |= GRID.ICE;
     if (ch === 'd') drifts.push(at(i, j));
-    if (ch === 'o') zoneTiles.push(at(i, j));
+    if (ch === 'o' || ch === 'O') zoneTiles.push(at(i, j));
     if (ch === 'h') home = at(i, j);
     if (ch === 'r') rival = at(i, j);
     if (ch === 'M') quiet.push([i, j]);

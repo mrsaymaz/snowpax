@@ -3,10 +3,25 @@
 // a warmth bar with number and team emblem, and your own snowball bar under yours.
 import {
   Group, Mesh, MeshLambertMaterial, MeshBasicMaterial, SphereGeometry, CapsuleGeometry, CylinderGeometry, ConeGeometry, TorusGeometry,
-  CircleGeometry, RingGeometry, BoxGeometry, CanvasTexture, SRGBColorSpace, Sprite, SpriteMaterial, BackSide, Color,
+  CircleGeometry, RingGeometry, BoxGeometry, CanvasTexture, SRGBColorSpace, Sprite, SpriteMaterial, BackSide, Color, BufferAttribute,
 } from 'three';
 import { CONFIG } from '../../config.js';
 import { emblemSVG } from '../../emblems.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+
+// Merge meshes (in their parent's space, plus an optional extra matrix) into one geometry
+// with per-vertex colours, so a whole kid draws in a handful of calls.
+function bakeColored(meshes, extra = null) {
+  const geos = meshes.map(m => {
+    const g = (m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone());
+    for (const k of Object.keys(g.attributes)) if (!['position', 'normal'].includes(k)) g.deleteAttribute(k);
+    m.updateMatrix(); g.applyMatrix4(m.matrix); if (extra) g.applyMatrix4(extra);
+    const c = m.material.color, n = g.attributes.position.count, col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+    g.setAttribute('color', new BufferAttribute(col, 3)); return g;
+  });
+  return mergeGeometries(geos);
+}
 
 const SKIN = ['#f3c9a5', '#e0a87e', '#c68863', '#a86f4d', '#f6d5bb'];
 const OUTLINE = '#1c2340';
@@ -73,8 +88,30 @@ export class Kid {
     this.bt = new CanvasTexture(this.bc); this.bt.colorSpace = SRGBColorSpace;
     this.bar = new Sprite(new SpriteMaterial({ map: this.bt, depthTest: false, transparent: true }));
     this.bar.scale.set(1.9, 1.9 * this.bc.height / 160, 1); this.bar.position.y = 2.75 * s; this.bar.renderOrder = 20; root.add(this.bar);
+    this.bake();
     this.last = ''; this.t = Math.random() * 6; this.throwT = 0; this.shakeT = 0;
     emblem(c.team).onload = () => { this.last = ''; };
+  }
+  // Replace the many small parts with merged meshes: body+head+hat, outlines, each arm, each leg, the snowman.
+  bake() {
+    const vc = this.vc = new MeshLambertMaterial({ vertexColors: true, transparent: true, emissive: new Color(0) });
+    const isOutline = m => m.material === this.outlineMat;
+    const swapGroup = grp => {
+      const direct = grp.children.filter(m => m.isMesh && !this.arms.includes(m) && !this.legs.includes(m));
+      const colored = direct.filter(m => !isOutline(m)), lines = direct.filter(isOutline);
+      if (colored.length) { const m = new Mesh(bakeColored(colored), vc); m.castShadow = true; grp.add(m); }
+      if (lines.length) { const o = new Mesh(bakeColored(lines), this.outlineMat); grp.add(o); }
+      for (const m of direct) grp.remove(m);
+    };
+    swapGroup(this.kid); swapGroup(this.snowman);
+    const limb = part => { // the limb plus its child (mitten/boot) in the limb's own space
+      const kids = part.children.filter(c => c.isMesh);
+      const geo = bakeColored([Object.assign(new Mesh(part.geometry, part.material)), ...kids]);
+      const m = new Mesh(geo, vc); m.position.copy(part.position); m.rotation.copy(part.rotation); m.scale.copy(part.scale); m.castShadow = true;
+      this.kid.add(m); this.kid.remove(part); return m;
+    };
+    this.arms = this.arms.map(limb); this.legs = this.legs.map(limb);
+    this.jacket = vc; this.mats = [vc, this.outlineMat];
   }
   outline(mesh, parent) { const o = new Mesh(mesh.geometry, this.outlineMat); o.position.copy(mesh.position); o.rotation.copy(mesh.rotation); o.scale.copy(mesh.scale).multiplyScalar(1.09); parent.add(o); }
 
@@ -121,7 +158,7 @@ export class Kid {
     this.arms[0].rotation.x = sw * 0.7;
     const squash = c.flash > 0 && !reduceMotion ? 1 - c.flash * 1.5 : 1;
     this.kid.scale.y = this.kid.scale.x * squash;
-    this.jacket.emissive = this.jacket.emissive || new Color(0); this.jacket.emissive.setScalar(c.flash > 0 ? 0.9 : 0);
+    this.vc.emissive.setScalar(c.flash > 0 ? 0.75 : 0);
     if (thaw && this.shakeT < 0.35 && !reduceMotion) this.kid.rotation.y = c.face + (1 - this.shakeT / 0.35) * Math.PI * 2;
     // hidden in a hedge: you see yourself (and your team) faded
     const fade = c.hidden && c.revealT <= 0 ? 0.45 : 1;
