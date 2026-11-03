@@ -39,5 +39,8 @@ export function play(type, { near = 1 } = {}) {
     case 'dodge': noise(0.2, 3000, 800, 0.18 * v, 'highpass'); break;
     case 'poof': noise(0.25, 2400, 3600, 0.12 * v, 'highpass'); break;
     case 'tap': tone(660, 0.06, 0.1, 'sine'); break;
+    case 'super': noise(0.5, 300, 1200, 0.5 * v, 'lowpass'); tone(110, 0.45, 0.3 * v, 'sawtooth', 0.5); break;
+    case 'superReady': [523, 659, 784].forEach((f, i) => setTimeout(() => tone(f, 0.16, 0.14, 'triangle'), i * 70)); break;
+    case 'capture': [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.22, 0.16, 'triangle'), i * 110)); break;
   }
 }

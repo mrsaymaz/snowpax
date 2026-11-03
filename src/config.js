@@ -84,15 +84,30 @@ export const CONFIG = {
     meaningRevealSeconds: 2,
   },
 
-  // Snowball fight numbers.
+  // Snowball fight numbers (one tile = one world unit in the arenas).
   fight: {
-    warmth: 100,
-    hitWarmth: 25,
-    bigHitWarmth: 50,
-    ammoMax: 8,
-    throwRange: 9,
-    bigChargeSeconds: 0.8,
+    warmth: 100,            // warmth bar (not health); at 0 you freeze into a snowman
+    ammoMax: 3,             // snowballs in hand; they come back by themselves (reload)
+    regenDelay: 3,          // seconds without hits or throws before warmth comes back
+    regenRate: 14,          // warmth per second
+    spawnShield: 1.5,       // seconds of protection after shaking off the snow
+    moveSpeed: 3.4,         // tiles per second on snow
+    streetBonus: 1.12,      // cleared streets are faster
+    hideRange: 2.5,         // rivals see you in a hedge only from this close
+    revealSeconds: 1.0,     // throwing from a hedge shows you for a moment
+    throwRange: 7.5,        // used by quick auto-aim
   },
+
+  // Throwing kits. Each kid on a team carries one.
+  kits: {
+    thrower: { name: 'Quick Thrower', shot: 'straight', damage: 26, speed: 12, range: 7.5, reload: 1.1, superPerHit: 0.22, hat: 'beanie' },
+    lobber:  { name: 'Lobber', shot: 'lob', damage: 30, range: 6.5, flight: 0.75, splash: 1.15, reload: 1.4, superPerHit: 0.25, hat: 'earmuffs' },
+    sprayer: { name: 'Sprayer', shot: 'spread', damage: 12, speed: 13, range: 5, count: 3, spreadDeg: 13, reload: 1.0, superPerHit: 0.1, hat: 'cap' },
+  },
+  // Super: a giant rolling snowball that charges up as your snowballs hit.
+  superBoulder: { damage: 45, speed: 8.5, range: 10, radius: 0.85, knockback: 5 },
+  // Capture zone (an outpost): stand in it with nobody from the other side.
+  zone: { captureSeconds: 8, extraKidBonus: 0.35 },
 
   // Text budget for the task card at the smallest screen (640 × 360).
   // The card covers about half the screen; at 16 px roughly this many characters fit per line.

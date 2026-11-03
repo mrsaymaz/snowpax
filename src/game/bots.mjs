@@ -1,39 +1,34 @@
 // Bot brains: small state machines that produce the same input object a player would.
-// Teammates follow and guard the student; rivals play their team's style (config.styles):
-// flanker (air) circles to the sides, rusher (fire) closes in with fast volleys,
-// sniper (water) keeps long range, builder (nature) puts up snow walls and holds ground.
+// Teammates stay with the student and guard them; rivals play the capture zone. Team style
+// (config.styles) shapes how each bot fights: flanker (air) strafes wide, rusher (fire)
+// closes in, sniper (water) keeps long range, builder (nature) puts up snow walls.
 import { CONFIG } from '../config.js';
 import { GRID } from './grid.mjs';
 
-const STYLE = CONFIG.styles;
-const RANGE = CONFIG.fight.throwRange;
+const STYLE = CONFIG.styles, KITS = CONFIG.kits;
+const PREF = { thrower: 6, lobber: 5.2, sprayer: 3.4 };
 
 export class Bot {
   constructor(sim, char, { style = 'rusher', leader = null, rng = Math.random } = {}) {
     this.sim = sim; this.c = char; this.style = STYLE[style] ? style : 'rusher'; this.s = STYLE[this.style];
     this.leader = leader; this.rng = rng;
-    this.state = 'idle'; this.path = null; this.pathT = 0; this.goal = null;
-    this.throwT = 0.5 + rng() * 1.2; this.side = rng() < 0.5 ? 1 : -1; this.wallT = 3 + rng() * 4;
-    this.slot = rng() * Math.PI * 2;
-    char.rangeMul = this.s.range || 1;
-    this.target = null;
+    this.state = 'idle'; this.path = null; this.pathT = 0; this.goal = null; this.stuck = 0;
+    this.throwT = 0.4 + rng() * 0.8; this.side = rng() < 0.5 ? 1 : -1; this.wallT = 3 + rng() * 4;
+    this.slot = rng() * Math.PI * 2; this.target = null;
   }
 
-  steerTo(x, z, dt, near = 0.8) {
+  steerTo(x, z, dt, near = 0.5) {
     const c = this.c, g = this.sim.grid;
     if (Math.hypot(x - c.x, z - c.z) < near) return { mx: 0, mz: 0 };
     this.pathT -= dt;
-    const goalMoved = !this.goal || Math.hypot(this.goal[0] - x, this.goal[1] - z) > 3;
-    if (g.clearLine(c.x, c.z, x, z)) { this.path = null; this.goal = [x, z]; }
-    else if (!this.path || this.pathT <= 0 || goalMoved) {
-      this.path = this.sim.nav ? this.sim.nav.path(c.x, c.z, x, z) : null; this.pathT = 1.2 + this.rng() * 0.6; this.goal = [x, z];
-    }
-    // Not moving although we should: force a fresh route soon.
-    this.stuck = c.moving < 0.4 ? (this.stuck || 0) + dt : 0;
-    if (this.stuck > 0.7) { this.pathT = 0; this.stuck = 0; this.path = this.sim.nav ? this.sim.nav.path(c.x, c.z, x, z) : null; }
+    const moved = !this.goal || Math.hypot(this.goal[0] - x, this.goal[1] - z) > 1.5;
+    if (g.clearPath(c.x, c.z, x, z, 0.3)) { this.path = null; this.goal = [x, z]; }
+    else if (!this.path || this.pathT <= 0 || moved) { this.path = this.sim.nav ? this.sim.nav.path(c.x, c.z, x, z) : null; this.pathT = 0.8 + this.rng() * 0.5; this.goal = [x, z]; }
+    this.stuck = c.moving < 0.25 ? this.stuck + dt : 0;
+    if (this.stuck > 0.5) { this.stuck = 0; this.path = this.sim.nav ? this.sim.nav.path(c.x, c.z, x, z) : null; }
     let tx = x, tz = z;
     if (this.path && this.path.length) {
-      while (this.path.length > 1 && Math.hypot(this.path[0][0] - c.x, this.path[0][1] - c.z) < 1) this.path.shift();
+      while (this.path.length > 1 && Math.hypot(this.path[0][0] - c.x, this.path[0][1] - c.z) < 0.45) this.path.shift();
       [tx, tz] = this.path[0];
     }
     const dx = tx - c.x, dz = tz - c.z, d = Math.hypot(dx, dz) || 1;
@@ -41,93 +36,87 @@ export class Bot {
   }
 
   pickTarget() {
-    const c = this.c, maxSeek = this.c.side === 'rival' ? 70 : 14;
+    const c = this.c, seek = c.side === 'rival' ? 11 : 9;
     let best = null, bd = Infinity;
     for (const o of this.sim.enemiesOf(c)) {
-      if (this.sim.grid.has(o.x, o.z, GRID.ZONE)) continue;
-      const d = Math.hypot(o.x - c.x, o.z - c.z) + (o.role === 'player' && c.side === 'rival' ? -4 : 0);
-      if (d < bd && d < maxSeek) { bd = d; best = o; }
+      if (!this.sim.canSee(c, o) || this.sim.grid.has(o.x, o.z, GRID.ZONE)) continue;
+      const raw = Math.hypot(o.x - c.x, o.z - c.z);
+      if (raw > seek) continue;
+      const d = raw - (o.role === 'player' && c.side === 'rival' ? 1.5 : 0) + (o.warmth / o.maxWarmth) * 1.5;
+      if (d < bd) { bd = d; best = o; }
     }
     return best;
+  }
+
+  // A snowball flying at me? Sidestep.
+  incoming() {
+    const c = this.c;
+    for (const b of this.sim.balls) {
+      if (b.side === c.side || b.kind === 'lob') continue;
+      const rx = c.x - b.x, rz = c.z - b.z, d = Math.hypot(rx, rz); if (d > 4) continue;
+      const sp = Math.hypot(b.vx, b.vz) || 1, along = (rx * b.vx + rz * b.vz) / sp; if (along < 0) continue;
+      const miss = Math.abs((rx * b.vz - rz * b.vx) / sp);
+      if (miss < 0.8) return { mx: -b.vz / sp, mz: b.vx / sp };
+    }
+    return null;
   }
 
   think(dt) {
     const c = this.c, sim = this.sim;
     if (c.frozen || c.thaw) return {};
-    const inp = { mx: 0, mz: 0 };
     this.throwT -= dt; this.wallT -= dt;
-    this.target = this.pickTarget();
-    const t = this.target;
+    const inp = { mx: 0, mz: 0 };
+    const t = this.target = this.pickTarget();
+    const kit = KITS[c.kit] || KITS.thrower;
+    const want = (PREF[c.kit] || 5) + (this.style === 'sniper' ? 1.2 : this.style === 'rusher' ? -1 : 0);
+    const low = c.warmth < c.maxWarmth * 0.35 && this.style !== 'rusher';
 
-    // Out of snowballs: fetch some from the nearest drift.
-    if (c.ammo === 0) {
-      this.state = 'refill';
-      let best = null, bd = Infinity;
-      for (const d of sim.drifts) { if (d.cd > 0) continue; const dd = Math.hypot(d.x - c.x, d.z - c.z); if (dd < bd) { bd = dd; best = d; } }
-      const h = sim.nearestHeld(c.side, c.x, c.z);
-      const goTo = h && (!best || Math.hypot(h.x - c.x, h.z - c.z) < bd) ? h : best;
-      if (goTo) Object.assign(inp, this.steerTo(goTo.x, goTo.z, dt, 0.4));
-      return inp;
-    }
-
+    // Where to be when not fighting
+    let goal = null;
+    const z = sim.zone;
     if (c.side === 'home' && this.leader) {
-      const L = this.leader, guard = L.guarding;
-      const dl = Math.hypot(L.x - c.x, L.z - c.z);
-      if (t && Math.hypot(t.x - c.x, t.z - c.z) < RANGE * 1.05 && (dl < 12 || guard)) {
-        this.state = 'engage'; Object.assign(inp, this.fight(t, dt, 0.75));
-        if (guard && dl > 5) Object.assign(inp, this.steerTo(L.x, L.z, dt, 3)); // stay close while the student seizes
-      } else {
-        this.state = 'follow';
-        this.slot += dt * (guard ? 0.6 : 0.15);
-        const r = guard ? 3.2 : 2.6;
-        const gx = L.x + Math.sin(this.slot) * r, gz = L.z + Math.cos(this.slot) * r;
-        Object.assign(inp, this.steerTo(gx, gz, dt, dl > 6 ? 1.5 : 0.9));
-      }
-      return inp;
+      const L = this.leader, inZone = z && Math.hypot(L.x - z.x, L.z - z.z) < z.r + 1;
+      this.slot += dt * (inZone || L.guarding ? 0.5 : 0.1);
+      const r = inZone || L.guarding ? 2.6 : 2.2;
+      goal = [L.x + Math.sin(this.slot) * r, L.z + Math.cos(this.slot) * r];
+    } else if (z && z.owner !== c.side) {
+      const a = this.slot + sim.t * 0.2; goal = [z.x + Math.sin(a) * z.r * 0.6, z.z + Math.cos(a) * z.r * 0.6];
+    } else {
+      const p = sim.chars.find(o => o.role === 'player' && !o.frozen) || sim.enemiesOf(c)[0];
+      if (p) goal = [p.x, p.z];
     }
 
-    if (!t) { // rivals with nobody near: advance on the home side
-      const home = sim.chars.filter(o => o.side !== c.side && !o.frozen);
-      if (home.length) { this.state = 'advance'; const h = home[0]; Object.assign(inp, this.steerTo(h.x, h.z, dt, 2)); }
-      return inp;
-    }
-    const lowWarmth = c.warmth < c.maxWarmth * 0.3;
-    if (lowWarmth && this.style !== 'rusher') { // back off
+    if (low && t) { // back off to warm up
       this.state = 'retreat';
-      const dx = c.x - t.x, dz = c.z - t.z, d = Math.hypot(dx, dz) || 1;
-      Object.assign(inp, this.steerTo(c.x + (dx / d) * 6, c.z + (dz / d) * 6, dt, 0.5));
-      if (this.throwT <= 0 && d < RANGE) this.tryThrow(inp, t);
-      return inp;
+      const home = sim.spawns[c.side][0];
+      Object.assign(inp, this.steerTo(home.x, home.z, dt, 1));
+    } else if (t) {
+      this.state = 'fight';
+      const d = Math.hypot(t.x - c.x, t.z - c.z), ux = (t.x - c.x) / (d || 1), uz = (t.z - c.z) / (d || 1);
+      let mx = 0, mz = 0;
+      const tether = c.side === 'home' && this.leader && Math.hypot(this.leader.x - c.x, this.leader.z - c.z) > 6;
+      if (tether) { const s = this.steerTo(this.leader.x, this.leader.z, dt, 2); mx = s.mx; mz = s.mz; }
+      else if (d > want + 0.8 || (kit.shot !== 'lob' && !sim.grid.clearLine(c.x, c.z, t.x, t.z))) { const s = this.steerTo(t.x, t.z, dt, want); mx = s.mx; mz = s.mz; }
+      else if (d < want - 1.2) { mx = -ux; mz = -uz; }
+      const strafe = this.style === 'flanker' ? 0.85 : this.style === 'builder' ? 0.15 : 0.45;
+      mx += -uz * this.side * strafe; mz += ux * this.side * strafe;
+      if (this.rng() < dt * 0.5) this.side *= -1;
+      const dodge = this.incoming(); if (dodge && this.rng() < 0.7) { mx = dodge.mx * this.side; mz = dodge.mz * this.side; }
+      inp.mx = mx * (this.s.speed || 1); inp.mz = mz * (this.s.speed || 1);
+      // super when it lines up
+      if (c.super >= 1 && d < CONFIG.superBoulder.range * 0.8 && sim.grid.clearLine(c.x, c.z, t.x, t.z)) inp.super = { x: t.x, z: t.z };
+      else if (this.throwT <= 0 && c.ammo >= 1 && d < kit.range + 0.3 && (kit.shot === 'lob' || sim.grid.clearLine(c.x, c.z, t.x, t.z))) {
+        const err = c.side === 'rival' ? 0.9 : 0.6, lead = d / (kit.speed || 9);
+        inp.attack = { x: t.x + t.vx * lead * 0.7 + (this.rng() - 0.5) * err, z: t.z + t.vz * lead * 0.7 + (this.rng() - 0.5) * err };
+        inp.manual = true;
+        const rate = (this.s.throwRate || 1) * (c.side === 'rival' ? sim.pace.rivalThrowRate : 1);
+        this.throwT = (0.55 + this.rng() * 0.6) / rate;
+      }
+      if (this.style === 'builder' && this.wallT <= 0 && d < 7) { inp.wall = true; this.wallT = 7 + this.rng() * 5; }
+    } else if (goal) {
+      this.state = 'move';
+      Object.assign(inp, this.steerTo(goal[0], goal[1], dt, 0.6));
     }
-    this.state = 'engage';
-    Object.assign(inp, this.fight(t, dt, 1));
     return inp;
-  }
-
-  // Keep a style-dependent distance, strafe, throw when the shot is clear.
-  fight(t, dt, aggression) {
-    const c = this.c, inp = {};
-    const s = this.s, d = Math.hypot(t.x - c.x, t.z - c.z);
-    const want = this.style === 'sniper' ? RANGE * 1.05 : this.style === 'rusher' ? RANGE * 0.45 : this.style === 'builder' ? RANGE * 0.8 : RANGE * 0.65;
-    const ux = (t.x - c.x) / (d || 1), uz = (t.z - c.z) / (d || 1);
-    let mx = 0, mz = 0;
-    if (d > want + 1) { const st = this.steerTo(t.x, t.z, dt, want); mx = st.mx; mz = st.mz; }
-    else if (d < want - 1.5) { mx = -ux; mz = -uz; }
-    const strafe = this.style === 'flanker' ? 0.9 : this.style === 'builder' ? 0.1 : 0.35;
-    mx += -uz * this.side * strafe; mz += ux * this.side * strafe;
-    if (this.rng() < dt * 0.4) this.side *= -1;
-    inp.mx = mx * (s.speed || 1); inp.mz = mz * (s.speed || 1);
-    if (this.style === 'builder' && this.wallT <= 0 && d < RANGE * 1.1) { inp.wall = true; this.wallT = 6 + this.rng() * 5; }
-    if (this.throwT <= 0 && d < RANGE * (s.range || 1)) this.tryThrow(inp, t, aggression);
-    return inp;
-  }
-
-  tryThrow(inp, t, aggression = 1) {
-    const c = this.c, sim = this.sim;
-    if (!sim.grid.clearLine(c.x, c.z, t.x, t.z)) { this.throwT = 0.3; return; }
-    const sloppy = c.side === 'rival' ? 1.4 : 0.9; // rivals miss a bit more
-    inp.throwAt = { x: t.x + (this.rng() - 0.5) * sloppy, z: t.z + (this.rng() - 0.5) * sloppy };
-    const rate = (this.s.throwRate || 1) * (c.side === 'rival' ? sim.pace.rivalThrowRate : 1) * aggression;
-    this.throwT = (1.5 + this.rng() * 1.1) / rate;
   }
 }

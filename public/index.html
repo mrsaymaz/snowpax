@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="google" content="notranslate">
-<meta name="theme-color" content="#cfe0ee">
+<meta name="theme-color" content="#2f8fe8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <title>SnowPax</title>
@@ -12,50 +12,49 @@
 <link rel="stylesheet" href="game.css">
 </head>
 <body class="notranslate">
-<canvas id="scene" aria-label="Snowball fight around Our School"></canvas>
-<div id="overlay" aria-hidden="true"><div class="ts top"></div><div class="ts bottom"></div></div>
+<canvas id="scene" aria-label="Snowball brawl in the schoolyard"></canvas>
+<div id="fx-layer" aria-hidden="true"></div>
 
 <section id="start" class="screen">
   <div class="card">
     <h1>SnowPax</h1>
-    <p class="sub">It's a snow day in Beyoğlu! Pick your team.</p>
-    <div id="teams" class="team-grid" role="group" aria-label="Teams"></div>
-    <div class="pace" role="group" aria-label="Pace">
-      <button type="button" class="pace-btn" data-pace="relaxed">Relaxed</button>
-      <button type="button" class="pace-btn" data-pace="challenge">Challenge</button>
-    </div>
-    <button id="play" class="big-btn" type="button" disabled>Pick your team</button>
-    <p class="note">Test build M1 · v{{VERSION}} · movement and snowballs around Our School. <a href="preview.html">Task preview</a> · Map data © OpenStreetMap contributors</p>
+    <p class="sub">Snow day! School's out. Grab your team and take the street!</p>
+    <div class="step"><span class="lbl">Your team</span><div id="teams" class="row4"></div></div>
+    <div class="step"><span class="lbl">Your snowball style</span><div id="kits" class="row3"></div></div>
+    <div class="step pace"><button type="button" class="pace-btn" data-pace="relaxed">Relaxed</button><button type="button" class="pace-btn" data-pace="challenge">Challenge</button></div>
+    <button id="play" class="play-btn" type="button" disabled>Pick your team</button>
+    <p class="note">Feel test · v{{VERSION}} · <a href="preview.html">Task preview</a></p>
   </div>
 </section>
-<div id="loading" class="screen" hidden><div class="card">Building the snowy streets…</div></div>
+<div id="loading" class="screen" hidden><div class="card">Loading…</div></div>
 
 <div id="hud" hidden>
-  <canvas id="minimap" aria-label="Mini-map. Tap a place to walk there."></canvas>
-  <button id="map-btn" class="hud-btn" type="button" aria-label="Open the map">Map</button>
+  <div id="topbar">
+    <div id="score" aria-label="Freezes"><span class="home"></span><b class="h">0</b><span class="vs">:</span><b class="r">0</b><span class="rival"></span></div>
+    <div id="zone"><div id="zone-label">Street Outpost</div><div id="zone-bar"><i class="home"></i><i class="rival"></i></div></div>
+  </div>
   <button id="pause" class="hud-btn" type="button" aria-label="Pause">❚❚</button>
+  <div id="feed"></div>
   <div id="coach" hidden><b>Mr. Saymaz</b><span class="line"></span></div>
-  <div id="toast" hidden></div>
-  <div id="arrows"></div>
+  <div id="banner"></div>
+  <div id="frozen" hidden><div>Frozen! Back in <span class="count">3</span>…</div></div>
   <div id="joy-base"></div><div id="joy-knob"></div>
-  <button id="throw" type="button" aria-label="Throw a snowball. Hold for a big one.">
-    <span id="charge"></span><span class="ball">❄</span><span id="ammo">8</span>
-  </button>
+  <button id="super" type="button" aria-label="Super snowball. Tap to roll it at the nearest rival, drag to aim."><span class="ring"></span><span class="knob">★</span></button>
+  <button id="attack" type="button" aria-label="Throw. Tap to throw at the nearest rival, drag to aim."><span class="knob">❄</span><span class="pips"></span></button>
   <div id="debug"></div>
-  <div id="bigmap-wrap" hidden><canvas id="bigmap" aria-label="Map. Tap a place to walk there."></canvas><p>Tap a place to walk there.</p></div>
 </div>
 
 <section id="pause-menu" class="screen" hidden>
   <div class="card">
     <h2>Paused</h2>
-    <button id="resume" class="big-btn" type="button">Back to the snow</button>
+    <button id="resume" class="play-btn" type="button">Back to the snow</button>
     <button id="q-cycle" class="menu-btn" type="button">Quality: <span id="q-level">Auto</span></button>
     <button id="sound" class="menu-btn" type="button">Sound: on</button>
     <button id="restart" class="menu-btn" type="button">Start again</button>
   </div>
 </section>
 
-<div id="rotate" class="screen"><div class="card"><div class="phone">📱</div><p>Rotate your phone to play.</p></div></div>
+<div id="rotate" class="screen"><div class="card"><div class="phone">📱</div><p>Turn your phone sideways to play.</p></div></div>
 <script type="module" src="game.js"></script>
 </body>
 </html>
