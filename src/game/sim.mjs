@@ -44,8 +44,9 @@ export class Sim {
     this.drifts = arena.drifts.map(([x, z], i) => ({ id: i, x, z, cd: 0 }));
     this.spawns = { home: [], rival: [] };
     this.held = { home: [], rival: [] };
-    const zp = arena.places.find(p => p.kind === 'zone');
-    this.zone = zp ? { x: zp.x, z: zp.z, r: zp.r || 2.3, progress: 0, owner: null, home: 0, rival: 0 } : null;
+    // capture zones (outposts): one in a feel-test arena, five in a world
+    this.zones = arena.places.filter(p => p.kind === 'zone').map(zp => ({ id: zp.id, label: zp.label, family: zp.family || null, x: zp.x, z: zp.z, r: zp.r || 2.3, progress: 0, owner: null, home: 0, rival: 0 }));
+    this.zone = this.zones[0] || null;
   }
   add(char) { this.chars.push(char); return char; }
   setSpawn(side, x, z) { this.spawns[side].push({ x, z }); this.held[side].push({ x, z }); }
@@ -157,21 +158,22 @@ export class Sim {
     this.stepBalls(dt);
     for (const w of [...this.walls]) if ((w.life -= dt) <= 0) { this.removeWall(w); this.emit('wallMelt', { id: w.id }); }
     for (const d of this.drifts) d.cd = Math.max(0, d.cd - dt);
-    if (this.zone) this.stepZone(dt);
+    for (const z of this.zones) this.stepZone(z, dt);
   }
 
-  stepZone(dt) {
-    const z = this.zone; let home = 0, rival = 0;
+  nearestZone(x, z) { let best = null, bd = Infinity; for (const zn of this.zones) { const d = Math.hypot(zn.x - x, zn.z - z); if (d < bd) { bd = d; best = zn; } } return best; }
+  stepZone(z, dt) {
+    let home = 0, rival = 0;
     for (const c of this.chars) if (!c.frozen && !c.thaw && Math.hypot(c.x - z.x, c.z - z.z) <= z.r) { if (c.side === 'home') home++; else rival++; }
     z.home = home; z.rival = rival; z.contested = home > 0 && rival > 0;
     if (z.owner) return;
     const rate = dt / ZONE.captureSeconds;
     if (home && !rival) z.progress = Math.min(1, z.progress + rate * (1 + ZONE.extraKidBonus * (home - 1)));
     if (rival && !home) z.progress = Math.max(-1, z.progress - rate * (1 + ZONE.extraKidBonus * (rival - 1)));
-    if (z.progress >= 1) { z.owner = 'home'; this.emit('zoneCaptured', { side: 'home' }); }
-    if (z.progress <= -1) { z.owner = 'rival'; this.emit('zoneCaptured', { side: 'rival' }); }
+    if (z.progress >= 1) { z.owner = 'home'; this.emit('zoneCaptured', { side: 'home', zone: z.id }); }
+    if (z.progress <= -1) { z.owner = 'rival'; this.emit('zoneCaptured', { side: 'rival', zone: z.id }); }
   }
-  resetZone() { if (this.zone) Object.assign(this.zone, { progress: 0, owner: null }); }
+  resetZone(id = null) { for (const z of this.zones) if (!id || z.id === id) Object.assign(z, { progress: 0, owner: null }); }
 
   stepChar(c, dt, inp) {
     c.attackCd = Math.max(0, c.attackCd - dt); c.shield = Math.max(0, c.shield - dt); c.dodgeCd = Math.max(0, c.dodgeCd - dt);
@@ -184,7 +186,7 @@ export class Sim {
     if (c.thaw > 0) {
       c.thaw -= dt;
       if (c.thaw <= 0) {
-        c.thaw = 0; const h = this.spawns[c.side][0];
+        c.thaw = 0; const h = this.nearestHeld(c.side, c.x, c.z) || this.spawns[c.side][0]; // back at the nearest point your team holds
         c.x = h.x + (this.rng() - 0.5) * 1.5; c.z = h.z + (this.rng() - 0.5) * 1.5;
         if (!this.grid.freeCircle(c.x, c.z, SIM.radius)) { c.x = h.x; c.z = h.z; }
         c.warmth = c.maxWarmth; c.ammo = F.ammoMax; c.shield = F.spawnShield; c.vx = c.vz = 0;

@@ -73,7 +73,9 @@ export class Bot {
 
     // Where to be when not fighting
     let goal = null;
-    const z = sim.zone;
+    // the outpost that matters is the one nearest the student (where the fight is)
+    const P = this.leader || sim.chars.find(o => o.role === 'player') || c;
+    const z = sim.nearestZone ? sim.nearestZone(P.x, P.z) : sim.zone;
     if (c.side === 'home' && this.leader) {
       const L = this.leader, inZone = z && Math.hypot(L.x - z.x, L.z - z.z) < z.r + 1;
       this.slot += dt * (inZone || L.guarding ? 0.5 : 0.1);

@@ -16,6 +16,7 @@ import { addCutout } from './cutout.js';
 import { CONFIG } from '../../config.js';
 import { Grid, GRID } from '../grid.mjs';
 import { GridNav } from '../gridnav.mjs';
+import { buildSnowtown } from './snowtown.js';
 
 export const PAL = {
   snow: '#e6eef9', snowShade: '#cdd6ef', ice: '#bfe3f5', lavender: '#b7a9da', lavDeep: '#8e7fbf', slate: '#5d6b80', slateDark: '#3d475d', navy: '#24304f',
@@ -141,11 +142,15 @@ class Kit {
       for (const m of list) this.statics.get(mat).push(base.clone().applyMatrix4(m));
     }
     this.inst.clear();
-    for (const [mat, list] of this.statics) {
-      for (let i = 0; i < list.length; i += 2500) { // merge in big chunks
-        const g = mergeGeometries(list.slice(i, i + 2500)); g.computeBoundingSphere();
-        const mesh = new Mesh(g, mat); mesh.castShadow = shadows && !mat.isMeshBasicMaterial; mesh.receiveShadow = true; group.add(mesh);
-      }
+    // merge per material and per 12×12 area, so the camera can skip what is off screen
+    const CH = 12, buckets = new Map();
+    for (const [mat, list] of this.statics) for (const g of list) {
+      g.computeBoundingBox(); const b = g.boundingBox, cx = Math.floor((b.min.x + b.max.x) / 2 / CH), cz = Math.floor((b.min.z + b.max.z) / 2 / CH);
+      const key = mat.uuid + '|' + cx + '|' + cz; if (!buckets.has(key)) buckets.set(key, { mat, list: [] }); buckets.get(key).list.push(g);
+    }
+    for (const { mat, list } of buckets.values()) {
+      const g = mergeGeometries(list); g.computeBoundingSphere();
+      const mesh = new Mesh(g, mat); mesh.castShadow = shadows && !mat.isMeshBasicMaterial; mesh.receiveShadow = true; group.add(mesh);
     }
     for (const { geo, mat, list } of this.inst.values()) {
       const im = new InstancedMesh(geo, mat, list.length); list.forEach((m, i) => im.setMatrixAt(i, m));
@@ -190,7 +195,7 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
 
   // ---------- ground: painted snow, cobbled street, flagstone yard, plaza, trodden paths, contact shadows ----------
   const PX = low ? 32 : 48;
-  {
+  if (!arena.world) {
     const c = document.createElement('canvas'); c.width = W * PX; c.height = H * PX; const g = c.getContext('2d');
     g.fillStyle = '#e2e9f6'; g.fillRect(0, 0, c.width, c.height);
     for (let k = 0; k < W * H * 0.5; k++) soft(g, rnd(k, 31) * c.width, rnd(k, 37) * c.height, PX * (0.6 + rnd(k, 41) * 1.6), k % 3 ? 'rgba(170,165,215,A)' : 'rgba(255,255,255,A)', 0.09);
@@ -370,6 +375,8 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   };
 
   // ---------- edge buildings and nature (quieter around the edges) ----------
+  if (arena.world) buildSnowtown({ arena: { ...arena, x0, z0 }, K, M, T, PAL, GEO, rbox, prism, rnd, at, group, glows, smokeSources, lights, low, lantern, windows, pine, rock, barrel, crate, firewood, shovel, mSnow, mStone, mStoneDark, mBeam, mWood, mMetal, mIce, mGlass, sign });
+  else {
   const used = new Set(), key = (i, j) => i + ',' + j;
   const isH = (i, j) => i >= 0 && j >= 0 && i < W && j < H && rows[j][i] === 'H' && !used.has(key(i, j));
   let seed = 1;
@@ -401,10 +408,11 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
     const a = rnd(k, 101) * 6.28, x = Math.cos(a) * (W / 2 + 2.5 + rnd(k, 103) * 7), z = Math.sin(a) * (H / 2 + 2.5 + rnd(k, 107) * 7);
     if (rnd(k, 109) < 0.65) pine(x, z, 0.9 + rnd(k, 111) * 0.6); else rock(x, z, 0.8 + rnd(k, 113) * 0.8);
   }
+  }
 
   // ---------- Our School: long building with a bell tower and a sign ----------
   {
-    const s = tiles('S'); const is = s.map(t => t[0]), js = s.map(t => t[1]);
+    const s = tiles('S'); if (s.length) { const is = s.map(t => t[0]), js = s.map(t => t[1]);
     const [ax, az] = at(Math.min(...is), Math.min(...js)), [bx, bz] = at(Math.max(...is), Math.max(...js));
     const cx = (ax + bx) / 2, cz = (az + bz) / 2 + 0.35, w = bx - ax + 1, d = bz - az + 1.3;
     const r = house({ cx, cz, w, d, storeys: 1, face: [0, -1], seed: 77, school: true, signText: 'Our School', signOnRoof: true });
@@ -412,18 +420,18 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
     K.add(rbox(1.0, 1.0, 1.2, 0.06), M('plaster', '#d9cfa6'), cx, r.top - 0.4, cz); for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) K.add(rbox(0.14, 0.14, 1.25, 0.03), mBeam, cx + sx * 0.45, r.top - 0.4, cz + sz * 0.45);
     K.add(new CylinderGeometry(0.22, 0.3, 0.36, 12, 1, true), M('metal', '#c9a24a'), cx, r.top + 0.45, cz);
     K.add(new ConeGeometry(0.85, 0.9, 4), mShingle, cx, r.top + 1.25, cz, 0, Math.PI / 4); K.add(new ConeGeometry(0.8, 0.7, 4), mSnow, cx, r.top + 1.36, cz, 0, Math.PI / 4);
-    lights.push([cx, 1.6, cz - d / 2 - 0.6]);
+    lights.push([cx, 1.6, cz - d / 2 - 0.6]); }
   }
 
   // ---------- the rivals' snow fort ----------
   {
-    const k = tiles('K'); const rc = CONFIG.teams[rivalTeam]?.color || '#c8584a';
+    const k = tiles('K'); const rc = CONFIG.teams[rivalTeam]?.color || '#c8584a'; if (k.length) {
     for (const [i, j] of k) { const [x, z] = at(i, j); K.add(rbox(1.02, 1.02, 1.3, 0.22, 3), mSnow, x, 0, z); if ((i + j) % 2 === 0) K.add(rbox(0.5, 0.5, 0.45, 0.18, 3), mSnow, x, 1.25, z); K.add(rbox(1.04, 1.04, 0.35, 0.08), mStone, x, 0, z); }
-    const is = k.map(t => t[0]), [fx, fz] = at((Math.min(...is) + Math.max(...is)) / 2, 0);
+    const is = k.map(t => t[0]), js = k.map(t => t[1]), [fx, fz] = at((Math.min(...is) + Math.max(...is)) / 2, Math.min(...js));
     K.add(new CylinderGeometry(0.05, 0.05, 3.2, 8), mWood, fx, 2.6, fz - 0.4);
     const flag = new Mesh(new PlaneGeometry(1.3, 0.75, 8, 1), new MeshLambertMaterial({ color: rc, map: T.fabric(), side: DoubleSide })); flag.position.set(fx + 0.65, 3.7, fz - 0.4); group.add(flag); group.userData.rivalFlag = flag;
     fireBarrel(fx - 2.4, fz - 1.1); fireBarrel(fx + 2.4, fz - 1.1); // just outside the fort wall
-    lights.push([fx, 1.6, fz - 1.0]);
+    lights.push([fx, 1.6, fz - 1.0]); }
   }
 
   // ---------- quiet scenery: the mosque behind its fence ----------
@@ -441,10 +449,10 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   }
 
   // ---------- the central outpost lodge (dominant) ----------
-  const zp = arena.places.find(p => p.kind === 'zone');
-  let flag = null;
-  if (zp) {
-    const cx = zp.x, cz = zp.z;
+  const zonePlaces = arena.places.filter(p => p.kind === 'zone');
+  const flags = new Map();
+  const lodge = (cx, cz) => {
+    let flag = null;
     K.add(rbox(2.5, 2.5, 0.95, 0.12), mStone, cx, 0, cz);
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { K.add(rbox(0.5, 0.5, 1.1, 0.08), mStoneDark, cx + sx * 1.15, 0, cz + sz * 1.15); K.put('capS', GEO.snowCap, mSnow, cx + sx * 1.15, 1.08, cz + sz * 1.15, 0, 0.32, 0.16, 0.32); }
     K.add(rbox(2.0, 2.0, 1.4, 0.08), M('plaster', '#c2b6e2'), cx, 0.9, cz);
@@ -472,12 +480,14 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
     const sg = sign('OUTPOST', 1.8); sg.position.set(cx, 3.95, cz + 1.31); group.add(sg);
     const sg2 = sign('OUTPOST', 1.8); sg2.position.set(cx, 3.95, cz - 1.31); sg2.rotation.y = Math.PI; group.add(sg2);
     lights.push([cx, 1.8, cz + 1.9]);
-  }
+    return flag;
+  };
+  for (const zp of zonePlaces) flags.set(zp.id, lodge(zp.x, zp.z));
 
   // ---------- cover pieces ----------
   for (const [i, j] of tiles('#')) { const [x, z] = at(i, j); K.add(rbox(1.0, 1.0, 0.45, 0.06), mStone, x, 0, z); K.add(rbox(0.96, 0.94, 0.85, 0.26, 3), M('snow', '#dfe6f7'), x, 0.35, z); K.put('wallCap', GEO.snowCap, mSnow, x, 1.12, z, rnd(i, j) * 3, 0.42, 0.18, 0.42); }
   for (const [i, j] of tiles('b')) { const [x, z] = at(i, j); K.add(rbox(0.95, 0.46, 0.14, 0.04), mWood, x, 0.4, z); K.add(rbox(0.95, 0.12, 0.42, 0.04), mWood, x, 0.55, z - 0.2); for (const dx of [-0.38, 0.38]) K.add(rbox(0.08, 0.4, 0.42, 0.02), mMetal, x + dx, 0, z); K.add(rbox(0.92, 0.48, 0.16, 0.08), mSnow, x, 0.54, z + 0.02); }
-  for (const [i, j] of tiles('c')) { // a loaded cargo sled with a tarp and snow
+  if (!arena.world) for (const [i, j] of tiles('c')) { // a loaded cargo sled with a tarp and snow
     const [x, z] = at(i, j), ry = rnd(i, j) < 0.5 ? 0 : Math.PI;
     K.add(rbox(1.7, 0.85, 0.45, 0.06), mWood, x, 0.15, z, 0, ry); for (const s of [-0.38, 0.38]) K.add(rbox(1.9, 0.07, 0.1, 0.03), mMetal, x, 0.02, z + s, 0, ry);
     crate(x - 0.4, z, 0.1, 0.6); barrel(x + 0.45, z, false); K.put('barrelY', GEO.barrel, mWood, x + 0.45, 0.6 + 0.31, z);
@@ -485,7 +495,7 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   }
   for (const [i, j] of tiles('n')) { const [x, z] = at(i, j); K.put('snowB', new SphereGeometry(0.42, 16, 12), mSnow, x, 0.38, z); K.put('snowT', new SphereGeometry(0.29, 16, 12), mSnow, x, 0.96, z); K.put('nose', new ConeGeometry(0.05, 0.26, 8), M('glow', '#f08a24'), x, 0.98, z + 0.34, 0, 1, 1, 1, Math.PI / 2); K.put('scarf', new TorusGeometry(0.25, 0.06, 6, 16), M('fabric', '#c8584a'), x, 0.73, z, 0, 1, 1, 1, Math.PI / 2); K.put('hat', new CylinderGeometry(0.17, 0.2, 0.28, 12), M('fabric', PAL.navy), x, 1.3, z); }
   for (const [i, j] of tiles('t')) { const [x, z] = at(i, j); pine(x, z, 0.9); }
-  for (const [i, j] of tiles('L')) { const [x, z] = at(i, j); K.put('lampPost', GEO.post, mMetal, x, 1.0, z, 0, 1, 2.0, 1); K.add(rbox(0.3, 0.3, 0.08, 0.03), mMetal, x, 0.0, z); lantern(x, 2.0, z); }
+  if (!arena.world) for (const [i, j] of tiles('L')) { const [x, z] = at(i, j); K.put('lampPost', GEO.post, mMetal, x, 1.0, z, 0, 1, 2.0, 1); K.add(rbox(0.3, 0.3, 0.08, 0.03), mMetal, x, 0.0, z); lantern(x, 2.0, z); }
   for (const [i, j] of tiles('F')) { const [x, z] = at(i, j); const v = rows[j][i - 1] !== 'F' && rows[j][i + 1] !== 'F'; for (const d of [-0.4, 0.4]) K.put('fpost', rbox(0.14, 0.14, 0.85, 0.03), mWood, x + (v ? 0 : d), 0, z + (v ? d : 0)); for (const y of [0.3, 0.62]) K.add(rbox(v ? 0.08 : 1.0, v ? 1.0 : 0.08, 0.1, 0.02), mWood, x, y, z); K.add(rbox(v ? 0.16 : 1.0, v ? 1.0 : 0.16, 0.1, 0.05), mSnow, x, 0.72, z); for (const d of [-0.4, 0.4]) K.put('fcap', GEO.snowCap, mSnow, x + (v ? 0 : d), 0.84, z + (v ? d : 0), 0, 0.11, 0.08, 0.11); }
   for (const [i, j] of tiles('B')) { const [x, z] = at(i, j); for (let k = 0; k < 3; k++) { const a = rnd(i * 3 + k, j) * 6.28, r = 0.15 + rnd(j, i * 5 + k) * 0.12, s = 0.42 + rnd(i, j + k) * 0.1; K.put('shrub' + (k % 2), new IcosahedronGeometry(1, 1), M('plaster', k % 2 ? PAL.pine : PAL.pine2), x + Math.cos(a) * r, s * 0.9, z + Math.sin(a) * r, a, s); } K.put('shrubSnow', GEO.snowCap, mSnow, x, 0.82, z, 0, 0.52, 0.32, 0.52); }
   for (const [i, j] of tiles('f')) { const [x, z] = at(i, j); fireBarrel(x, z); }
@@ -522,21 +532,21 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   const flakes = new Points(fg, new PointsMaterial({ size: 0.16, map: flakeTex, transparent: true, depthWrite: false, opacity: 0.9 })); flakes.frustumCulled = false; group.add(flakes);
 
   // capture ring around the outpost (progress drawn each frame)
-  let zone = null;
-  if (zp) {
+  const rings = new Map();
+  for (const zp of zonePlaces) {
     const ringBase = new Mesh(new RingGeometry(zp.r - 0.16, zp.r, 72), new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.9, depthWrite: false }));
     ringBase.rotation.x = -Math.PI / 2; ringBase.position.set(zp.x, 0.045, zp.z); group.add(ringBase);
     const fill = new Mesh(new RingGeometry(1.25, zp.r - 0.16, 72, 1, 0, 0.001), new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.3, depthWrite: false }));
     fill.rotation.x = -Math.PI / 2; fill.position.set(zp.x, 0.04, zp.z); group.add(fill);
-    zone = { ringBase, fill, r: zp.r };
+    rings.set(zp.id, { ringBase, fill, r: zp.r, flag: flags.get(zp.id) });
   }
 
   let time = 0;
   return {
     group,
     updateDrift(k, t) { setDrift(k, t); drift.instanceMatrix.needsUpdate = true; },
-    setZone(progress, homeColor, rivalColor, contested, t) {
-      if (!zone) return;
+    setZone(progress, homeColor, rivalColor, contested, t, id = null) {
+      const zone = id ? rings.get(id) : rings.values().next().value; if (!zone) return; const flag = zone.flag;
       const p = Math.abs(progress), col = progress >= 0 ? homeColor : rivalColor;
       zone.fill.geometry.dispose(); zone.fill.geometry = new RingGeometry(1.25, zone.r - 0.16, 72, 1, Math.PI / 2, Math.max(0.001, p * Math.PI * 2));
       zone.fill.material.color.set(col); zone.fill.material.opacity = 0.32 + (contested ? 0.15 * Math.sin(t * 12) : 0);
@@ -548,6 +558,7 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
       const q = camera ? camera.quaternion : null;
       fires.forEach(({ x, z }, f) => { for (let k = 0; k < 3; k++) { const s1 = 1 + Math.sin(time * (9 + k * 3) + f + k) * 0.12 + Math.sin(time * 23 + k) * 0.05; bo.position.set(x + (k - 1) * 0.08, 0.68, z + (k % 2) * 0.06); bo.quaternion.identity(); bo.scale.set(s1 * (1 - k * 0.2), s1 * (1 + 0.15 * Math.sin(time * 7 + k)) * (1 - k * 0.15), s1 * (1 - k * 0.2)); bo.updateMatrix(); flameMesh.setMatrixAt(f * 3 + k, bo.matrix); } });
       flameMesh.instanceMatrix.needsUpdate = true;
+      if (arena.world && pls.length && (this._lt = (this._lt || 0) - dt) <= 0) { this._lt = 0.5; const near = lights.map(p => [Math.hypot(p[0] - focus.x, p[2] - focus.z), p]).sort((a, b) => a[0] - b[0]); pls.forEach((l, k) => { const p = near[k]?.[1]; if (p) l.position.set(p[0], p[1], p[2]); }); }
       pls.forEach((l, k) => { l.intensity = 14 + Math.sin(time * 11 + k) * 1.5 + Math.sin(time * 27 + k * 2) * 0.8; });
       if (q) {
         glows.forEach(([x, y, z, sc], k) => { bo.position.set(x, y, z); bo.quaternion.copy(q); bo.scale.setScalar(sc * (0.93 + Math.sin(time * 6 + k) * 0.07)); bo.updateMatrix(); glowMesh.setMatrixAt(k, bo.matrix); });
@@ -555,7 +566,7 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
         smoke.forEach((u, k) => { u.t += dt * 0.35; if (u.t > 3) u.t -= 3; const a = u.t / 3, grow = Math.sin(Math.PI * Math.min(1, a * 1.15)); bo.position.set(u.src[0] + a * 1.6 + Math.sin(time + u.t * 3) * 0.1, u.src[1] + a * 2.4, u.src[2] - a * 0.5); bo.quaternion.copy(q); bo.scale.setScalar((0.4 + a * 1.4) * Math.max(0.05, grow)); bo.updateMatrix(); smokeMesh.setMatrixAt(k, bo.matrix); });
         if (smokeN) smokeMesh.instanceMatrix.needsUpdate = true;
       }
-      if (flag) { const pos = flag.geometry.attributes.position; for (let v = 0; v < pos.count; v++) { const x = pos.getX(v) + 0.55; pos.setZ(v, Math.sin(time * 6 - x * 4) * 0.08 * x); } pos.needsUpdate = true; }
+      for (const flag of flags.values()) { if (!flag) continue; const pos = flag.geometry.attributes.position; for (let v = 0; v < pos.count; v++) { const x = pos.getX(v) + 0.55; pos.setZ(v, Math.sin(time * 6 - x * 4) * 0.08 * x); } pos.needsUpdate = true; }
       const rf = group.userData.rivalFlag; if (rf) { const pos = rf.geometry.attributes.position; for (let v = 0; v < pos.count; v++) { const x = pos.getX(v) + 0.65; pos.setZ(v, Math.sin(time * 6 - x * 4 + 1) * 0.08 * x); } pos.needsUpdate = true; }
       const fpos = flakes.geometry.attributes.position.array;
       for (let k = 0; k < flakesN; k++) {

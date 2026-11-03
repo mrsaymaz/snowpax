@@ -50,13 +50,18 @@ function startScreen() {
 
 // ---------- the game ----------
 async function startGame(myTeam, kit, pace) {
-  const arena = buildTileArena(SCHOOLYARD);
+  // Arena 1 world (five outposts) by default; the small schoolyard feel test with ?arena=schoolyard
+  const worldDef = params.get('arena') === 'schoolyard' ? null : await (await fetch('arenas/arena1.json')).json();
+  const arena = buildTileArena(worldDef || SCHOOLYARD);
   const others = TEAM_IDS.filter(t => t !== myTeam);
   const rivalTeam = others.includes(params.get('rival')) ? params.get('rival') : others[Math.floor(Math.random() * others.length)];
   let s = Number(params.get('seed')) || (Date.now() % 100000); const rng = () => (s = (s * 16807) % 2147483647) / 2147483647;
   const match = createMatch({ arena, myTeam, rivalTeam, pace, rng, playerKit: kit });
   const { sim, player } = match;
   const myCol = CONFIG.teams[myTeam].color, rivCol = CONFIG.teams[rivalTeam].color;
+  // test helper: ?at=<outpost id> starts the student and teammates beside that outpost
+  const atZone = sim.zones.find(zz => zz.id === params.get('at'));
+  if (atZone) { sim.zone = atZone; sim.chars.filter(c => c.side === 'home').forEach((c, k) => { c.x = atZone.x - 1.2 + k * 1.2; c.z = atZone.z + atZone.r + 0.6; }); }
 
   // renderer, scene, lights
   const canvas = $('#scene');
@@ -105,6 +110,54 @@ async function startGame(myTeam, kit, pace) {
   const banner = (text, cls = '', sec = 1.6) => { const b = $('#banner'); b.textContent = text; b.className = 'show ' + cls; clearTimeout(banner.t); banner.t = setTimeout(() => { b.className = ''; }, sec * 1000); };
   const feed = (html) => { const li = document.createElement('div'); li.className = 'feed-item'; li.innerHTML = html; $('#feed').prepend(li); setTimeout(() => li.remove(), 3500); while ($('#feed').children.length > 3) $('#feed').lastChild.remove(); };
 
+  // mini-map (top left) and the big map: tap a place to walk there
+  const FAM = { answer: 'B', sort: 'C', match: 'A', listen: 'E', build: 'D' };
+  const mapImg = document.createElement('canvas'), MP = 4; mapImg.width = arena.w * MP; mapImg.height = arena.h * MP;
+  const TILE_COL = { H: '#5e6888', S: '#d9cfa6', K: '#f4f8ff', Q: '#a99bd2', C: '#8e86b8', W: '#9cc3e6', G: '#b98a6a', O: '#24304f', c: '#7c84a8', t: '#2d5a5d', '_': '#ffffff', '=': '#eef0fa', '+': '#e3dcf6', q: '#ece6fb', P: '#d5c79c', f: '#d5c79c', '#': '#d5c79c', d: '#ffffff', Y: '#eadfc0', h: '#eadfc0', r: '#f4f8ff', j: '#b98a6a', p: '#dfeee3', '.': '#e7edf8' };
+  function drawMap() {
+    const g = mapImg.getContext('2d');
+    for (let j = 0; j < arena.h; j++) for (let i = 0; i < arena.w; i++) { g.fillStyle = TILE_COL[arena.rows[j][i]] || '#e7edf8'; g.fillRect(i * MP, j * MP, MP, MP); }
+  }
+  drawMap();
+  const toMap = (x, z, s, cx, cz, W2, H2) => [W2 + (x - cx) * s, H2 + (z - cz) * s];
+  function drawMarks(g, s, cx, cz, W2, H2, big) {
+    for (const zz of sim.zones) {
+      const [x, y] = toMap(zz.x, zz.z, s, cx, cz, W2, H2), col = zz.owner === 'home' ? myCol : zz.owner === 'rival' ? rivCol : '#ffffff';
+      g.beginPath(); g.arc(x, y, big ? 13 : 7, 0, 7); g.fillStyle = col; g.fill(); g.lineWidth = 2.5; g.strokeStyle = '#1c2340'; g.stroke();
+      g.fillStyle = '#1c2340'; g.font = `900 ${big ? 14 : 9}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(FAM[zz.family] || '★', x, y + 0.5);
+      if (big) { g.font = '800 14px system-ui'; g.fillText(zz.label, x, y - 22); }
+    }
+    const base = arena.places.find(pl => pl.kind === 'base'); { const [x, y] = toMap(base.x, base.z, s, cx, cz, W2, H2); g.fillStyle = '#e5383b'; g.fillRect(x - 5, y - 5, 10, 10); if (big) { g.fillStyle = '#1c2340'; g.font = '800 14px system-ui'; g.fillText('Our School', x, y - 16); } }
+    for (const c of sim.chars) { if (c.frozen || (c.side === 'rival' && !sim.canSee(player, c))) continue; const [x, y] = toMap(c.x, c.z, s, cx, cz, W2, H2); g.beginPath(); g.arc(x, y, c === player ? 5 : 3.5, 0, 7); g.fillStyle = CONFIG.teams[c.team].color; g.fill(); if (c === player) { g.lineWidth = 2.5; g.strokeStyle = '#fff'; g.stroke(); } }
+  }
+  const mini = $('#minimap'), big = $('#bigmap');
+  mini.hidden = !arena.world; $('#map-btn').hidden = !arena.world;
+  function drawMini() {
+    if (!arena.world) return;
+    const dpr = Math.min(2, devicePixelRatio || 1), W2 = mini.clientWidth, H2 = mini.clientHeight;
+    if (mini.width !== Math.round(W2 * dpr)) { mini.width = Math.round(W2 * dpr); mini.height = Math.round(H2 * dpr); }
+    const g = mini.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); const s = W2 / 36;
+    g.save(); g.beginPath(); g.arc(W2 / 2, H2 / 2, W2 / 2 - 1, 0, 7); g.clip(); g.fillStyle = '#e7edf8'; g.fillRect(0, 0, W2, H2);
+    g.imageSmoothingEnabled = false;
+    g.drawImage(mapImg, (player.x - arena.x0) * MP - (W2 / 2) / s * MP, (player.z - arena.z0) * MP - (H2 / 2) / s * MP, W2 / s * MP, H2 / s * MP, 0, 0, W2, H2);
+    drawMarks(g, s, player.x, player.z, W2 / 2, H2 / 2, false); g.restore();
+    g.beginPath(); g.arc(W2 / 2, H2 / 2, W2 / 2 - 1, 0, 7); g.lineWidth = 3; g.strokeStyle = '#1c2340'; g.stroke();
+    if (!$('#bigmap-wrap').hidden) drawBig();
+  }
+  const bigScale = () => Math.min(big.clientWidth / arena.w, big.clientHeight / arena.h);
+  function drawBig() {
+    const dpr = Math.min(2, devicePixelRatio || 1), W2 = big.clientWidth, H2 = big.clientHeight;
+    if (big.width !== Math.round(W2 * dpr)) { big.width = Math.round(W2 * dpr); big.height = Math.round(H2 * dpr); }
+    const g = big.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); const s = bigScale(); g.clearRect(0, 0, W2, H2);
+    g.imageSmoothingEnabled = false; g.drawImage(mapImg, W2 / 2 - arena.w * s / 2, H2 / 2 - arena.h * s / 2, arena.w * s, arena.h * s);
+    drawMarks(g, s, arena.x0 + arena.w / 2, arena.z0 + arena.h / 2, W2 / 2, H2 / 2, true);
+  }
+  const travel = (x, z) => { if (sim.travelTo(player, x, z)) { play('tap'); coach('On my way! Move the stick to take over.', 2.5); } };
+  mini.addEventListener('pointerup', e => { e.stopPropagation(); const r = mini.getBoundingClientRect(), s = r.width / 36; travel(player.x + (e.clientX - r.left - r.width / 2) / s, player.z + (e.clientY - r.top - r.height / 2) / s); });
+  mini.addEventListener('pointerdown', e => e.stopPropagation());
+  $('#map-btn').onclick = () => { $('#bigmap-wrap').hidden = false; drawBig(); };
+  big.addEventListener('pointerup', e => { e.stopPropagation(); const r = big.getBoundingClientRect(), s = bigScale(); const x = arena.x0 + arena.w / 2 + (e.clientX - r.left - r.width / 2) / s, z = arena.z0 + arena.h / 2 + (e.clientY - r.top - r.height / 2) / s; $('#bigmap-wrap').hidden = true; travel(x, z); });
+  $('#bigmap-wrap').addEventListener('pointerup', e => { if (e.target.id === 'bigmap-wrap') $('#bigmap-wrap').hidden = true; });
   // pause
   let paused = false;
   function pause(on) { paused = on; $('#pause-menu').hidden = !on; $('#q-level').textContent = quality.forced === null ? `Auto (${LEVELS[quality.level].name})` : LEVELS[quality.level].name; }
@@ -118,7 +171,7 @@ async function startGame(myTeam, kit, pace) {
   // round flow: countdown, then play; capturing the zone celebrates and resets it
   const pose = params.has('pose');
   let countdown = pose ? 0 : 3.2, lastCount = 4, resetZoneAt = 0, score = { home: 0, rival: 0 };
-  if (!pose) coach(touch ? 'Move with your left thumb. Tap the snowball to throw, or drag it to aim. Take the outpost in the street!' : 'Move with WASD. Aim with the mouse and click to throw. Take the outpost in the street!', 6);
+  if (!pose) coach(arena.world ? (touch ? 'Snow day in Kasımpaşa! Five outposts to seize. Tap the map to walk to one, or use your left thumb.' : 'Snow day in Kasımpaşa! Five outposts to seize. Click the map to walk there, or use WASD.') : (touch ? 'Move with your left thumb. Tap the snowball to throw, or drag it to aim. Take the outpost in the street!' : 'Move with WASD. Aim with the mouse and click to throw. Take the outpost in the street!'), 6);
   const name = c => (c === player ? 'You' : c.side === 'home' ? `Your ${KITS[c.kit].name}` : `${CONFIG.teams[c.team].name} ${KITS[c.kit].name}`);
 
   if (pose) arrangePose();
@@ -137,7 +190,7 @@ async function startGame(myTeam, kit, pace) {
     focus.set(player.x, 0, player.z - 1.6);
   }
 
-  let last = performance.now(), zoneKey = '';
+  let last = performance.now(); const zoneKeys = {}, held = new Set();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     requestAnimationFrame(frame); quality.tick(dt);
@@ -191,9 +244,11 @@ async function startGame(myTeam, kit, pace) {
       if (e.type === 'respawn' && e.id === player.id) $('#frozen').hidden = true;
       if (e.type === 'noThrowZone' && e.id === player.id) coach('Quiet zone: no snowballs near the mosque.', 3);
       if (e.type === 'zoneCaptured') {
-        if (e.side === 'home') { banner('OUTPOST SEIZED!', 'win', 2.6); play('capture'); fx.emit(sim.zone.x, 0.5, sim.zone.z, 90, myCol, 6, 1.2); fx.emit(sim.zone.x, 0.5, sim.zone.z, 60, '#ffffff', 5, 1.2); coach('Great teamwork! In the full game, the English task card opens here while your team guards you.', 5); }
+        const zc = sim.zones.find(zz => zz.id === e.zone) || sim.zone;
+        if (e.side === 'home') { banner('OUTPOST SEIZED!', 'win', 2.6); play('capture'); fx.emit(zc.x, 0.5, zc.z, 90, myCol, 6, 1.2); fx.emit(zc.x, 0.5, zc.z, 60, '#ffffff', 5, 1.2); coach(arena.world ? `${zc.label} is yours! It is now a respawn and snowball point. In the full game, the English task card opens here.` : 'Great teamwork! In the full game, the English task card opens here while your team guards you.', 5); }
         else { banner('Rivals took the outpost!', 'lose', 2.2); play('freeze'); coach('Take it back! Stand in the circle with your team.', 4); }
-        resetZoneAt = sim.t + 4;
+        if (arena.world) { sim.held[e.side].push({ x: zc.x, z: zc.z + zc.r - 0.6 }); held.add(zc.id + ':' + e.side); drawMap(); }
+        else resetZoneAt = sim.t + 4;
       }
     }
     if (resetZoneAt && sim.t > resetZoneAt) { sim.resetZone(); resetZoneAt = 0; }
@@ -206,8 +261,8 @@ async function startGame(myTeam, kit, pace) {
     }
     sim.drifts.forEach((d, i) => { const t = 1 - d.cd / 6; if (d.lt !== t) { d.lt = t; world.updateDrift(i, Math.max(0.2, t)); } });
     fx.update(pose ? 0 : dt, sim);
-    const z = sim.zone, key = `${z.progress.toFixed(3)}|${z.contested}`;
-    if (key !== zoneKey || z.contested) { zoneKey = key; world.setZone(z.progress, myCol, rivCol, z.contested, now / 1000); }
+    for (const zz of sim.zones) { const key = `${zz.progress.toFixed(3)}|${zz.contested}`; if (key !== zoneKeys[zz.id] || zz.contested) { zoneKeys[zz.id] = key; world.setZone(zz.progress, myCol, rivCol, zz.contested, now / 1000, zz.id); } }
+    const z = sim.nearestZone(player.x, player.z);
 
     // camera
     const tx = player.x, tz = player.z - 1.2;
@@ -225,12 +280,13 @@ async function startGame(myTeam, kit, pace) {
     const pv = new Vector3(player.x, 1, player.z), pr = renderer.getPixelRatio(), ndc = pv.clone().project(camera);
     CUT.center.value.set((ndc.x + 1) / 2 * innerWidth * pr, (ndc.y + 1) / 2 * innerHeight * pr);
     CUT.radius.value = Math.min(innerWidth, innerHeight) * 0.13 * pr;   // just around the player
-    CUT.depth.value = pv.applyMatrix4(camera.matrixWorldInverse).z + 2.6; // only things clearly in front
+    CUT.depth.value = pv.applyMatrix4(camera.matrixWorldInverse).z + 1.8; // only things in front of the student
 
     // HUD
     const p = Math.round(Math.abs(z.progress) * 100);
     $('#zone-bar .home').style.width = (z.progress > 0 ? p : 0) + '%'; $('#zone-bar .rival').style.width = (z.progress < 0 ? p : 0) + '%';
-    $('#zone-label').textContent = z.owner === 'home' ? 'Outpost seized!' : z.owner === 'rival' ? 'Rivals hold it!' : z.contested ? 'Contested!' : z.home ? `Seizing… ${p}%` : z.rival ? `Rivals seizing… ${p}%` : 'Street Outpost';
+    $('#zone-label').textContent = `${z.label}: ` + (z.owner === 'home' ? 'yours!' : z.owner === 'rival' ? 'rivals hold it' : z.contested ? 'contested!' : z.home ? `seizing… ${p}%` : z.rival ? `rivals seizing… ${p}%` : `${Math.round(Math.hypot(z.x - player.x, z.z - player.z))} steps away`);
+    drawMini();
     $('#zone').classList.toggle('contested', !!z.contested);
     $('#score .h').textContent = score.home; $('#score .r').textContent = score.rival;
     $('#super').classList.toggle('ready', player.super >= 1); $('#super').style.setProperty('--p', Math.round(player.super * 100));

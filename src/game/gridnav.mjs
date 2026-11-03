@@ -15,11 +15,13 @@ export class GridNav {
     const g = this.grid, W = g.W, N = W * g.H, start = s[1] * W + s[0], goal = t[1] * W + t[0];
     const gs = new Float32Array(N).fill(Infinity), came = new Int32Array(N).fill(-1), closed = new Uint8Array(N);
     const hx = k => { const dx = Math.abs((k % W) - t[0]), dz = Math.abs(((k / W) | 0) - t[1]); return Math.max(dx, dz) + 0.414 * Math.min(dx, dz); };
-    const open = [[hx(start), start]]; gs[start] = 0;
+    // binary heap of [f, node]
+    const heap = [[hx(start), start]]; gs[start] = 0;
+    const push = it => { heap.push(it); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+    const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
     const DIRS = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 1.414], [1, -1, 1.414], [-1, 1, 1.414], [-1, -1, 1.414]];
-    while (open.length) {
-      let bi = 0; for (let i = 1; i < open.length; i++) if (open[i][0] < open[bi][0]) bi = i;
-      const [, u] = open[bi]; open[bi] = open[open.length - 1]; open.pop();
+    while (heap.length) {
+      const [, u] = pop();
       if (closed[u]) continue; closed[u] = 1;
       if (u === goal) { const out = []; for (let v = goal; v >= 0; v = came[v]) out.push([v % W, (v / W) | 0]); return out.reverse(); }
       const ui = u % W, uj = (u / W) | 0;
@@ -27,7 +29,7 @@ export class GridNav {
         const vi = ui + di, vj = uj + dj; if (!this.walkable(vi, vj)) continue;
         if (di && dj && (!this.walkable(ui + di, uj) || !this.walkable(ui, uj + dj))) continue; // no corner cutting
         const v = vj * W + vi, ng = gs[u] + c;
-        if (ng < gs[v]) { gs[v] = ng; came[v] = u; open.push([ng + hx(v), v]); }
+        if (ng < gs[v]) { gs[v] = ng; came[v] = u; push([ng + hx(v), v]); }
       }
     }
     return null;

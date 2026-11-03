@@ -2,7 +2,7 @@
 // navigation and renderer use. One tile = one world unit; x = east (columns), z = south (rows).
 import { GRID } from './grid.mjs';
 
-const SOLID = 'HSKMFctLb#nOf';            // tiles you cannot walk through
+const SOLID = 'HSKMFctLb#nOfQCWGRD';      // tiles you cannot walk through (G = landmark, R = buried roof, D = edge snowbank)
 const TALL = 'HSKM';                      // edge buildings
 export const TILE = {
   '.': 'snow', '_': 'street', Y: 'yard', '#': 'wall', b: 'bench', c: 'car', n: 'snowman', t: 'tree', L: 'lamp', F: 'fence',
@@ -19,7 +19,9 @@ export function buildTileArena(def) {
   for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
     const ch = rows[j][i], k = j * w + i;
     if (SOLID.includes(ch)) grid[k] |= GRID.BLOCK;
-    if (ch === '_' || ch === 'i' || ch === 'o') grid[k] |= GRID.ROAD;
+    if ('_=+ioPj'.includes(ch)) grid[k] |= GRID.ROAD;
+    if ('QCq+'.includes(ch)) grid[k] |= GRID.ZONE;   // places of worship, cemeteries and their quiet buffer
+    if (ch === 'p') grid[k] |= GRID.PARK;
     if (ch === 'Y' || ch === 'h') grid[k] |= GRID.YARD;
     if (ch === 'B') grid[k] |= GRID.BUSH;
     if (ch === 'i') grid[k] |= GRID.ICE;
@@ -41,9 +43,12 @@ export function buildTileArena(def) {
     drifts,
     places: [
       { id: 'base', kind: 'base', label: 'Our School', x: home[0], z: home[1] },
-      { id: 'rival-base', kind: 'rivalBase', label: 'Snow Fort', x: rival[0], z: rival[1] },
-      { id: 'zone', kind: 'zone', label: 'Street Outpost', x: zc[0], z: zc[1], r: def.zoneRadius || 2.3 },
+      { id: 'rival-base', kind: 'rivalBase', label: 'Snow Camp', x: rival[0], z: rival[1] },
+      ...(def.outposts
+        ? def.outposts.map(o => ({ id: o.id, kind: 'zone', family: o.family, label: o.label, landmark: o.landmark, x: x0 + o.i, z: z0 + o.j, r: o.r || 3.4 }))
+        : [{ id: 'zone', kind: 'zone', label: 'Street Outpost', x: zc[0], z: zc[1], r: def.zoneRadius || 2.3 }]),
     ],
+    world: !!def.world, landmarks: def.landmarks || [], scenery: def.scenery || [],
     graph: null,
   };
 }

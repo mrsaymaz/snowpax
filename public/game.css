@@ -105,3 +105,14 @@ h2 { margin: 0 0 8px; }
   #banner { font-size: 36px; } #banner.count, #banner.go { font-size: 72px; }
   #zone { min-width: 160px; } #coach { font-size: 14px; max-width: 30vw; }
 }
+
+/* world maps */
+#minimap { position: absolute; top: max(6px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); width: 110px; height: 110px; border-radius: 50%; pointer-events: auto; cursor: pointer; box-shadow: 0 3px 0 var(--ink); }
+#minimap[hidden], #map-btn[hidden] { display: none; }
+#map-btn { left: calc(max(8px, env(safe-area-inset-left)) + 118px); right: auto; padding: 0 10px; }
+#minimap:not([hidden]) ~ #coach { top: calc(max(6px, env(safe-area-inset-top)) + 118px); }
+#bigmap-wrap { position: absolute; inset: 0; background: rgba(20, 40, 90, 0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; z-index: 15; }
+#bigmap-wrap[hidden] { display: none; }
+#bigmap { width: min(80vw, 64vh); height: min(96vw, 78vh); background: #e7edf8; border: 4px solid var(--ink); border-radius: 16px; box-shadow: 0 5px 0 var(--ink); }
+#bigmap-wrap p { color: #fff; font-weight: 800; margin: 8px 0 0; -webkit-text-stroke: 0.5px var(--ink); }
+@media (max-height: 430px) { #minimap { width: 92px; height: 92px; } #map-btn { left: calc(max(8px, env(safe-area-inset-left)) + 100px); } #minimap:not([hidden]) ~ #coach { top: calc(max(6px, env(safe-area-inset-top)) + 100px); } }
