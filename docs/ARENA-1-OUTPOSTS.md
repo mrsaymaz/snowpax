@@ -1,10 +1,10 @@
 # Arena 1: Home Turf, provisional outposts (waiting for Mr. Saymaz)
 
-Nothing here gets built until you confirm or replace it. I could not open OpenStreetMap from the build environment, so no positions are placed yet and nothing below has been checked against the map.
+Nothing here gets built until you confirm or replace it. Our School is confirmed and located. The outposts below are not placed yet: building outlines are still waiting on map access.
 
 | # | Place (provisional) | Outpost family | Notes |
 |---|---|---|---|
-| Start | **Our School** (Kaptanpaşa Mah., Kasımpaşa Zincirlikuyu Cad.) | Team base + final battle (Schoolyard Showdown) | Shown as "Our School", no real name on the building. Exact building to be found in the OSM data and confirmed with you. |
+| Start | **Our School** (Kaptanpaşa Mah.) | Team base + final battle (Schoolyard Showdown) | ✅ Confirmed by Mr. Saymaz (OSM point 41.03954, 28.96485). Shown only as "Our School", no real name anywhere in the game. |
 | 1 | Piyalepaşa Boulevard | B · Answer | Wide boulevard: open lanes of fire, so it suits a quick question-and-answer outpost. |
 | 2 | Kulaksız | C · Sorting | Outpost on a street or square, kept well away from any cemetery or place of worship. Please name the exact spot. |
 | 3 | Centre of Kasımpaşa | A · Matching | A market street or small square: busy and close-range. Please name the exact spot. |

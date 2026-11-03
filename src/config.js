@@ -35,7 +35,9 @@ export const CONFIG = {
   },
 
   arenas: [
-    { id: 'home-turf',   name: 'Home Turf',   area: 'Kaptanpaşa and Kasımpaşa', finale: 'Schoolyard Showdown' },
+    { id: 'home-turf',   name: 'Home Turf',   area: 'Kaptanpaşa and Kasımpaşa', finale: 'Schoolyard Showdown',
+      // Team base and final battle. Shown only as "Our School" (confirmed by Mr. Saymaz, OSM point).
+      base: { label: 'Our School', lat: 41.0395384, lng: 28.9648511 } },
     { id: 'golden-horn', name: 'The Golden Horn', area: 'Hasköy and Sütlüce',   finale: 'The Giants of Miniatürk' },
     { id: 'big-city',    name: 'The Big City', area: 'Pera, Taksim and Galata', finale: 'Battle for Galata Tower' },
   ],
