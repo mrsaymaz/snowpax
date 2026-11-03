@@ -1,11 +1,11 @@
-// Snow Siege: every setting lives here. Change a value, run `npm run build`, redeploy.
+// SnowPax: every setting lives here. Change a value, run `npm run build`, redeploy.
 // Plain data only (no imports), so tools and tests can read it too.
 
 export const CONFIG = {
   game: {
-    title: 'Snow Siege: Beyoğlu', // working title — final name to be chosen by Mr. Saymaz
-    id: 'snowsiege',               // also the English League game ID
-    saveKey: 'snowSiege.save',     // a version suffix is added by src/save.mjs (e.g. snowSiege.save.v1)
+    title: 'SnowPax',
+    id: 'snowpax',                 // also the English League game ID
+    saveKey: 'snowPax.save',       // a version suffix is added by src/save.mjs (e.g. snowPax.save.v1)
   },
 
   // Optional class access code. '' = off (anyone can play). If set, the game asks once per device.

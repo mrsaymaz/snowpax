@@ -1,8 +1,8 @@
 {
-  "name": "snow-siege",
+  "name": "snowpax",
   "version": "0.1.0",
   "private": true,
-  "description": "Snow Siege: Beyoğlu (working title) by Mr. Saymaz: a free English-practice snowball game for Grades 5–8.",
+  "description": "SnowPax by Mr. Saymaz: a free English-practice snowball game for Grades 5–8.",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",

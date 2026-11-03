@@ -103,7 +103,7 @@ export function exportCode(save) {
 export function importCode(code) {
   const text = String(code || '').replace(/\s+/g, '');
   const m = /^SNOW1-([A-Za-z0-9_-]+)-([0-9a-z]{6})$/.exec(text);
-  if (!m) return { ok: false, error: 'This is not a Snow Siege backup code.' };
+  if (!m) return { ok: false, error: 'This is not a SnowPax backup code.' };
   if (checksum(m[1]) !== m[2]) return { ok: false, error: 'The code is not complete. Copy all of it and try again.' };
   try {
     const save = migrate(JSON.parse(fromB64(m[1])));

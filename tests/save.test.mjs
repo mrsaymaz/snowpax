@@ -7,7 +7,7 @@ import { makeRng } from '../src/tasks/subtasks.mjs';
 const memStore = () => { const m = new Map(); return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), map: m }; };
 const throwing = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('quota'); } };
 
-test('the save key is versioned', () => assert.equal(SAVE_KEY, 'snowSiege.save.v1'));
+test('the save key is versioned', () => assert.equal(SAVE_KEY, 'snowPax.save.v1'));
 
 test('saves round-trip through storage', () => {
   const store = memStore();
@@ -28,7 +28,7 @@ test('broken save data is kept aside and a fresh save starts', () => {
   const store = memStore();
   store.setItem(SAVE_KEY, '{not json');
   assert.equal(loadSave(store).team, null);
-  assert.equal(store.getItem('snowSiege.save.broken'), '{not json');
+  assert.equal(store.getItem('snowPax.save.broken'), '{not json');
 });
 
 test('migration fills new fields, fixes bad values, keeps progress, refuses newer saves', () => {
@@ -61,5 +61,5 @@ test('a damaged or foreign backup code is refused kindly', () => {
   const code = exportCode({ ...defaultSave(), team: 'ravenclaw' });
   assert.equal(importCode(code.slice(0, -8) + 'AAAA' + code.slice(-4)).ok, false);
   assert.equal(importCode('hello').ok, false);
-  assert.match(importCode('hello').error, /not a Snow Siege backup code/);
+  assert.match(importCode('hello').error, /not a SnowPax backup code/);
 });

@@ -1,6 +1,6 @@
-# Snow Siege: Beyoğlu (working title)
+# SnowPax
 
-A free English-practice snowball game by Mr. Saymaz for Grades 5–8 (CEFR A1–A2+). Static web game, deployed on Vercel. No ads, no accounts, no data collection.
+SnowPax is a free English-practice snowball game by Mr. Saymaz for Grades 5–8 (CEFR A1–A2+). Static web game, deployed on Vercel. No ads, no accounts, no data collection.
 
 **Status: M0 (setup and content).** The deployed page is a task preview for checking the content. The isometric game starts in M1.
 
