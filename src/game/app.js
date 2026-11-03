@@ -63,7 +63,7 @@ async function startGame(myTeam, pace) {
   // renderer + scene
   const canvas = $('#scene');
   const level = params.has('quality') ? Math.max(0, LEVELS.findIndex(l => l.name === params.get('quality'))) : guessLevel();
-  const styleName = STYLES[params.get('style')] ? params.get('style') : 'toybox', ST = styleOf(styleName);
+  const styleName = STYLES[params.get('style')] ? params.get('style') : 'snowclay', ST = styleOf(styleName);
   document.body.dataset.style = styleName;
   const renderer = new WebGLRenderer({ canvas, antialias: level >= 1, powerPreference: 'high-performance' });
   renderer.shadowMap.type = PCFSoftShadowMap;

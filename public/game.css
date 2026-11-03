@@ -84,7 +84,7 @@ h2 { margin: 0 0 10px; }
 #overlay .ts { position: absolute; left: 0; right: 0; height: 14%; backdrop-filter: blur(1.4px); -webkit-backdrop-filter: blur(1.4px); }
 #overlay .ts.top { top: 0; -webkit-mask: linear-gradient(#000, transparent); mask: linear-gradient(#000, transparent); }
 #overlay .ts.bottom { bottom: 0; -webkit-mask: linear-gradient(transparent, #000); mask: linear-gradient(transparent, #000); }
-body[data-style="toybox"] #overlay { display: block; background: radial-gradient(ellipse at center, transparent 60%, rgba(120,160,210,0.28)); }
+body[data-style="toybox"] #overlay, body[data-style="snowclay"] #overlay { display: block; background: radial-gradient(ellipse at center, transparent 60%, rgba(120,160,210,0.28)); }
 body[data-style="clay"] #overlay { display: block; background: radial-gradient(ellipse at center, transparent 55%, rgba(90,60,40,0.22)); }
 body[data-style="clay"] #overlay .ts, body[data-style="paper"] #overlay .ts { display: none; }
 body[data-style="paper"] #overlay { display: block; background: radial-gradient(ellipse at center, transparent 65%, rgba(120,100,70,0.18)); }

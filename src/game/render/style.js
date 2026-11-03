@@ -9,6 +9,19 @@ import {
 } from 'three';
 
 export const STYLES = {
+  // The chosen mix: clay's rounded matte blocks and warm light + toybox's candy colours,
+  // snow pillows, icicles and round glowing windows, with extra miniature details.
+  snowclay: {
+    name: 'Snowclay (toybox + clay)', levels: [2, 4], floor: 1.8, bay: 2.4,
+    walls: ['#ff9f8f', '#ffd27a', '#94d5c8', '#a3c4f5', '#c8aef2', '#ffb8cf', '#b2e3a6', '#ffc792', '#f6e3c4'],
+    eave: '#e0634e', snow: '#fdfeff', ground: '#f5f8fc', road: '#d9e1f0', roadMain: '#cfd9ec',
+    areas: { park: '#e4f3e2', pitch: '#ddf0db', playground: '#eef5df', wood: '#d8ecd5', cemetery: '#ebe7ef', schoolyard: '#fff1d4', ourYard: '#ffedbf' },
+    zone: '#efe9fb', sky: '#c9e4f7', roof: 'pillow', trees: 'blob', outline: null, rounded: true, clay: true,
+    hemi: ['#fffaf2', '#dfe7f2', 1.95], sun: ['#ffefd8', 2.3], shadows: true, overlay: 'tiltshift', mixedRoofs: true,
+    details: { doors: true, chimneys: 0.4, plinth: true, ao: true, banks: true, lamps: true },
+    bumpScale: 0.45,
+    windows: { lit: 0.45, glass: '#7f9fce', litColor: '#ffc65c', shape: 'mix', big: true },
+  },
   toybox: {
     name: 'Snow-globe toybox', levels: [2, 4], floor: 1.75, bay: 2.5,
     walls: ['#ff9a8b', '#ffd36e', '#8fd3c7', '#9ec5ff', '#c9a7ff', '#ffb3d1', '#a8e6a1', '#ffc48c'],
@@ -46,7 +59,7 @@ export const STYLES = {
     windows: { lit: 0.35, glass: '#6b7f99', litColor: '#ffc26b', shape: 'arch', big: true },
   },
 };
-export const styleOf = name => STYLES[name] || STYLES.toybox;
+export const styleOf = name => STYLES[name] || STYLES.snowclay;
 
 let toonMaps = {};
 function toonGradient(steps) {
@@ -87,7 +100,7 @@ export function makeMaterial(style, opts = {}) {
   if (S.grain && !base.map && !base.noGrain) base.map = grainTexture();
   delete base.noGrain;
   if (style === 'toybox' || style === 'cartoon') return new MeshToonMaterial({ gradientMap: toonGradient(S.toonSteps || 3), ...base });
-  if (S.clay) return new MeshStandardMaterial({ roughness: 0.82, metalness: 0, bumpMap: bumpTexture(), bumpScale: 1.2, ...base });
+  if (S.clay) return new MeshStandardMaterial({ roughness: 0.85, metalness: 0, bumpMap: bumpTexture(), bumpScale: S.bumpScale ?? 1.2, ...base });
   return new MeshLambertMaterial(base);
 }
 
@@ -105,10 +118,19 @@ export function windowTextures(style) {
     const x = i * cs, y = j * cs, lit = r() < W.lit;
     const w = cs * (W.big ? 0.52 : 0.42), h = cs * (W.big ? 0.56 : 0.5), wx = x + (cs - w) / 2, wy = y + cs * 0.18;
     const glass = lit ? W.litColor : W.glass;
-    if (W.shape === 'round') {
+    const shape = W.shape === 'mix' ? (i % 3 === 1 ? 'arch' : 'round') : W.shape;
+    if (shape === 'arch' && W.shape === 'mix') {
+      m.fillStyle = '#fff6ea'; m.beginPath(); m.moveTo(wx - 4, wy + h + 2); m.lineTo(wx - 4, wy + w / 2); m.arc(wx + w / 2, wy + w / 2, w / 2 + 4, Math.PI, 0); m.lineTo(wx + w + 4, wy + h + 2); m.fill();
+      m.fillStyle = glass; m.beginPath(); m.moveTo(wx, wy + h); m.lineTo(wx, wy + w / 2); m.arc(wx + w / 2, wy + w / 2, w / 2, Math.PI, 0); m.lineTo(wx + w, wy + h); m.fill();
+      m.fillStyle = 'rgba(255,255,255,0.55)'; m.fillRect(wx + w / 2 - 1.5, wy + 4, 3, h - 4); m.fillRect(wx, wy + h * 0.55, w, 3);
+      m.fillStyle = '#ffffff'; rr(m, wx - 8, wy + h - 1, w + 16, 11, 5);
+    } else if (shape === 'round') {
+      if (W.shape === 'mix') { m.fillStyle = '#fff6ea'; rr(m, wx - 5, wy - 5, w + 10, h + 10, 15); m.fillStyle = glass; rr(m, wx, wy, w, h, 10); m.fillStyle = 'rgba(255,255,255,0.55)'; m.fillRect(wx + w / 2 - 1.5, wy, 3, h); m.fillStyle = '#ffffff'; rr(m, wx - 8, wy + h - 1, w + 16, 11, 5); }
+      else {
       m.fillStyle = 'rgba(40,60,110,0.35)'; rr(m, wx - 3, wy - 3, w + 6, h + 6, 13);
       m.fillStyle = glass; rr(m, wx, wy, w, h, 10);
       m.fillStyle = '#ffffff'; rr(m, wx - 7, wy + h - 1, w + 14, 10, 5); // snow pillow on the sill
+      }
     } else if (W.shape === 'comic') {
       m.fillStyle = '#1d1b2e'; m.fillRect(wx - 4, wy - 4, w + 8, h + 8);
       m.fillStyle = glass; m.fillRect(wx, wy, w, h);
@@ -122,7 +144,7 @@ export function windowTextures(style) {
       m.fillStyle = 'rgba(60,40,30,0.25)'; m.beginPath(); m.moveTo(wx - 3, wy + h + 3); m.lineTo(wx - 3, wy + w / 2); m.arc(wx + w / 2, wy + w / 2, w / 2 + 3, Math.PI, 0); m.lineTo(wx + w + 3, wy + h + 3); m.fill();
       m.fillStyle = glass; m.beginPath(); m.moveTo(wx, wy + h); m.lineTo(wx, wy + w / 2); m.arc(wx + w / 2, wy + w / 2, w / 2, Math.PI, 0); m.lineTo(wx + w, wy + h); m.fill();
     }
-    if (lit) { e.fillStyle = W.litColor; e.globalAlpha = 0.55; e.fillRect(wx, wy, w, h); e.globalAlpha = 1; }
+    if (lit) { e.fillStyle = W.litColor; e.globalAlpha = 0.6; if (shape === 'arch') { e.beginPath(); e.moveTo(wx, wy + h); e.lineTo(wx, wy + w / 2); e.arc(wx + w / 2, wy + w / 2, w / 2, Math.PI, 0); e.lineTo(wx + w, wy + h); e.fill(); } else e.fillRect(wx + 3, wy + 3, w - 6, h - 6); e.globalAlpha = 1; }
   }
   const tex = c => { const t = new CanvasTexture(c); t.wrapS = t.wrapT = RepeatWrapping; t.colorSpace = SRGBColorSpace; t.anisotropy = 4; return t; };
   return { map: tex(mc), emissiveMap: tex(ec) };

@@ -12,7 +12,7 @@ import { makeMaterial, styleOf } from './style.js';
 const JACKETS = ['#3d5a80', '#8d6e63', '#5c6bc0', '#26a69a', '#ef8354', '#7e57c2', '#546e7a', '#c0ca33'];
 const SKIN = ['#f1c7a3', '#e0a87e', '#c68863', '#a86f4d', '#f6d5bb'];
 const geo = {
-  body: new CapsuleGeometry(0.42, 0.42, 4, 10), head: new SphereGeometry(0.34, 14, 10), hat: new SphereGeometry(0.36, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+  body: new CapsuleGeometry(0.44, 0.4, 6, 16), head: new SphereGeometry(0.38, 18, 14), hat: new SphereGeometry(0.4, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), cheek: new SphereGeometry(0.07, 8, 6), mitten: new SphereGeometry(0.13, 10, 8), boot: new SphereGeometry(0.16, 10, 8), hatBand: new TorusGeometry(0.38, 0.06, 6, 18),
   pom: new SphereGeometry(0.11, 8, 6), leg: new CapsuleGeometry(0.13, 0.25, 3, 6), arm: new CapsuleGeometry(0.11, 0.32, 3, 6),
   scarf: new TorusGeometry(0.3, 0.09, 6, 14), tail: new BoxGeometry(0.14, 0.38, 0.06), eye: new SphereGeometry(0.045, 6, 4),
   ball: new SphereGeometry(0.09, 6, 5), snowBottom: new SphereGeometry(0.6, 12, 10), snowMid: new SphereGeometry(0.45, 12, 10), snowTop: new SphereGeometry(0.33, 12, 10),
@@ -49,14 +49,16 @@ export class CharacterView {
     const s = (c.captain ? 1.35 : 1) * 1.3; // chunky toy kids, readable on a phone
     k.scale.setScalar(s);
     const body = new Mesh(geo.body, jacket); body.position.y = 0.78; body.scale.set(1, 1, 0.9); k.add(body);
-    const head = new Mesh(geo.head, skin); head.position.y = 1.48; k.add(head);
-    const hat = new Mesh(geo.hat, team); hat.position.y = 1.52; k.add(hat);
-    const pom = new Mesh(geo.pom, mat('#ffffff')); pom.position.y = 1.9; k.add(pom);
+    const head = new Mesh(geo.head, skin); head.position.y = 1.5; k.add(head);
+    for (const x of [-0.21, 0.21]) { const ch = new Mesh(geo.cheek, mat('#ff9aa2')); ch.position.set(x, 1.42, 0.3); ch.scale.set(1, 0.7, 0.5); k.add(ch); }
+    const hat = new Mesh(geo.hat, team); hat.position.y = 1.56; k.add(hat);
+    const band = new Mesh(geo.hatBand, dark); band.rotation.x = Math.PI / 2; band.position.y = 1.58; k.add(band);
+    const pom = new Mesh(geo.pom, mat('#ffffff')); pom.position.y = 1.98; pom.scale.setScalar(1.25); k.add(pom);
     const scarf = new Mesh(geo.scarf, team); scarf.rotation.x = Math.PI / 2; scarf.position.y = 1.17; k.add(scarf);
     const tail = new Mesh(geo.tail, dark); tail.position.set(0.16, 0.98, -0.32); tail.rotation.x = 0.25; k.add(tail);
-    for (const x of [-0.12, 0.12]) { const e = new Mesh(geo.eye, mat('#1d2733')); e.position.set(x, 1.52, 0.3); k.add(e); }
-    this.legs = [-0.17, 0.17].map(x => { const l = new Mesh(geo.leg, mat('#33415c')); l.position.set(x, 0.28, 0); k.add(l); return l; });
-    this.arms = [-0.5, 0.5].map(x => { const a = new Mesh(geo.arm, jacket); a.position.set(x, 0.95, 0); a.rotation.z = x < 0 ? -0.25 : 0.25; k.add(a); return a; });
+    for (const x of [-0.13, 0.13]) { const e = new Mesh(geo.eye, mat('#1d2733')); e.position.set(x, 1.53, 0.34); e.scale.set(1, 1.3, 0.6); k.add(e); }
+    this.legs = [-0.17, 0.17].map(x => { const l = new Mesh(geo.leg, mat('#33415c')); l.position.set(x, 0.32, 0); const bt = new Mesh(geo.boot, mat('#5a3b2e')); bt.position.set(0, -0.2, 0.06); bt.scale.set(1, 0.7, 1.3); l.add(bt); k.add(l); return l; });
+    this.arms = [-0.5, 0.5].map(x => { const a = new Mesh(geo.arm, jacket); a.position.set(x, 0.95, 0); a.rotation.z = x < 0 ? -0.25 : 0.25; const mt = new Mesh(geo.mitten, team); mt.position.set(0, -0.3, 0); a.add(mt); k.add(a); return a; });
     // carried snowballs on the back (up to 8)
     this.ammo = []; for (let i = 0; i < CONFIG.fight.ammoMax; i++) { const b = new Mesh(geo.ball, mat('#ffffff')); const row = Math.floor(i / 4), col = i % 4; b.position.set(-0.24 + col * 0.16, 0.62 + row * 0.18, -0.4); k.add(b); this.ammo.push(b); }
     for (const m of k.children) m.castShadow = true;

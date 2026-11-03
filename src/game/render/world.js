@@ -7,6 +7,40 @@ import {
 } from 'three';
 import { addCutout } from './cutout.js';
 import { styleOf, makeMaterial, windowTextures, color } from './style.js';
+import { Grid, GRID } from '../grid.mjs';
+
+// Soft contact shadows (RGBA vertex colours, dark inside → clear outside).
+class Shade {
+  constructor() { this.p = []; this.c = []; }
+  ring(inner, outer, y, rgb, alpha) {
+    for (let i = 0; i < inner.length; i++) {
+      const j = (i + 1) % inner.length, a = inner[i], b = inner[j], A = outer[i], B = outer[j];
+      const v = (q, al) => { this.p.push(q[0], y, q[1]); this.c.push(rgb.r, rgb.g, rgb.b, al); };
+      v(a, alpha); v(A, 0); v(B, 0); v(a, alpha); v(B, 0); v(b, alpha);
+    }
+  }
+  mesh() {
+    const g = new BufferGeometry(); g.setAttribute('position', new Float32BufferAttribute(this.p, 3)); g.setAttribute('color', new Float32BufferAttribute(this.c, 4));
+    const m = new Mesh(g, new MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false })); m.renderOrder = 1; return m;
+  }
+}
+function blobTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(70,90,125,0.42)'); gr.addColorStop(1, 'rgba(70,90,125,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64); const t = new CanvasTexture(c); return t;
+}
+// Door shape: arched top. Built in the wall's local frame (x along the wall, y up, z out).
+function doorGeometry(w = 1.0, h = 1.55) {
+  const sh = new Shape(); sh.moveTo(-w / 2, 0); sh.lineTo(-w / 2, h - w / 2); sh.absarc(0, h - w / 2, w / 2, Math.PI, 0, true); sh.lineTo(w / 2, 0); sh.lineTo(-w / 2, 0);
+  return new ExtrudeGeometry(sh, { depth: 0.12, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 2, curveSegments: 8 });
+}
+function roundedBox(w, d, h, r = 0.12) {
+  const sh = new Shape(), x = -w / 2, y = -d / 2;
+  sh.moveTo(x + r, y); sh.lineTo(x + w - r, y); sh.quadraticCurveTo(x + w, y, x + w, y + r); sh.lineTo(x + w, y + d - r); sh.quadraticCurveTo(x + w, y + d, x + w - r, y + d);
+  sh.lineTo(x + r, y + d); sh.quadraticCurveTo(x, y + d, x, y + d - r); sh.lineTo(x, y + r); sh.quadraticCurveTo(x, y, x + r, y);
+  const g = new ExtrudeGeometry(sh, { depth: h, bevelEnabled: true, bevelThickness: r * 0.6, bevelSize: r * 0.6, bevelSegments: 2, curveSegments: 3 });
+  g.rotateX(-Math.PI / 2); return g;
+}
 
 const hash = (a, b) => { let h = Math.imul(Math.round(a * 13) ^ 0x9e3779b9, 2654435761) ^ Math.imul(Math.round(b * 17), 1597334677); h ^= h >>> 15; return (h >>> 0) / 4294967296; };
 
@@ -149,6 +183,12 @@ export function buildWorld(arena, { quality = 'medium', style = 'toybox' } = {})
   const wallB = mk(), roofB = mk(), hullB = outline ? mk() : null;
   const eave = color(S.eave), snow = color(S.snow), domes = [], signs = [], icicles = [];
   const [lmin, lmax] = S.levels, FLOOR = S.floor, BAY = S.bay;
+  const DT = S.details || null, shade = new Shade(), aoCol = color('#5d6f8f');
+  const DOORS = ['#8a5a3b', '#2f6f8f', '#b5473a', '#3f7a52', '#6b4f8f'];
+  // nearest-street lookup (for doors): bucketed road segments
+  const segs = new Map(), SB = 16;
+  for (const rd of arena.roads) { if (rd.c === 'footway' || rd.c === 'path' || rd.c === 'steps') continue; for (let k2 = 0; k2 + 2 < rd.p.length; k2 += 2) { const sg = [rd.p[k2], rd.p[k2 + 1], rd.p[k2 + 2], rd.p[k2 + 3], rd.w / 2]; const bx = Math.floor(sg[0] / SB), bz = Math.floor(sg[1] / SB); const key = bx + ',' + bz; if (!segs.has(key)) segs.set(key, []); segs.get(key).push(sg); } }
+  const roadDist = (x, z) => { let best = Infinity; const bx = Math.floor(x / SB), bz = Math.floor(z / SB); for (let i = bx - 1; i <= bx + 1; i++) for (let j = bz - 1; j <= bz + 1; j++) for (const [x0, z0, x1, z1, hw] of segs.get(i + ',' + j) || []) { const dx = x1 - x0, dz = z1 - z0, L2 = dx * dx + dz * dz || 1e-9, t = Math.max(0, Math.min(1, ((x - x0) * dx + (z - z0) * dz) / L2)); best = Math.min(best, Math.hypot(x - x0 - t * dx, z - z0 - t * dz) - hw); } return best; };
   for (const b of arena.buildings) {
     let p = pts(b.p); if (p.length < 3) continue;
     if (signedArea(p) < 0) p = p.reverse();
@@ -166,7 +206,8 @@ export function buildWorld(arena, { quality = 'medium', style = 'toybox' } = {})
     } else walls(wallB[k], p, 0, h, wall, r * 8, BAY, FLOOR, b.k !== 'worship');
 
     let top = h;
-    if (S.roof === 'pillow' || S.roof === 'blob') {
+    const pitchedHere = S.mixedRoofs && p.length === 4 && b.k === 'house' && !b.o;
+    if ((S.roof === 'pillow' || S.roof === 'blob') && !pitchedHere) {
       const bevel = S.roof === 'blob' ? 0.45 : 0.32;
       if (S.roof === 'pillow') walls(roofB[k], p, h - 0.18, h, eave, 0, BAY, FLOOR, false);
       roofB[k].add(extrude(inflate(p, S.roof === 'blob' ? 0.2 : 0.5), h, S.roof === 'blob' ? 0.25 : 0.25, S.roof === 'blob' ? bevel : 0.45, 4), snow);
@@ -178,9 +219,43 @@ export function buildWorld(arena, { quality = 'medium', style = 'toybox' } = {})
         const nx = (c[1] - a[1]) / bl, nz = -(c[0] - a[0]) / bl;
         for (let i = 1; i <= n; i++) { const t = i / (n + 1); icicles.push([a[0] + (c[0] - a[0]) * t + nx * 0.42, h + 0.05, a[1] + (c[1] - a[1]) * t + nz * 0.42, 0.6 + hash(i, cx) * 0.6]); }
       }
+    } else if (pitchedHere) {
+      walls(roofB[k], inflate(p, 0.14), h - 0.25, h + 0.05, eave, 0, BAY, FLOOR, false);
+      top = h + gableRoof(roofB[k], inflate(p, 0.32), h + 0.04, eave, snow, wall);
+      const q = p, L01 = Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]), L12 = Math.hypot(q[2][0] - q[1][0], q[2][1] - q[1][1]);
+      const e = L01 >= L12 ? [q[0], q[1]] : [q[1], q[2]], [a, c] = e, bl = Math.max(L01, L12), n = Math.min(7, Math.floor(bl / 1.0));
+      const ex = (c[1] - a[1]) / bl, ez = -(c[0] - a[0]) / bl;
+      for (let i = 1; i <= n; i++) { const t = i / (n + 1); icicles.push([a[0] + (c[0] - a[0]) * t + ex * 0.36, h + 0.05, a[1] + (c[1] - a[1]) * t + ez * 0.36, 0.45 + hash(i, cx) * 0.6]); }
     } else { // gable on rectangles, flat roof with a snow top elsewhere
       if (p.length === 4 && b.k !== 'ourSchool' && b.k !== 'worship') { walls(roofB[k], p, h - 0.2, h, eave, 0, BAY, FLOOR, false); top = h + gableRoof(roofB[k], p, h, eave, snow, wall); }
       else { walls(roofB[k], p, h - 0.25, h + 0.22, eave, 0, BAY, FLOOR, false); flatPolygon(roofB[k], p, h + 0.22, snow); top = h + 0.22; }
+    }
+    if (DT) {
+      const dark = wall.clone().multiplyScalar(0.82);
+      if (DT.plinth) walls(roofB[k], inflate(p, S.rounded ? 0.16 : 0.05), -0.05, 0.42, dark, 0, BAY, FLOOR, false);
+      if (DT.ao) shade.ring(inflate(p, 0.1), inflate(p, 1.3), 0.03, aoCol, 0.38);
+      // door on the wall that faces the nearest street, with a snowy step
+      if (DT.doors && b.k !== 'worship') {
+        let best = null, bd = Infinity;
+        for (let e = 0; e < p.length; e++) {
+          const a = p[e], c = p[(e + 1) % p.length], L = Math.hypot(c[0] - a[0], c[1] - a[1]); if (L < 2.2) continue;
+          const mx = (a[0] + c[0]) / 2, mz = (a[1] + c[1]) / 2, nx = (c[1] - a[1]) / L, nz = -(c[0] - a[0]) / L;
+          const d = roadDist(mx + nx * 1.5, mz + nz * 1.5); if (d < bd) { bd = d; best = { mx, mz, nx, nz }; }
+        }
+        if (best && bd < 8) {
+          const ang = Math.atan2(best.nx, best.nz), out = S.rounded ? 0.2 : 0.04;
+          const door = doorGeometry(); door.rotateY(ang); door.translate(best.mx + best.nx * out, 0.18, best.mz + best.nz * out);
+          roofB[k].add(door, color(DOORS[Math.floor(r * 37) % DOORS.length]));
+          const step = roundedBox(1.5, 0.7, 0.14, 0.12); step.rotateY(ang); step.translate(best.mx + best.nx * (out + 0.35), 0.02, best.mz + best.nz * (out + 0.35));
+          roofB[k].add(step, snow);
+        }
+      }
+      // chimney with a snow cap
+      if (DT.chimneys && b.k === 'house' && hash(cx * 3, cz) < DT.chimneys) {
+        const q = p[Math.floor(hash(cz, cx * 5) * p.length)], ix = cx + (q[0] - cx) * 0.55, iz = cz + (q[1] - cz) * 0.55;
+        const ch = roundedBox(0.7, 0.7, 1.3, 0.1); ch.translate(ix, h, iz); roofB[k].add(ch, color('#c8735a'));
+        const cap = roundedBox(0.95, 0.95, 0.22, 0.12); cap.translate(ix, h + 1.35, iz); roofB[k].add(cap, snow);
+      }
     }
     if (outline) { wallB[k].hullInto(hullB[k], w0, cx, cz, rad, h, outline.width); roofB[k].hullInto(hullB[k], r0, cx, cz, rad, top, outline.width); }
     if (b.k === 'worship') domes.push({ x: cx, z: cz, h, r: Math.min(5, Math.sqrt(Math.abs(signedArea(p))) * 0.32), p });
@@ -192,6 +267,59 @@ export function buildWorld(arena, { quality = 'medium', style = 'toybox' } = {})
   for (let k = 0; k < CH * CH; k++) {
     for (const [B, m] of [[wallB[k], wallMat], [roofB[k], roofMat]]) if (B.count) { const mesh = new Mesh(B.geometry(), m); mesh.castShadow = mesh.receiveShadow = true; group.add(mesh); }
     if (hullB && hullB[k].count) group.add(new Mesh(hullB[k].geometry(), outlineMat));
+  }
+  if (DT && DT.ao) group.add(shade.mesh());
+  const o2 = new Object3D(), blobs = [];
+  if (DT && (DT.lamps || DT.banks)) {
+    const grid = new Grid(arena);
+    // street lamps with a warm glow, along the bigger streets
+    if (DT.lamps) {
+      const L = [];
+      for (const rd of arena.roads) {
+        if (!['primary', 'secondary', 'tertiary', 'residential', 'unclassified', 'living_street'].includes(rd.c)) continue;
+        const pp = pts(rd.p); let acc = 7, side = 1;
+        for (let k2 = 0; k2 + 1 < pp.length; k2++) {
+          const [x0, z0] = pp[k2], [x1, z1] = pp[k2 + 1], Ls = Math.hypot(x1 - x0, z1 - z0); if (Ls < 0.1) continue;
+          const ux = (x1 - x0) / Ls, uz = (z1 - z0) / Ls;
+          for (let t = acc; t < Ls; t += 13) {
+            const x = x0 + ux * t - uz * side * (rd.w / 2 + 0.5), z = z0 + uz * t + ux * side * (rd.w / 2 + 0.5); side = -side;
+            if (!grid.blocked(x, z) && !grid.has(x, z, GRID.ROAD) && !L.some(q => Math.hypot(q[0] - x, q[1] - z) < 8)) L.push([x, z]);
+            acc = t + 13 - Ls;
+          }
+          if (acc < 0) acc = 0;
+        }
+      }
+      const post = new InstancedMesh(new CylinderGeometry(0.07, 0.1, 2.6, 6), makeMaterial(style, { color: '#3b4a63' }), L.length);
+      const head = new InstancedMesh(new SphereGeometry(0.26, 12, 8), makeMaterial(style, { color: '#ffe2a6', emissive: new Color('#ffc566'), emissiveIntensity: 1.2 }), L.length);
+      const lcap = new InstancedMesh(new SphereGeometry(0.3, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2.4), makeMaterial(style, { color: S.snow }), L.length);
+      L.forEach(([x, z], i) => {
+        o2.rotation.set(0, 0, 0); o2.scale.setScalar(1);
+        o2.position.set(x, 1.3, z); o2.updateMatrix(); post.setMatrixAt(i, o2.matrix);
+        o2.position.set(x, 2.75, z); o2.updateMatrix(); head.setMatrixAt(i, o2.matrix);
+        o2.position.set(x, 2.84, z); o2.updateMatrix(); lcap.setMatrixAt(i, o2.matrix);
+        blobs.push([x, z, 0.7]);
+      });
+      for (const m of [post, head, lcap]) { m.castShadow = true; addCutout(m.material); group.add(m); }
+    }
+    // soft snowbanks along street edges
+    if (DT.banks && quality !== 'low') {
+      const B = [];
+      for (const rd of arena.roads) {
+        if (!['primary', 'secondary', 'tertiary', 'residential', 'unclassified', 'living_street', 'service'].includes(rd.c)) continue;
+        const pp = pts(rd.p);
+        for (let k2 = 0; k2 + 1 < pp.length; k2++) {
+          const [x0, z0] = pp[k2], [x1, z1] = pp[k2 + 1], Ls = Math.hypot(x1 - x0, z1 - z0); if (Ls < 0.1) continue;
+          const ux = (x1 - x0) / Ls, uz = (z1 - z0) / Ls, ang = Math.atan2(ux, uz);
+          for (let t = 1; t < Ls; t += 1.7) for (const side of [1, -1]) {
+            const off = rd.w / 2 + 0.25, x = x0 + ux * t - uz * side * off, z = z0 + uz * t + ux * side * off;
+            if (B.length < 3600 && !grid.blocked(x, z) && !grid.has(x, z, GRID.ROAD) && !grid.has(x, z, GRID.ZONE)) B.push([x, z, ang, 0.8 + hash(x, z) * 0.6]);
+          }
+        }
+      }
+      const bank = new InstancedMesh(new SphereGeometry(1, 10, 6), makeMaterial(style, { color: '#ffffff' }), B.length);
+      B.forEach(([x, z, a, sc], i) => { o2.position.set(x, 0, z); o2.rotation.set(0, a, 0); o2.scale.set(0.34 * sc, 0.2 * sc, 1.05 * sc); o2.updateMatrix(); bank.setMatrixAt(i, o2.matrix); });
+      bank.receiveShadow = true; group.add(bank);
+    }
   }
   const withOutline = (mesh, s = 1.08) => {
     group.add(mesh);
@@ -265,6 +393,13 @@ export function buildWorld(arena, { quality = 'medium', style = 'toybox' } = {})
         o.position.set(x, (y + 0.75 * sc) * s, z); o.scale.setScalar(s * sc); o.updateMatrix(); caps.setMatrixAt(fi, o.matrix); fi++;
       }
     });
+  }
+
+  if (DT && DT.ao) {
+    for (const [x, z] of T) blobs.push([x, z, 1.6]);
+    const bm = new InstancedMesh(new PlaneGeometry(2, 2), new MeshBasicMaterial({ map: blobTexture(), transparent: true, depthWrite: false }), blobs.length);
+    blobs.forEach(([x, z, r], i) => { o2.position.set(x, 0.035, z); o2.rotation.set(-Math.PI / 2, 0, 0); o2.scale.set(r, r, 1); o2.updateMatrix(); bm.setMatrixAt(i, o2.matrix); });
+    bm.renderOrder = 1; group.add(bm);
   }
 
   // Snowdrifts: ammo pickups that shrink while they refill
