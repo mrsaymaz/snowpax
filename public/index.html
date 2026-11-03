@@ -2,32 +2,59 @@
 <html lang="en" translate="no">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="google" content="notranslate">
-<meta name="theme-color" content="#cfe6f7">
-<title>SnowPax · task preview</title>
+<meta name="theme-color" content="#cfe0ee">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>SnowPax</title>
 <link rel="icon" href="favicon.svg">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="game.css">
 </head>
 <body class="notranslate">
-<main id="app">
-  <header class="top">
-    <h1>SnowPax <small>v{{VERSION}} · setup build (M0)</small></h1>
-    <p class="lead">This page is for Mr. Saymaz to check the tasks before the game is built. Choose a unit and an outpost to see a round the game would make. Right answers are marked ✓.</p>
-    <div id="teams" class="teams"></div>
-  </header>
-  <section class="controls" aria-label="Choose what to preview">
-    <label>Grade <select id="grade"><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
-    <label>Unit <select id="unit"></select></label>
-    <label>Arena <select id="arena"><option value="1">1 · Home Turf</option><option value="2">2 · The Golden Horn</option><option value="3">3 · The Big City</option></select></label>
-    <label>Outpost <select id="family"></select></label>
-    <label>Sub-task <select id="sub"></select></label>
-    <button id="again" type="button">New round</button>
-  </section>
-  <section id="status" class="status"></section>
-  <section id="round" class="round" aria-live="polite"></section>
-  <footer class="foot">Word lists © Mr. Saymaz's lesson banks. Pictures: Fluent Emoji 3D by Microsoft (MIT) and solMaxima pictograms. No data leaves this page.</footer>
-</main>
-<script type="module" src="main.js"></script>
+<canvas id="scene" aria-label="Snowball fight around Our School"></canvas>
+
+<section id="start" class="screen">
+  <div class="card">
+    <h1>SnowPax</h1>
+    <p class="sub">It's a snow day in Beyoğlu! Pick your team.</p>
+    <div id="teams" class="team-grid" role="group" aria-label="Teams"></div>
+    <div class="pace" role="group" aria-label="Pace">
+      <button type="button" class="pace-btn" data-pace="relaxed">Relaxed</button>
+      <button type="button" class="pace-btn" data-pace="challenge">Challenge</button>
+    </div>
+    <button id="play" class="big-btn" type="button" disabled>Pick your team</button>
+    <p class="note">Test build M1 · v{{VERSION}} · movement and snowballs around Our School. <a href="preview.html">Task preview</a> · Map data © OpenStreetMap contributors</p>
+  </div>
+</section>
+<div id="loading" class="screen" hidden><div class="card">Building the snowy streets…</div></div>
+
+<div id="hud" hidden>
+  <canvas id="minimap" aria-label="Mini-map. Tap a place to walk there."></canvas>
+  <button id="map-btn" class="hud-btn" type="button" aria-label="Open the map">Map</button>
+  <button id="pause" class="hud-btn" type="button" aria-label="Pause">❚❚</button>
+  <div id="coach" hidden><b>Mr. Saymaz</b><span class="line"></span></div>
+  <div id="toast" hidden></div>
+  <div id="arrows"></div>
+  <div id="joy-base"></div><div id="joy-knob"></div>
+  <button id="throw" type="button" aria-label="Throw a snowball. Hold for a big one.">
+    <span id="charge"></span><span class="ball">❄</span><span id="ammo">8</span>
+  </button>
+  <div id="debug"></div>
+  <div id="bigmap-wrap" hidden><canvas id="bigmap" aria-label="Map. Tap a place to walk there."></canvas><p>Tap a place to walk there.</p></div>
+</div>
+
+<section id="pause-menu" class="screen" hidden>
+  <div class="card">
+    <h2>Paused</h2>
+    <button id="resume" class="big-btn" type="button">Back to the snow</button>
+    <button id="q-cycle" class="menu-btn" type="button">Quality: <span id="q-level">Auto</span></button>
+    <button id="sound" class="menu-btn" type="button">Sound: on</button>
+    <button id="restart" class="menu-btn" type="button">Start again</button>
+  </div>
+</section>
+
+<div id="rotate" class="screen"><div class="card"><div class="phone">📱</div><p>Rotate your phone to play.</p></div></div>
+<script type="module" src="game.js"></script>
 </body>
 </html>
