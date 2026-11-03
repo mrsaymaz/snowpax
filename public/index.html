@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="google" content="notranslate">
+<meta name="theme-color" content="#cfe6f7">
+<title>Snow Siege · task preview</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="notranslate">
+<main id="app">
+  <header class="top">
+    <h1>Snow Siege <small>v{{VERSION}} · setup build (M0)</small></h1>
+    <p class="lead">This page is for Mr. Saymaz to check the tasks before the game is built. Choose a unit and an outpost to see a round the game would make. Right answers are marked ✓.</p>
+    <div id="teams" class="teams"></div>
+  </header>
+  <section class="controls" aria-label="Choose what to preview">
+    <label>Grade <select id="grade"><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
+    <label>Unit <select id="unit"></select></label>
+    <label>Arena <select id="arena"><option value="1">1 · Home Turf</option><option value="2">2 · The Golden Horn</option><option value="3">3 · The Big City</option></select></label>
+    <label>Outpost <select id="family"></select></label>
+    <label>Sub-task <select id="sub"></select></label>
+    <button id="again" type="button">New round</button>
+  </section>
+  <section id="status" class="status"></section>
+  <section id="round" class="round" aria-live="polite"></section>
+  <footer class="foot">Word lists © Mr. Saymaz's lesson banks. Pictures: Fluent Emoji 3D by Microsoft (MIT) and solMaxima pictograms. No data leaves this page.</footer>
+</main>
+<script type="module" src="main.js"></script>
+</body>
+</html>
