@@ -9,7 +9,8 @@ import { createMatch } from './match.mjs';
 import { buildTileArena } from './tilemap.mjs';
 import { SCHOOLYARD } from './arenas/schoolyard.mjs';
 import { GRID } from './grid.mjs';
-import { buildVillage, LIGHTING } from './render/village.js';
+import { buildVillage, LIGHTING, DAYLIGHT } from './render/village.js';
+import { WorldLife } from './render/worldlife.js';
 import { Kid } from './render/kids.js';
 import { BrawlFx } from './render/brawlfx.js';
 import { CUT } from './render/cutout.js';
@@ -74,6 +75,20 @@ async function startGame(myTeam, kit, pace) {
   Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 60 }); sun.shadow.bias = -0.0006; scene.add(sun, sun.target);
 
   const world = buildVillage(arena, { rivalTeam, homeTeam: myTeam, quality: LEVELS[level].name }); scene.add(world.group);
+  const life = arena.world ? new WorldLife(scene, world.life, { low: LEVELS[level].name === 'low' }) : null;
+  // the light slides from late afternoon to dusk over the first five minutes (?dusk=0..1 to preview)
+  const hemi = scene.children.find(o => o.isHemisphereLight), sunDir = [...LIGHTING.sunDir];
+  const lerpC = (a, b, k) => new Color(a).lerp(new Color(b), k);
+  const applyDay = k => {
+    const A = DAYLIGHT.afternoon, B = DAYLIGHT.dusk;
+    scene.background.copy(lerpC(A.sky, B.sky, k)); scene.fog.color.copy(lerpC(A.fog, B.fog, k));
+    hemi.color.copy(lerpC(A.hemi[0], B.hemi[0], k)); hemi.groundColor.copy(lerpC(A.hemi[1], B.hemi[1], k)); hemi.intensity = A.hemi[2] + (B.hemi[2] - A.hemi[2]) * k;
+    sun.color.copy(lerpC(A.sun[0], B.sun[0], k)); sun.intensity = A.sun[1] + (B.sun[1] - A.sun[1]) * k;
+    for (let i = 0; i < 3; i++) sunDir[i] = A.sunDir[i] + (B.sunDir[i] - A.sunDir[i]) * k;
+    world.setDusk(k);
+  };
+  const forcedDusk = params.has('dusk') ? Math.max(0, Math.min(1, +params.get('dusk') || 0)) : null;
+  let dayK = -1;
   const kids = new Map(sim.chars.map(c => [c.id, new Kid(c, { isPlayer: c === player })]));
   for (const k of kids.values()) scene.add(k.root);
   const camera = new PerspectiveCamera(24, innerWidth / innerHeight, 0.5, 140); // restrained perspective
@@ -190,7 +205,7 @@ async function startGame(myTeam, kit, pace) {
     focus.set(player.x, 0, player.z - 1.6);
   }
 
-  let last = performance.now(); const zoneKeys = {}, held = new Set();
+  let last = performance.now(), puffT = 0; const zoneKeys = {}, held = new Set();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     requestAnimationFrame(frame); quality.tick(dt);
@@ -237,6 +252,7 @@ async function startGame(myTeam, kit, pace) {
       if (e.type === 'freeze') {
         const v = sim.chars.find(c => c.id === e.id), by = sim.chars.find(c => c.id === e.by);
         play('freeze', { near: e.id === player.id ? 1 : near });
+        if (!reduceMotion) fx.emit(e.x, 0.2, e.z, 34, '#ffffff', 4.5, 0.8, 1.3);
         if (v) { score[v.side === 'home' ? 'rival' : 'home']++; feed(`<b style="color:${CONFIG.teams[by?.team || v.team].dark}">${by ? name(by) : 'Someone'}</b> froze <b style="color:${CONFIG.teams[v.team].dark}">${name(v) === 'You' ? 'you' : name(v)}</b> ❄`); }
         if (e.id === player.id) { $('#frozen').hidden = false; coach('Brrr! You are a snowman. Shake it off and you are back at Our School.', 3.5); }
         if (by === player) banner('FROZEN ONE!', 'good', 1.1);
@@ -247,7 +263,7 @@ async function startGame(myTeam, kit, pace) {
         const zc = sim.zones.find(zz => zz.id === e.zone) || sim.zone;
         if (e.side === 'home') { banner('OUTPOST SEIZED!', 'win', 2.6); play('capture'); fx.emit(zc.x, 0.5, zc.z, 90, myCol, 6, 1.2); fx.emit(zc.x, 0.5, zc.z, 60, '#ffffff', 5, 1.2); coach(arena.world ? `${zc.label} is yours! It is now a respawn and snowball point. In the full game, the English task card opens here.` : 'Great teamwork! In the full game, the English task card opens here while your team guards you.', 5); }
         else { banner('Rivals took the outpost!', 'lose', 2.2); play('freeze'); coach('Take it back! Stand in the circle with your team.', 4); }
-        if (arena.world) { sim.held[e.side].push({ x: zc.x, z: zc.z + zc.r - 0.6 }); held.add(zc.id + ':' + e.side); drawMap(); }
+        if (arena.world) { sim.held[e.side].push({ x: zc.x, z: zc.z + zc.r - 0.6 }); held.add(zc.id + ':' + e.side); drawMap(); world.setOwner(zc.id, e.side === 'home' ? myCol : rivCol); }
         else resetZoneAt = sim.t + 4;
       }
     }
@@ -274,8 +290,15 @@ async function startGame(myTeam, kit, pace) {
     const j = shake > 0 ? shake * 0.6 : 0;
     camera.position.set(focus.x + off.x * zoom + (Math.random() - 0.5) * j, off.y * zoom, focus.z + off.z * zoom + (Math.random() - 0.5) * j);
     camera.lookAt(focus.x, 0, focus.z); camera.updateMatrixWorld();
-    sun.position.set(focus.x + LIGHTING.sunDir[0], LIGHTING.sunDir[1], focus.z + LIGHTING.sunDir[2]); sun.target.position.set(focus.x, 0, focus.z - 2); sun.target.updateMatrixWorld();
+    sun.position.set(focus.x + sunDir[0], sunDir[1], focus.z + sunDir[2]); sun.target.position.set(focus.x, 0, focus.z - 2); sun.target.updateMatrixWorld();
     world.tick(dt, focus, reduceMotion, camera);
+    if (arena.world) {
+      const k = forcedDusk ?? Math.min(1, sim.t / 300);
+      if (Math.abs(k - dayK) > 0.01) { dayK = k; applyDay(k); }
+      life.tick(pose ? 0 : dt, sim.chars, camera, player);
+    }
+    // powder kicked up by running kids
+    if (!reduceMotion && (puffT -= dt) <= 0) { puffT = 0.12; for (const c of sim.chars) if (!c.frozen && Math.hypot(c.vx, c.vz) > 2 && !sim.grid.has(c.x, c.z, GRID.ROAD)) fx.emit(c.x - c.vx * 0.05, 0.12, c.z - c.vz * 0.05, 2, '#f4f7ff', 0.7, 0.45, 0.8); }
     // see-through: anything between the camera and the player dissolves
     const pv = new Vector3(player.x, 1, player.z), pr = renderer.getPixelRatio(), ndc = pv.clone().project(camera);
     CUT.center.value.set((ndc.x + 1) / 2 * innerWidth * pr, (ndc.y + 1) / 2 * innerHeight * pr);
@@ -297,7 +320,7 @@ async function startGame(myTeam, kit, pace) {
     renderer.render(scene, camera);
   }
   requestAnimationFrame(frame);
-  globalThis.__snowpax = { match, sim, player, quality, renderer };
+  globalThis.__snowpax = { match, sim, player, quality, renderer, world, life };
 }
 
 startScreen();

@@ -24,6 +24,12 @@ export const PAL = {
   plaster: ['#c6bde2', '#b6cde8', '#d0d6ea', '#beb2de', '#aac0e2', '#c9c3e6'], pine: '#2d5a5d', pine2: '#356b6a', fabric: ['#8e7fbf', '#4f6fa8', '#c8584a', '#d99a3e'],
 };
 export const LIGHTING = { sky: '#9fb3db', fog: ['#aeb9df', 30, 62], hemi: ['#d3e0ff', '#8173b8', 1.15], sun: ['#eef2ff', 2.25], sunDir: [-9, 17, 8] };
+// Arena 1 light: a late snowy afternoon that slides into dusk as the match goes on
+// (pink-orange low sun, long blue shadows, windows and lamps glowing brighter).
+export const DAYLIGHT = {
+  afternoon: { sky: '#b4bde6', fog: '#c3c6ea', hemi: ['#dae2ff', '#7d72b8', 1.12], sun: ['#fff0e0', 2.3], sunDir: [-11, 14, 7] },
+  dusk: { sky: '#c3a3cc', fog: '#b9aad8', hemi: ['#c6c7f4', '#6556a8', 1.02], sun: ['#ffb68c', 2.0], sunDir: [-14, 8, 5] },
+};
 
 const rnd = (a, b = 0) => { let h = Math.imul((a * 73856093) ^ (b * 19349663), 2654435761); h ^= h >>> 13; h = Math.imul(h, 1597334677); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 
@@ -187,7 +193,7 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   const at = (i, j) => [x0 + i + 0.5, z0 + j + 0.5];
   const tiles = ch => { const out = []; for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (rows[j][i] === ch) out.push([i, j]); return out; };
   const low = quality === 'low';
-  const smokeSources = [], fires = [], glows = [], lights = [];
+  const smokeSources = [], fires = [], glows = [], lights = [], pools = [], life = { perches: [], cats: [], steam: [] };
 
   const mSnow = M('snow', PAL.snow), mStone = M('stone', PAL.stone), mStoneDark = M('stone', PAL.stoneDark), mBeam = M('beam', PAL.woodDark), mWood = M('wood', PAL.wood);
   const mShingle = M('shingle', '#6f7aa0'), mMetal = M('metal', PAL.metal), mIce = M('glow', '#d9f0ff', { transparent: true, opacity: 0.85 });
@@ -375,7 +381,7 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   };
 
   // ---------- edge buildings and nature (quieter around the edges) ----------
-  if (arena.world) buildSnowtown({ arena: { ...arena, x0, z0 }, K, M, T, PAL, GEO, rbox, prism, rnd, at, group, glows, smokeSources, lights, low, lantern, windows, pine, rock, barrel, crate, firewood, shovel, mSnow, mStone, mStoneDark, mBeam, mWood, mMetal, mIce, mGlass, sign });
+  if (arena.world) buildSnowtown({ arena: { ...arena, x0, z0 }, K, M, T, PAL, GEO, rbox, prism, rnd, at, group, glows, smokeSources, lights, low, lantern, windows, pine, rock, barrel, crate, firewood, shovel, mSnow, mStone, mStoneDark, mBeam, mWood, mMetal, mIce, mGlass, sign, life, pools });
   else {
   const used = new Set(), key = (i, j) => i + ',' + j;
   const isH = (i, j) => i >= 0 && j >= 0 && i < W && j < H && rows[j][i] === 'H' && !used.has(key(i, j));
@@ -506,7 +512,47 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   const setDrift = (k, t) => { const [x, z] = arena.drifts[k]; o.position.set(x, -0.1 + 0.16 * t, z); o.rotation.set(0, k, 0); o.scale.set(1.2, 0.5 + 0.45 * t, 1.0); o.updateMatrix(); drift.setMatrixAt(k, o.matrix); };
   arena.drifts.forEach((_, k) => setDrift(k, 1)); drift.receiveShadow = true; group.add(drift);
 
+  // strings of lanterns round each outpost plaza: warm while free, the holder's colour once taken
+  const bulbs = [], bulbZone = [];
+  if (arena.world) for (const zp of zonePlaces) {
+    const posts = [];
+    for (let k = 0; k < 8; k++) {
+      const a = (k + 0.5) / 8 * Math.PI * 2, x = zp.x + Math.cos(a) * 4.9, z = zp.z + Math.sin(a) * 4.9;
+      const ci = Math.floor(x - x0), cj = Math.floor(z - z0), c = rows[cj]?.[ci] || 'X';
+      if ('HSKQCGRDlWO#f'.includes(c)) { posts.push(null); continue; }
+      K.put('lpost', GEO.post, mBeam, x, 0.9, z, 0, 1.1, 1.8, 1.1); K.put('lpostCap', GEO.snowCap, mSnow, x, 1.8, z, 0, 0.2, 0.1, 0.2); K.put('lpostMound', GEO.snowCap, mSnow, x, 0, z, 0, 0.6, 0.25, 0.6);
+      posts.push([x, 1.72, z]);
+    }
+    for (let k = 0; k < 8; k++) {
+      const a = posts[k], b = posts[(k + 1) % 8]; if (!a || !b) continue;
+      const L = Math.hypot(b[0] - a[0], b[2] - a[2]), ry = Math.atan2(b[0] - a[0], b[2] - a[2]);
+      for (let s2 = 0; s2 < 2; s2++) { const t0 = s2 / 2, t1 = (s2 + 1) / 2, y0 = a[1] - 0.35 * 4 * t0 * (1 - t0), y1 = a[1] - 0.35 * 4 * t1 * (1 - t1); K.put('lwire', new BoxGeometry(1, 1, 1), mBeam, a[0] + (b[0] - a[0]) * (t0 + t1) / 2, (y0 + y1) / 2, a[2] + (b[2] - a[2]) * (t0 + t1) / 2, ry, 0.02, 0.02, L / 2 + 0.05, (y1 - y0) / (L / 2) * -1); }
+      for (let m = 1; m <= 5; m++) { const t = m / 6; bulbs.push([a[0] + (b[0] - a[0]) * t, a[1] - 0.35 * 4 * t * (1 - t) - 0.06, a[2] + (b[2] - a[2]) * t]); bulbZone.push(zp.id); }
+    }
+  }
+
   K.build(group, true);
+
+  // warm pools of light on the snow under street lamps and round the fire barrels
+  if (arena.world) for (const { x, z } of fires) pools.push([x, z, 2.2]);
+  const poolGeo = new PlaneGeometry(1, 1); poolGeo.rotateX(-Math.PI / 2);
+  const poolMesh = new InstancedMesh(poolGeo, new MeshBasicMaterial({ map: glow(), blending: AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.35 }), Math.max(1, pools.length));
+  poolMesh.count = pools.length; poolMesh.renderOrder = 2;
+  pools.forEach(([x, z, r], k) => { const o2 = new Object3D(); o2.position.set(x, 0.03, z); o2.scale.set(r * 2, 1, r * 2); o2.updateMatrix(); poolMesh.setMatrixAt(k, o2.matrix); });
+  group.add(poolMesh);
+  // the lantern bulbs
+  const BULB_WARM = [new Color('#ffcf7a'), new Color('#fff1c9')];
+  const bulbMesh = new InstancedMesh(new IcosahedronGeometry(0.11, 0), new MeshBasicMaterial({ color: '#ffffff' }), Math.max(1, bulbs.length)); bulbMesh.count = bulbs.length;
+  bulbs.forEach(([x, y, z], k) => { const o2 = new Object3D(); o2.position.set(x, y, z); o2.updateMatrix(); bulbMesh.setMatrixAt(k, o2.matrix); bulbMesh.setColorAt(k, BULB_WARM[k % 2]); });
+  group.add(bulbMesh);
+  const owners = new Map(); // zone id → { color, flash }
+  // a soft glow on the snow round each held outpost
+  const discs = new Map();
+  if (arena.world) for (const zp of zonePlaces) { // three stacked translucent circles: soft towards the edge
+    const d = new Group(); d.visible = false; d.userData.mats = [];
+    for (const r of [7, 5.6, 4.2]) { const m = new MeshBasicMaterial({ color: '#ffffff', transparent: true, depthWrite: false, opacity: 0.13 }); const c = new Mesh(new CircleGeometry(r, 40), m); c.rotation.x = -Math.PI / 2; c.renderOrder = 2; d.add(c); d.userData.mats.push(m); }
+    d.position.set(zp.x, 0.07, zp.z); group.add(d); discs.set(zp.id, d);
+  }
 
   // glows (lanterns, fires, chimney pots) and chimney smoke: one billboard mesh each
   const bill = new PlaneGeometry(1, 1);
@@ -544,7 +590,21 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   let time = 0;
   return {
     group,
+    life,
     updateDrift(k, t) { setDrift(k, t); drift.instanceMatrix.needsUpdate = true; },
+    // who holds an outpost: lanterns, chimney smoke nearby and the snow glow take their colour
+    setOwner(id, color) {
+      const zp = zonePlaces.find(z => z.id === id); if (!zp) return;
+      const col = new Color(color); owners.set(id, { col, flash: 2.5 });
+      const d = discs.get(id); if (d) { d.userData.mats.forEach(m => m.color.copy(col)); d.visible = true; }
+      smoke.forEach((u, k) => { if (Math.hypot(u.src[0] - zp.x, u.src[2] - zp.z) < 16) smokeMesh.setColorAt(k, new Color('#ffffff').lerp(col, 0.65)); });
+      if (smokeMesh.instanceColor) smokeMesh.instanceColor.needsUpdate = true;
+    },
+    // 0 = late afternoon, 1 = dusk: lamps, windows and lantern glows brighten
+    setDusk(k) {
+      glowMesh.material.opacity = 0.8 + 0.2 * k; poolMesh.material.opacity = 0.3 + 0.4 * k;
+      mGlass.color.set(PAL.amber).lerp(new Color('#ffd27a'), k);
+    },
     setZone(progress, homeColor, rivalColor, contested, t, id = null) {
       const zone = id ? rings.get(id) : rings.values().next().value; if (!zone) return; const flag = zone.flag;
       const p = Math.abs(progress), col = progress >= 0 ? homeColor : rivalColor;
@@ -558,6 +618,15 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
       const q = camera ? camera.quaternion : null;
       fires.forEach(({ x, z }, f) => { for (let k = 0; k < 3; k++) { const s1 = 1 + Math.sin(time * (9 + k * 3) + f + k) * 0.12 + Math.sin(time * 23 + k) * 0.05; bo.position.set(x + (k - 1) * 0.08, 0.68, z + (k % 2) * 0.06); bo.quaternion.identity(); bo.scale.set(s1 * (1 - k * 0.2), s1 * (1 + 0.15 * Math.sin(time * 7 + k)) * (1 - k * 0.15), s1 * (1 - k * 0.2)); bo.updateMatrix(); flameMesh.setMatrixAt(f * 3 + k, bo.matrix); } });
       flameMesh.instanceMatrix.needsUpdate = true;
+      if (owners.size) {
+        let dirty = false;
+        for (const [id, ow] of owners) {
+          if (ow.flash < -1) continue; ow.flash -= dt; dirty = true;
+          const chase = Math.floor(time * 10), white = new Color('#ffffff');
+          bulbZone.forEach((zid, k) => { if (zid !== id) return; bulbMesh.setColorAt(k, ow.flash > 0 ? ((k + chase) % 3 ? ow.col : white) : (k % 2 ? ow.col : white.clone().lerp(ow.col, 0.35))); });
+        }
+        if (dirty && bulbMesh.instanceColor) bulbMesh.instanceColor.needsUpdate = true;
+      }
       if (arena.world && pls.length && (this._lt = (this._lt || 0) - dt) <= 0) { this._lt = 0.5; const near = lights.map(p => [Math.hypot(p[0] - focus.x, p[2] - focus.z), p]).sort((a, b) => a[0] - b[0]); pls.forEach((l, k) => { const p = near[k]?.[1]; if (p) l.position.set(p[0], p[1], p[2]); }); }
       pls.forEach((l, k) => { l.intensity = 14 + Math.sin(time * 11 + k) * 1.5 + Math.sin(time * 27 + k * 2) * 0.8; });
       if (q) {

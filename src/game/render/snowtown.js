@@ -13,7 +13,7 @@ const blot = (g, x, y, r, rgb, a) => { const gr = g.createRadialGradient(x, y, 0
 
 export function buildSnowtown(ctx) {
   const { arena, K, M, T, PAL, GEO, rbox, prism, rnd, at, group, glows, smokeSources, lights, low, lantern, pine, rock, barrel, crate, firewood, shovel,
-    mSnow, mStone, mStoneDark, mBeam, mWood, mMetal, mIce, mGlass, sign } = ctx;
+    mSnow, mStone, mStoneDark, mBeam, mWood, mMetal, mIce, mGlass, sign, life, pools } = ctx;
   const rows = arena.rows, W = arena.w, H = arena.h;
   const ch = (i, j) => (i < 0 || j < 0 || i >= W || j >= H ? 'H' : rows[j][i]);
   const solid = c => 'HSKQCWGctO#fRD'.includes(c);
@@ -24,7 +24,13 @@ export function buildSnowtown(ctx) {
     snow: T.snow(),
     plaza: paint(256, (g, S) => { g.fillStyle = '#9ea4c0'; g.fillRect(0, 0, S, S); for (let b = 0; b < 8; b++) for (let a = 0; a < 9; a++) { const k = a * 13 + b, x = a * S / 8 - (b % 2) * S / 16, y = b * S / 8, v = 140 + Math.floor(rnd(k, 1) * 55); g.fillStyle = `rgb(${v - 14},${v - 6},${v + 24})`; g.beginPath(); g.ellipse(x + S / 16, y + S / 16, S / 17, S / 21, rnd(k, 2) - 0.5, 0, 7); g.fill(); } for (let k = 0; k < 10; k++) blot(g, rnd(k, 3) * S, rnd(k, 4) * S, 40, '255,255,255', 0.6); }),
     yard: paint(256, (g, S) => { g.fillStyle = '#c8c3dd'; g.fillRect(0, 0, S, S); for (let b = 0; b < 4; b++) for (let a = 0; a < 4; a++) { const v = 205 + Math.floor(rnd(a, b) * 25); g.fillStyle = `rgb(${v - 5},${v - 8},${v + 10})`; g.beginPath(); g.roundRect(a * S / 4 + 3, b * S / 4 + 3, S / 4 - 6, S / 4 - 6, 8); g.fill(); } for (let k = 0; k < 8; k++) blot(g, rnd(k, 5) * S, rnd(k, 6) * S, 50, '255,255,255', 0.55); }),
-    ice: paint(256, (g, S) => { g.fillStyle = '#a9cdea'; g.fillRect(0, 0, S, S); for (let k = 0; k < 18; k++) blot(g, rnd(k, 11) * S, rnd(k, 12) * S, 30 + rnd(k, 13) * 60, '255,255,255', 0.55); g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 1.5; for (let k = 0; k < 10; k++) { g.beginPath(); let x = rnd(k, 14) * S, y = rnd(k, 15) * S; g.moveTo(x, y); for (let s = 0; s < 4; s++) { x += (rnd(k, s) - 0.5) * 60; y += (rnd(s, k) - 0.5) * 60; g.lineTo(x, y); } g.stroke(); } }),
+    ice: paint(256, (g, S) => { // drawn wrapped so the tiles meet without seams
+      const wrap = fn => { for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) fn(ox, oy); };
+      g.fillStyle = '#a9cdea'; g.fillRect(0, 0, S, S);
+      for (let k = 0; k < 18; k++) wrap((ox, oy) => blot(g, rnd(k, 11) * S + ox, rnd(k, 12) * S + oy, 30 + rnd(k, 13) * 60, '255,255,255', 0.5));
+      g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 1.5;
+      for (let k = 0; k < 10; k++) wrap((ox, oy) => { g.beginPath(); let x = rnd(k, 14) * S + ox, y = rnd(k, 15) * S + oy; g.moveTo(x, y); for (let s = 0; s < 4; s++) { x += (rnd(k, s) - 0.5) * 60; y += (rnd(s, k) - 0.5) * 60; g.lineTo(x, y); } g.stroke(); });
+    }),
   };
   // Open snow, footpaths and the boulevard share one mesh: trodden lanes are a vertex tint that
   // fades into the snow, so the paths read as soft trampled tracks, not tiles.
@@ -38,7 +44,8 @@ export function buildSnowtown(ctx) {
   for (const [name, list] of Object.entries(quads)) {
     if (!list.length) continue;
     const P = [], N = [], U = [], Cc = [];
-    const vert = (x, z, ao, w) => { P.push(x, 0, z); N.push(0, 1, 0); U.push(x * 0.5, -z * 0.5); const s = 1 - w; Cc.push(ao * (0.97 * s + TRODDEN[0] * w), ao * (0.97 * s + TRODDEN[1] * w), Math.min(1, ao * (1.02 * s + TRODDEN[2] * w))); };
+    const uvs = name === 'ice' ? 0.16 : 0.5;
+    const vert = (x, z, ao, w) => { P.push(x, 0, z); N.push(0, 1, 0); U.push(x * uvs, -z * uvs); const s = 1 - w; Cc.push(ao * (0.97 * s + TRODDEN[0] * w), ao * (0.97 * s + TRODDEN[1] * w), Math.min(1, ao * (1.02 * s + TRODDEN[2] * w))); };
     for (const [i, j] of list) {
       const [x0, z0] = at(i, j).map(v => v - 0.5);
       const v = [[x0, z0, i, j], [x0 + 1, z0, i + 1, j], [x0 + 1, z0 + 1, i + 1, j + 1], [x0, z0 + 1, i, j + 1]];
@@ -49,6 +56,15 @@ export function buildSnowtown(ctx) {
         const cAo = (ao[0] + ao[1] + ao[2] + ao[3]) / 4;
         for (let k = 0; k < 4; k++) { const a = v[k], b = v[(k + 1) % 4]; vert(x0 + 0.5, z0 + 0.5, cAo, mine); vert(b[0], b[1], ao[(k + 1) % 4], w[(k + 1) % 4]); vert(a[0], a[1], ao[k], w[k]); }
       } else for (const k of [0, 2, 1, 0, 3, 2]) vert(v[k][0], v[k][1], ao[k], w[k]); // upward winding
+      // beyond the map edge: the snow or the frozen sea carries on into the haze
+      if (name === 'snow' || name === 'ice') {
+        const E = 45, out = [];
+        if (i === 0) out.push([x0 - E, z0, x0, z0 + 1]); if (i === W - 1) out.push([x0 + 1, z0, x0 + 1 + E, z0 + 1]);
+        if (j === 0) out.push([x0, z0 - E, x0 + 1, z0]); if (j === H - 1) out.push([x0, z0 + 1, x0 + 1, z0 + 1 + E]);
+        if (i === 0 && j === 0) out.push([x0 - E, z0 - E, x0, z0]); if (i === W - 1 && j === 0) out.push([x0 + 1, z0 - E, x0 + 1 + E, z0]);
+        if (i === 0 && j === H - 1) out.push([x0 - E, z0 + 1, x0, z0 + 1 + E]); if (i === W - 1 && j === H - 1) out.push([x0 + 1, z0 + 1, x0 + 1 + E, z0 + 1 + E]);
+        for (const [ax, az, bx, bz] of out) for (const [x, z] of [[ax, az], [bx, bz], [bx, az], [ax, az], [ax, bz], [bx, bz]]) vert(x, z, 1, 0);
+      }
     }
     const geo = new BufferGeometry(); geo.setAttribute('position', new Float32BufferAttribute(P, 3)); geo.setAttribute('normal', new Float32BufferAttribute(N, 3)); geo.setAttribute('uv', new Float32BufferAttribute(U, 2)); geo.setAttribute('color', new Float32BufferAttribute(Cc, 3));
     const mesh = new Mesh(geo, new MeshLambertMaterial({ map: TEX[name], vertexColors: true })); mesh.receiveShadow = true; group.add(mesh);
@@ -60,8 +76,11 @@ export function buildSnowtown(ctx) {
   const capGeo = new SphereGeometry(0.5, 10, 4, 0, Math.PI * 2, 0, Math.PI / 2);
   const lowCap = new SphereGeometry(0.5, 7, 3, 0, Math.PI * 2, 0, Math.PI / 2);
   const ridge = prism(1.0, 1.0, 0.5);
+  const tulip = new CylinderGeometry(0.035, 0.025, 0.1, 6); tulip.translate(0, 0.05, 0);
+  const mTea = M('glow', '#c4502c');
   const rimTints = ['#5f6b95', '#6d6a9c', '#56709a', '#4f5a82', '#76749f'];
-  let lanternCount = 0, chimneyGlow = 0;
+  let lanternCount = 0, chimneyGlow = 0, teaCount = 0;
+  const houses = [], houseAt = new Map();
   for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
     if (ch(i, j) !== 'H' || used.has(key(i, j))) continue;
     let len = 1; const max = 1 + Math.floor(rnd(i, j) * 3);
@@ -69,6 +88,9 @@ export function buildSnowtown(ctx) {
     for (let k = 0; k < len; k++) used.add(key(i + k, j));
     const [ax, az] = at(i, j), cx = ax + (len - 1) / 2, cz = az, w = len - 0.08, d = 0.92;
     const h = 0.62 + rnd(j, i) * 0.4 + (rnd(i * 5, j) < 0.1 ? 0.35 : 0); // snowed in up to the windows
+    const house = { i, j, len, cx, cz, w, d, h, chimney: null }; houses.push(house);
+    for (let k = 0; k < len; k++) houseAt.set(key(i + k, j), house);
+    life.perches.push([cx + (rnd(i, j * 17) - 0.5) * (w - 0.3), h + 0.62, cz]);
     const WALLS = [...PAL.plaster, '#d9c6b0', '#c9d9d2', '#e0c7cf', '#d3cfe8'];
     const plaster = M('plaster', WALLS[Math.floor(rnd(i * 3, j) * WALLS.length)]);
     K.put('bh-wall', boxGeo, plaster, cx, 0, cz, 0, w, h, d);
@@ -85,14 +107,87 @@ export function buildSnowtown(ctx) {
       const lit = rnd(i + k, j * 5 + dz) < 0.7;
       K.put(lit ? 'bh-glass' : 'bh-glassD', GEO.winGlass, lit ? mGlass : M('glow', '#46557a'), x, h - 0.3, z + dz * 0.01, ry, 0.85, 0.42, 1);
       K.put('bh-sill', GEO.sill, mSnow, x, h - 0.5, z + dz * 0.05, ry, 0.8, 1, 1);
+      if (lit && dz > 0 && teaCount < 24 && rnd(i * 19 + k, j) < 0.2) { // tea on the sill: a tray and two tulip glasses, steaming
+        teaCount++; const zz = z + 0.13;
+        K.put('tea-tray', GEO.sill, M('metal', '#c9b37a'), x, h - 0.42, zz, 0, 0.45, 0.5, 0.6);
+        for (const s2 of [-0.09, 0.09]) { K.put('tea-glass', tulip, mTea, x + s2, h - 0.36, zz, 0); }
+        life.steam.push([x, h - 0.2, zz]);
+      }
       if (!low && lanternCount < 120 && rnd(i + k, j + dz * 3) < 0.12) { lantern(x + 0.34, h - 0.35, z + dz * 0.1); lanternCount++; }
     }
     if (rnd(i * 7, j) < 0.22) {
       const chx = cx + (rnd(i, j * 11) - 0.5) * (w - 0.4);
       K.put('bh-chim', boxGeo, mStoneDark, chx, h, cz - 0.1, 0, 0.3, 0.85, 0.3);
       K.put('bh-chimCap', capGeo, mSnow, chx, h + 0.85, cz - 0.1, 0, 0.4, 0.2, 0.4);
+      house.chimney = [chx, h + 0.55, cz - 0.1];
+      if (rnd(i * 23, j) < 0.35) life.cats.push([chx + 0.28, h + 0.5, cz - 0.05, rnd(j, i * 29) * 6]);
       if (!low && chimneyGlow < 90 && rnd(j, i * 13) < 0.4) { glows.push([chx, h + 0.92, cz - 0.1, 0.5]); chimneyGlow++; }
     }
+  }
+
+  // ---------- the neighbourhood bakery (Fırın) nearest Our School: glowing oven window, big chimney ----------
+  const base = arena.places.find(p => p.kind === 'base');
+  const bakery = houses.filter(hh => '_=P'.includes(ch(hh.i, hh.j + 1))).sort((a, b) => Math.hypot(a.cx - base.x, a.cz - base.z) - Math.hypot(b.cx - base.x, b.cz - base.z))[0];
+  if (bakery) {
+    const { cx, cz, w, d, h } = bakery, fz = cz + d / 2 + 0.03;
+    K.add(rbox(0.7, 0.06, 0.42, 0.04), M('stone', '#b9b4cf'), cx, h - 0.62, fz); // oven mouth surround
+    K.add(new PlaneGeometry(0.5, 0.3), M('glow', '#ff9a3c'), cx, h - 0.4, fz + 0.04);
+    K.add(rbox(0.5, 0.5, 1.4, 0.05), mStoneDark, cx + w / 2 - 0.35, h - 0.2, cz - 0.15);
+    K.add(GEO.snowCap, mSnow, cx + w / 2 - 0.35, h + 1.2, cz - 0.15, 0, 0, 0, 0.62, 0.25, 0.62);
+    glows.push([cx + w / 2 - 0.35, h + 1.3, cz - 0.15, 0.8], [cx, h - 0.4, fz + 0.2, 1.2]); smokeSources.push([cx + w / 2 - 0.35, h + 1.35, cz - 0.15]);
+    const sg = sign('Fırın', 1.0); sg.position.set(cx, h + 0.15, fz + 0.06); group.add(sg);
+    for (let k = 0; k < 3; k++) K.add(new TorusGeometry(0.09, 0.035, 5, 10), M('wood', '#c98a4a'), cx - 0.45 + k * 0.12, h - 0.68, fz + 0.12, Math.PI / 2); // simit on the ledge
+    lights.push([cx, h - 0.2, fz + 0.4]);
+  }
+
+  // ---------- frozen laundry lines across the lanes (colourful, stiff with frost) ----------
+  const clothCols = ['#e8584a', '#f2c14e', '#4f9de0', '#7cc47a', '#e889b5', '#ffffff'];
+  const lineMat = M('metal', '#4a4f6a'), clothMats = clothCols.map(c => M('fabric', c));
+  const strung = new Set(); let lines = 0;
+  const hang = (ax, ay, az, bx, by, bz) => {
+    const L = Math.hypot(bx - ax, bz - az), ry = Math.atan2(bx - ax, bz - az), n = Math.max(2, Math.floor(L / 0.32));
+    for (let k = 0; k < 3; k++) { // a sagging line in three pieces
+      const t0 = k / 3, t1 = (k + 1) / 3, sag = t => -0.22 * 4 * t * (1 - t);
+      const x0 = ax + (bx - ax) * t0, z0 = az + (bz - az) * t0, y0 = ay + (by - ay) * t0 + sag(t0), x1 = ax + (bx - ax) * t1, z1 = az + (bz - az) * t1, y1 = ay + (by - ay) * t1 + sag(t1);
+      const seg = Math.hypot(x1 - x0, y1 - y0, z1 - z0), pitch = Math.atan2(y1 - y0, Math.hypot(x1 - x0, z1 - z0));
+      K.put('lineSeg', boxGeo, lineMat, (x0 + x1) / 2, (y0 + y1) / 2 - 0.01, (z0 + z1) / 2, ry, 0.02, 0.02, seg, -pitch);
+    }
+    for (let k = 1; k < n; k++) {
+      if (rnd(lines * 7 + k, 3) < 0.25) continue;
+      const t = k / n, x = ax + (bx - ax) * t, z = az + (bz - az) * t, y = ay + (by - ay) * t - 0.22 * 4 * t * (1 - t);
+      const big = rnd(k, lines * 5) < 0.5, mat = clothMats[Math.floor(rnd(lines, k * 3) * clothMats.length)];
+      K.put(big ? 'shirt' : 'sock', boxGeo, mat, x, y - (big ? 0.3 : 0.2), z, ry + Math.PI / 2, big ? 0.22 : 0.08, big ? 0.28 : 0.18, 0.025);
+      if (big) K.put('shirtSnow', boxGeo, mSnow, x, y - 0.03, z, ry + Math.PI / 2, 0.23, 0.03, 0.04);
+    }
+    lines++;
+  };
+  for (const hh of houses) {
+    if (lines >= 30 || strung.has(hh)) continue;
+    for (const [di, dj] of [[0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [-1, 2]]) {
+      const other = houseAt.get(key(hh.i + di, hh.j + dj)); if (!other || other === hh || strung.has(other)) continue;
+      let clear = true; for (let k = 1; k < dj; k++) if (solid(ch(hh.i + Math.round(di * k / dj), hh.j + k))) clear = false;
+      if (!clear) continue;
+      const ax = at(hh.i + di, hh.j)[0], y1 = hh.h + 0.25, y2 = other.h + 0.25;
+      hang(ax, y1, hh.cz + hh.d / 2, at(hh.i + di, 0)[0], y2, other.cz - other.d / 2); strung.add(hh); strung.add(other); break;
+    }
+    const side = rnd(hh.i, hh.j * 41) < 0.5 ? -1 : 1, pi = side > 0 ? hh.i + hh.len + 1 : hh.i - 2;
+    if (!strung.has(hh) && lines < 30 && rnd(hh.i * 41, hh.j) < 0.4 && ch(pi, hh.j) === '.' && ch(pi, hh.j + 1) !== 'H') { // a line along the front out to a pole in the snow
+      const [px] = at(pi, hh.j), pz = hh.cz + hh.d / 2 + 0.25, ex = hh.cx + side * hh.w / 2;
+      K.put('linePole', GEO.post, mWood, px, 0.65, pz, 0, 1, 1.3, 1); K.put('poleSnow', GEO.snowCap, mSnow, px, 0, pz, 0, 0.5, 0.25, 0.5);
+      hang(ex, hh.h + 0.2, pz, px, 1.25, pz); strung.add(hh);
+    }
+  }
+
+  // ---------- old street lamps, half buried, with warm pools of light ----------
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+    if (ch(i, j) !== 'l') continue;
+    const [x, z] = at(i, j), lean = (rnd(i, j * 43) - 0.5) * 0.12;
+    K.put('lampPost', GEO.post, mMetal, x, 0.95, z, 0, 1.2, 1.9, 1.2, lean, 0);
+    K.put('lampMound', lowCap, mSnow, x, 0, z, rnd(i, j) * 3, 0.9, 0.38, 0.8);
+    K.put('lampArm', boxGeo, mMetal, x + 0.18, 1.82, z, 0, 0.4, 0.05, 0.05);
+    lantern(x + 0.36, 1.55, z, true);
+    pools.push([x + 0.36, z, 2.4]);
+    life.perches.push([x + 0.36, 1.92, z]);
   }
 
   // ---------- the buried town: roof ridges, chimneys and dormers poking out of the drifts ----------
@@ -108,6 +203,7 @@ export function buildSnowtown(ctx) {
       K.put('br-roofSnow', ridge, mSnow, x, 0.36, z, ry, 1.22, 1.0, 0.98);
       K.put('br-ridgeSnow', capGeo, mSnow, x, 0.72, z, ry, 0.32, 0.16, 1.0);
       chx = x + (ry ? 0 : 0.3); chz = z + (ry ? 0.3 : 0); top = 0.7;
+      life.perches.push([x - (ry ? 0 : 0.25), 0.82, z - (ry ? 0.25 : 0)]);
     } else if (v < 0.82) { // a dormer window, still warm inside
       K.put('br-dormer', boxGeo, M('plaster', '#d3cfe8'), x, 0.3, z + 0.15, 0, 0.55, 0.5, 0.5);
       K.put('br-dormerRoof', ridge, roof, x, 0.78, z + 0.15, Math.PI / 2, 0.7, 0.5, 0.65);
@@ -120,6 +216,7 @@ export function buildSnowtown(ctx) {
     K.put('bh-chimCap', capGeo, mSnow, chx, top + 0.55, chz, 0, 0.4, 0.2, 0.4);
     if (!low && chimneyGlow < 90 && rnd(j, i * 13) < 0.5) { glows.push([chx, top + 0.62, chz, 0.45]); chimneyGlow++; }
     if (smokeCount < 24 && rnd(i * 11, j) < 0.35) { smokeSources.push([chx, top + 0.7, chz]); smokeCount++; }
+    if (rnd(i * 31, j * 3) < 0.22) life.cats.push([chx + 0.26, top + 0.2, chz + 0.12, rnd(i, j * 37) * 6]); // a cat warming itself by the chimney
   }
   // the world's edge: tall rounded snowbanks with the odd snowy pine
   for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
@@ -220,18 +317,21 @@ export function buildSnowtown(ctx) {
       K.add(new CapsuleGeometry(0.2, 0.55, 4, 8), bronze, x - 0.15, 1.95, z + 0.45, 0, 0, Math.PI / 2); K.add(new SphereGeometry(0.2, 10, 8), bronze, x - 0.55, 2.1, z + 0.45); K.add(new SphereGeometry(0.26, 10, 8), bronze, x - 0.6, 2.15, z + 0.45);
       K.add(GEO.snowCap, mSnow, x, 3.2, z, 0, 0, 0, 0.32, 0.14, 0.32); K.add(GEO.snowCap, mSnow, x, 1.82, z, 0, 0, 0, 0.95, 0.12, 0.95);
       const sg = sign('Waterfront Park', 1.9); sg.position.set(x, 1.15, z + 0.8); group.add(sg);
-    } else if (lm.type === 'pier') { // wooden pier over the ice with bollards and lamps
-      const [x, z] = centre(lm), L = lm.h;
-      K.add(rbox(2.1, L + 0.4, 0.22, 0.04), mWood, x, 0.12, z); K.add(rbox(1.9, L, 0.12, 0.06), M('snow', '#e6ecf8'), x, 0.34, z);
-      for (let k = 0; k <= L; k += 1.5) for (const s of [-1, 1]) { K.put('pierPost', new CylinderGeometry(0.1, 0.1, 0.8, 8), mWood, x + s * 1.0, 0.1, z - L / 2 + k); K.put('bollard', new CylinderGeometry(0.09, 0.11, 0.3, 8), mMetal, x + s * 0.85, 0.48, z - L / 2 + k); }
-      lantern(x - 0.9, 1.5, z + L / 2 - 0.3, true); K.put('lampPost', GEO.post, mMetal, x - 0.9, 0.85, z + L / 2 - 0.3, 0, 1, 1.3, 1);
+    } else if (lm.type === 'pier') { // wooden pier over the ice with bollards and a lamp
+      const [x, z] = centre(lm), alongX = lm.along === 'x', L = alongX ? lm.w : lm.h;
+      const P2 = (u, v) => (alongX ? [x + u, z + v] : [x + v, z + u]); // u along the pier, v across
+      K.add(rbox(alongX ? L + 0.4 : 2.1, alongX ? 2.1 : L + 0.4, 0.22, 0.04), mWood, x, 0.12, z); K.add(rbox(alongX ? L : 1.9, alongX ? 1.9 : L, 0.12, 0.06), M('snow', '#e6ecf8'), x, 0.34, z);
+      for (let k = 0; k <= L; k += 1.5) for (const s2 of [-1, 1]) { const [px, pz] = P2(-L / 2 + k, s2 * 1.0), [bx, bz] = P2(-L / 2 + k, s2 * 0.85); K.put('pierPost', new CylinderGeometry(0.1, 0.1, 0.8, 8), mWood, px, 0.1, pz); K.put('bollard', new CylinderGeometry(0.09, 0.11, 0.3, 8), mMetal, bx, 0.48, bz); life.perches.push([bx, 0.66, bz]); }
+      const [lx, lz] = P2(L / 2 - 0.3, -0.9); lantern(lx, 1.5, lz, true); K.put('lampPost', GEO.post, mMetal, lx, 0.85, lz, 0, 1, 1.3, 1);
     } else if (lm.type === 'ferry') { // a Golden Horn ferry stuck in the ice, snow on the deck, warm cabin windows
-      const [x, z] = centre(lm);
-      K.add(rbox(4.0, 1.8, 0.8, 0.3, 3), M('metal', '#e8e4ee'), x, -0.15, z); K.add(rbox(4.05, 1.85, 0.18, 0.06), M('metal', '#3d4a6b'), x, 0.05, z);
-      K.add(rbox(2.6, 1.3, 0.75, 0.1), M('plaster', '#f0ecf4'), x, 0.65, z); K.add(rbox(2.7, 1.4, 0.12, 0.05), M('metal', '#3d4a6b'), x, 1.4, z); K.add(rbox(2.6, 1.3, 0.25, 0.12, 3), mSnow, x, 1.5, z);
-      for (let k = 0; k < 4; k++) K.add(new PlaneGeometry(0.4, 0.32), mGlass, x - 0.9 + k * 0.6, 1.0, z + 0.66);
-      K.add(new CylinderGeometry(0.18, 0.2, 0.7, 12), M('metal', '#c8584a'), x + 0.6, 1.9, z); K.add(new CylinderGeometry(0.22, 0.22, 0.12, 12), mSnow, x + 0.6, 2.28, z);
-      smokeSources.push([x + 0.6, 2.4, z]);
+      const [x, z] = centre(lm), alongX = lm.along !== 'z', ry = alongX ? 0 : Math.PI / 2;
+      const F = (u, v) => (alongX ? [x + u, z + v] : [x + v, z - u]);
+      K.add(rbox(4.0, 1.8, 0.8, 0.3, 3), M('metal', '#e8e4ee'), x, -0.15, z, 0, ry); K.add(rbox(4.05, 1.85, 0.18, 0.06), M('metal', '#3d4a6b'), x, 0.05, z, 0, ry);
+      K.add(rbox(2.6, 1.3, 0.75, 0.1), M('plaster', '#f0ecf4'), x, 0.65, z, 0, ry); K.add(rbox(2.7, 1.4, 0.12, 0.05), M('metal', '#3d4a6b'), x, 1.4, z, 0, ry); K.add(rbox(2.6, 1.3, 0.25, 0.12, 3), mSnow, x, 1.5, z, 0, ry);
+      for (let k = 0; k < 4; k++) { const [wx, wz] = F(-0.9 + k * 0.6, 0.66); K.add(new PlaneGeometry(0.4, 0.32), mGlass, wx, 1.0, wz, 0, ry); }
+      const [fx, fz] = F(0.6, 0); K.add(new CylinderGeometry(0.18, 0.2, 0.7, 12), M('metal', '#c8584a'), fx, 1.9, fz); K.add(new CylinderGeometry(0.22, 0.22, 0.12, 12), mSnow, fx, 2.28, fz);
+      smokeSources.push([fx, 2.4, fz]);
+      for (const [u, v, y] of [[-1.4, 0, 1.65], [-0.4, 0.3, 1.65], [1.6, -0.5, 0.75]]) { const [px, pz] = F(u, v); life.perches.push([px, y, pz]); }
     } else if (lm.type === 'pavilion') { // an octagonal park pavilion under a heavy snow roof
       const [x, z] = centre(lm);
       K.add(new CylinderGeometry(1.2, 1.25, 0.25, 8), mStone, x, 0.12, z);
@@ -240,6 +340,14 @@ export function buildSnowtown(ctx) {
       K.add(new SphereGeometry(0.12, 8, 6), M('metal', '#c9a24a'), x, 3.05, z);
       const sg = sign('Sururi Park', 1.7); sg.position.set(x, 3.4, z); group.add(sg);
       lantern(x, 1.6, z, true);
+    } else if (lm.type === 'simit-cart') { // a street seller's cart: red box, glass case of sesame rings, wheels in the snow
+      const [x, z] = centre(lm), red = M('metal', '#c8443c');
+      K.add(rbox(1.0, 0.6, 0.6, 0.06), red, x, 0.25, z); K.add(rbox(0.9, 0.5, 0.42, 0.03), M('glow', '#ffe6b0'), x, 0.85, z);
+      for (let a = 0; a < 3; a++) for (let b = 0; b < 2; b++) K.add(new TorusGeometry(0.1, 0.04, 5, 10), M('wood', '#c98a4a'), x - 0.28 + a * 0.28, 0.95 + b * 0.14, z + 0.05, Math.PI / 2 - 0.4);
+      K.add(rbox(1.05, 0.65, 0.06, 0.03), red, x, 1.27, z); K.add(rbox(1.0, 0.6, 0.18, 0.08, 3), mSnow, x, 1.32, z);
+      for (const s2 of [-0.42, 0.42]) K.add(new CylinderGeometry(0.22, 0.22, 0.06, 12), mBeam, x + s2, 0.2, z + 0.32, Math.PI / 2);
+      K.add(GEO.snowCap, mSnow, x, 0, z, 0, 0, 0, 1.4, 0.3, 1.0);
+      glows.push([x, 0.95, z + 0.35, 1.0]); life.perches.push([x + 0.3, 1.48, z]);
     } else if (lm.type === 'slide') {
       const [x, z] = centre(lm);
       K.add(rbox(0.5, 0.5, 1.1, 0.04), M('metal', '#c8584a'), x - 0.3, 0, z); K.add(rbox(0.3, 1.3, 0.06, 0.02), M('metal', '#d99a3e'), x + 0.25, 0.55, z + 0.3, -0.75, 0, 0); K.add(rbox(0.32, 1.1, 0.12, 0.05), mSnow, x + 0.25, 0.62, z + 0.3, -0.75, 0, 0); K.add(GEO.snowCap, mSnow, x - 0.3, 1.1, z, 0, 0, 0, 0.32, 0.18, 0.32);

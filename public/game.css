@@ -11,7 +11,7 @@ h1, .play-btn, #banner, .fx-num, #zone-label, #score b { font-weight: 900; lette
 
 /* screens */
 .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 10px; z-index: 30;
-  background: radial-gradient(circle at 30% 20%, #8fd0ff, #2f74d0 70%, #1c3f8f); }
+  background: url(skyline.svg) center bottom / cover no-repeat, linear-gradient(#4c4f9a, #f0b9a6); }
 .screen[hidden] { display: none; }
 #pause-menu, #loading { background: rgba(20, 40, 90, 0.55); }
 .card { background: #fff; border-radius: 22px; padding: 14px 18px; max-width: 680px; width: 100%; max-height: 100%; overflow: auto; text-align: center; font-size: 16px;

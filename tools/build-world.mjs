@@ -19,7 +19,7 @@ import { CONFIG } from '../src/config.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const TILE = 15;                                // metres per tile
-const BOUNDS = { x0: -620, x1: 760, z0: -520, z1: 1140 }; // metres around Our School (x east, z south)
+const BOUNDS = { x0: -620, x1: 760, z0: -520, z1: 1260 }; // metres around Our School (x east, z south)
 const W = Math.ceil((BOUNDS.x1 - BOUNDS.x0) / TILE), H = Math.ceil((BOUNDS.z1 - BOUNDS.z0) / TILE);
 const base = CONFIG.arenas[0].base;
 
@@ -161,14 +161,23 @@ for (const op of outposts) {
       landmarks.push({ type: 'footbridge', a: t1, b: t2, outpost: op.id });
     }
   } else if (op.landmark === 'archers-lodge') { clearAround(i + 6, j - 3, 3, 3); place('archers-lodge', i + 6, j - 3, 3, 3, { outpost: op.id }); for (const [dx, dz] of [[-6, -6], [-7, 4], [6, 5]]) { clearAround(i + dx, j + dz, 1, 1); place('target', i + dx, j + dz, 1, 1, { outpost: op.id }); } for (const [dx, dz] of [[-6, 0], [5, -6]]) { clearAround(i + dx, j + dz, 1, 1); place('marker-stone', i + dx, j + dz, 1, 1, { outpost: op.id }); } }
-  else if (op.landmark === 'fountain') { clearAround(i - 1, j - 8, 2, 2); place('fountain', i - 1, j - 8, 2, 2, { outpost: op.id }); clearAround(i + 6, j - 2, 2, 2); place('plane-tree', i + 6, j - 2, 2, 2, { outpost: op.id }); }
+  else if (op.landmark === 'fountain') { clearAround(i - 1, j - 8, 2, 2); place('fountain', i - 1, j - 8, 2, 2, { outpost: op.id }); clearAround(i + 6, j - 2, 2, 2); place('plane-tree', i + 6, j - 2, 2, 2, { outpost: op.id }); place('simit-cart', i + 3, j + 3, 1, 1, { outpost: op.id }); }
   else if (op.landmark === 'admiral') {
     clearAround(i - 1, j - 7, 2, 2); place('admiral', i - 1, j - 7, 2, 2, { outpost: op.id });
     // the ferry pier: from the plaza into the frozen Golden Horn (walkable), a ferry stuck in the ice at the end
-    let pi = i, pj = j + 6; while (land(pi, pj) && pj < H - 1) { set(pi, pj, 'P'); set(pi - 1, pj, 'P'); pj++; }
-    const start = pj; for (let k = 0; k < 6 && pj < H - 2; k++, pj++) { set(pi, pj, 'j'); set(pi - 1, pj, 'j'); }
-    landmarks.push({ type: 'pier', i: pi - 1, j: start, w: 2, h: pj - start, outpost: op.id });
-    landmarks.push({ type: 'ferry', i: pi + 1, j: pj - 3, w: 4, h: 2, outpost: op.id });
+    // which way is the water closest? (the Golden Horn bends round Kasımpaşa)
+    const dirs = [[0, 1], [-1, 0], [1, 0], [0, -1]].map(([di, dj]) => { let k = 5; while (k < 30 && land(i + di * k, j + dj * k)) k++; return { di, dj, k }; }).sort((a, b) => a.k - b.k);
+    const { di, dj } = dirs[0], wide = [-dj, di]; // pier is two tiles wide, across the direction of travel
+    let k = 2, ci = i + di * k, cj = j + dj * k;
+    while (land(ci, cj) && k < 30) { for (const s2 of [0, -1]) { const a = ci + wide[0] * s2, b = cj + wide[1] * s2; if (land(a, b) && !'OfdG#'.includes(get(a, b))) set(a, b, 'P'); } k++; ci = i + di * k; cj = j + dj * k; }
+    const cells = []; for (let m = 0; m < 6 && inB(ci, cj); m++, k++, ci = i + di * k, cj = j + dj * k) for (const s2 of [0, -1]) { set(ci + wide[0] * s2, cj + wide[1] * s2, 'j'); cells.push([ci + wide[0] * s2, cj + wide[1] * s2]); }
+    const is = cells.map(c => c[0]), js = cells.map(c => c[1]);
+    const pier = { type: 'pier', i: Math.min(...is), j: Math.min(...js), w: Math.max(...is) - Math.min(...is) + 1, h: Math.max(...js) - Math.min(...js) + 1, along: dj ? 'z' : 'x', outpost: op.id };
+    landmarks.push(pier);
+    // the ferry lies alongside the end of the pier, in the ice
+    const end = cells.slice(-4), ei = Math.min(...end.map(c => c[0])), ej = Math.min(...end.map(c => c[1]));
+    const ferry = dj ? { i: Math.max(...is) + 1, j: dj > 0 ? ej - 1 : ej - 1, w: 2, h: 4 } : { i: di > 0 ? ei - 1 : ei - 1, j: Math.max(...js) + 1, w: 4, h: 2 };
+    landmarks.push({ type: 'ferry', ...ferry, along: dj ? 'z' : 'x', outpost: op.id });
   } else if (op.landmark === 'pavilion') { clearAround(i + 6, j - 2, 2, 2); place('pavilion', i + 6, j - 2, 2, 2, { outpost: op.id }); for (const [dx, dz] of [[-7, -2], [-7, 1]]) { clearAround(i + dx, j + dz, 1, 1); place(dz < 0 ? 'slide' : 'swings', i + dx, j + dz, 1, 1, { outpost: op.id }); } clearAround(i - 6, j - 8, 2, 2); place('giant-snowman', i - 6, j - 8, 2, 2, { outpost: op.id }); /* behind the lodge, so it never hides the play */ }
 }
 
@@ -217,6 +226,18 @@ for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
 }
 for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (get(i, j) === '_' && rand() < 0.02) g[j][i] = 'd';
 
+// 8b. old street lamps poking out of the snow along the paths (solid, thin), well spaced
+{
+  const lamps = [];
+  for (let j = 2; j < H - 2; j++) for (let i = 2; i < W - 2; i++) {
+    if (get(i, j) !== '.' || lamps.length >= 120) continue;
+    const byPath = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([di, dj]) => '=_'.includes(get(i + di, j + dj)));
+    if (!byPath || near(i, j, 8) || nearHome(i, j, 4)) continue;
+    if (lamps.some(([a, b]) => Math.max(Math.abs(a - i), Math.abs(b - j)) < 10)) continue;
+    if (rand() < 0.3) { lamps.push([i, j]); set(i, j, 'l'); }
+  }
+}
+
 // 9. everything walkable must be reachable from the school: fill pockets, open blocked outposts
 const WALK = new Set(['.', '_', '=', 'p', 'P', 'Y', 'h', 'r', 'q', '+', 'd', 'j']);
 const flood = () => {
@@ -246,4 +267,4 @@ const out = {
 mkdirSync(join(ROOT, 'public/arenas'), { recursive: true });
 writeFileSync(join(ROOT, 'public/arenas/arena1.json'), JSON.stringify(out));
 const count = ch => rows.join('').split(ch).length - 1;
-console.log(`World ${W}×${H} tiles (${TILE} m each): houses ${count('H')}, buried roofs ${count('R')}, open snow ${count('.')}, streets ${count('_') + count('=')}, plazas ${count('P')}, water ${count('W')}, parks ${count('p')}, scenery ${scenery.length}, landmarks ${landmarks.length}, buried cars ${count('c')}, filled pockets ${filled}`);
+console.log(`World ${W}×${H} tiles (${TILE} m each): houses ${count('H')}, buried roofs ${count('R')}, open snow ${count('.')}, streets ${count('_') + count('=')}, plazas ${count('P')}, water ${count('W')}, parks ${count('p')}, scenery ${scenery.length}, landmarks ${landmarks.length}, buried cars ${count('c')}, lamps ${count('l')}, filled pockets ${filled}`);

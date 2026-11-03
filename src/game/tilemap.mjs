@@ -2,7 +2,7 @@
 // navigation and renderer use. One tile = one world unit; x = east (columns), z = south (rows).
 import { GRID } from './grid.mjs';
 
-const SOLID = 'HSKMFctLb#nOfQCWGRD';      // tiles you cannot walk through (G = landmark, R = buried roof, D = edge snowbank)
+const SOLID = 'HSKMFctLb#nOfQCWGRDl';     // tiles you cannot walk through (G = landmark, R = buried roof, D = edge snowbank, l = street lamp)
 const TALL = 'HSKM';                      // edge buildings
 export const TILE = {
   '.': 'snow', '_': 'street', Y: 'yard', '#': 'wall', b: 'bench', c: 'car', n: 'snowman', t: 'tree', L: 'lamp', F: 'fence',

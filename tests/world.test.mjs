@@ -50,3 +50,15 @@ test('places of worship and the cemetery are quiet scenery: no outpost near them
     for (let dj = -3; dj <= 3; dj++) for (let di = -3; di <= 3; di++) assert.ok(!'QCq+'.includes(def.rows[j + dj]?.[i + di] ?? '.'), `${z.id} is clear of quiet zones`);
   }
 });
+
+test('street lamps line the paths, a simit cart stands at Kızılay Square, the pier reaches the ice', () => {
+  const cells = def.rows.join('');
+  const lamps = [...cells].filter(c => c === 'l').length;
+  assert.ok(lamps >= 30 && lamps <= 120, `street lamps: ${lamps}`);
+  assert.ok(def.landmarks.find(l => l.type === 'simit-cart' && l.outpost === 'kizilay'));
+  const pier = def.landmarks.find(l => l.type === 'pier');
+  const at = (i, j) => def.rows[j]?.[i] ?? 'X';
+  let touchesPlaza = false, overIce = false;
+  for (let j = pier.j - 1; j <= pier.j + pier.h; j++) for (let i = pier.i - 1; i <= pier.i + pier.w; i++) { if (at(i, j) === 'P') touchesPlaza = true; if (at(i, j) === 'W') overIce = true; }
+  assert.ok(touchesPlaza && overIce, 'the pier runs from the plaza out over the frozen sea');
+});
