@@ -7,6 +7,7 @@
 import { Mesh, MeshLambertMaterial, MeshStandardMaterial, MeshBasicMaterial, BoxGeometry, CylinderGeometry, ConeGeometry, PlaneGeometry, SphereGeometry, TorusGeometry, Shape, ShapeGeometry, LineSegments, EdgesGeometry, LineBasicMaterial, Color, DoubleSide, HemisphereLight, DirectionalLight, CanvasTexture, SRGBColorSpace, RepeatWrapping, Fog, Points, PointsMaterial, BufferGeometry, Float32BufferAttribute, Group } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { stage, actor } from './stationkit.js';
+import { tall } from './stations.js';
 import { esc, shuffle, blockOrder } from './util.js';
 
 const NOTES = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5, 1567.98, 1760, 1975.5, 2093];
@@ -15,9 +16,10 @@ const STATION = {
   prepare(s, ctx, H) {
     const set = s.set, k = set.courses, up = set.top - set.base;
     const a = innerWidth / innerHeight, d = a < 1.6 ? 1.12 : 1, cam = innerHeight < 430 ? { eye: [0, 5.0 + up * 0.7, 12.6 * d], look: [0, 1.45 + up * 0.7, 0.9] } : { eye: [0, 4.6 + up * 0.7, 12.2 * d], look: [0, 1.6 + up * 0.7, 0.9] };
-    s.frame(cam.eye, cam.look);
+    const T = tall();
+    if (T) s.frame([0, 9.0 + up * 0.7, 10.0], [0, 2.4 + up * 0.7, 0.6], 44); else s.frame(cam.eye, cam.look); // portrait: from higher up, the bricks in more rows
     set.flag.position.y = set.flagLow + up;
-    return { flag: set.flag, flagUp: set.flagTop + up, slotY: set.top, slotZ: -0.42, pileZ: [1.55, 2.75], rowMax: 9.2,
+    return { flag: set.flag, flagUp: set.flagTop + up, slotY: set.top, slotZ: -0.42, pileZ: T ? [1.6, 2.9, 4.2] : [1.55, 2.75], rowMax: T ? 4.4 : 9.2,
       keep(used, mat) { // the finished course stays: the wall is one course taller
         for (const it of used) { s.unlabel(it.el); it.mesh.material = mat; s.step.remove(it.mesh); s.persist.add(it.mesh); }
         set.courses = k + 1; set.top += H; set.raise(set.top);
@@ -53,9 +55,9 @@ function build3d(ctx, { kind, pieces, expected, sayAtEnd, revealText, revealTr, 
     return g;
   });
   // the pile on the snow, in up to two rows
-  const rows = [[], []]; let rw = 0;
+  const rows = L.pileZ.map(() => []); let r = 0, rw = 0;
   const pg = ice ? 0.16 : 0.3;
-  for (const it of items) { const r = rw + it.w > L.rowMax && rows[0].length ? 1 : 0; rows[r].push(it); if (!r) rw += it.w + pg; }
+  for (const it of items) { if (rw + it.w > L.rowMax && rows[r].length && r < rows.length - 1) { r++; rw = 0; } rows[r].push(it); rw += it.w + pg; }
   rows.forEach((row, r) => { const tw = row.reduce((a, it) => a + it.w + pg, -pg); let px = -tw / 2; for (const it of row) { it.mesh.position.set(px + it.w / 2, H / 2 + 0.02, L.pileZ[r]); it.mesh.rotation.y = (ctx.rng() - 0.5) * 0.12; px += it.w + pg; } });
 
   let next = expected.findIndex(e => !e.given), tried = false, done = false;

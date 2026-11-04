@@ -163,8 +163,11 @@ async function startGame(myTeam, kit, pace) {
   const focus = new Vector3(player.x, 0, player.z - 1.2);
   let stages = null; // set below once the HUD exists
   function resize() {
-    const w = innerWidth, h = innerHeight; camera.aspect = w / h;
-    zoom = Math.min(1.35, Math.max(1, Math.min(w, h) / 390)) * (w / h < 1.5 ? 1.12 : 1) * (Number(params.get('zoom')) || 1) * (V2 ? 0.86 : 1); // v2: closer, bigger characters
+    const w = innerWidth, h = innerHeight, a = w / h; camera.aspect = a;
+    // portrait (phones held upright): a wider lens and a little further back, so the narrow screen
+    // still shows the fight round you; the extra height shows more of the street ahead
+    camera.fov = a < 1 ? 24 + (1 - a) * 37 : 24;
+    zoom = Math.min(1.35, Math.max(1, Math.min(w, h) / 390)) * (a < 1.5 ? 1.12 : 1) * (a < 1 ? 1 + (1 - a) * 0.5 : 1) * (Number(params.get('zoom')) || 1) * (V2 ? 0.86 : 1); // v2: closer, bigger characters
     camera.updateProjectionMatrix(); renderer.setSize(w, h, false); stages?.sled?.resize(w, h); post?.setSize(w, h);
     const dist = off.length() * zoom; scene.fog.near = base.fogNear = dist * 1.25; scene.fog.far = base.fogFar = dist * 2.9; // haze only beyond the arena
   }
@@ -416,11 +419,12 @@ async function startGame(myTeam, kit, pace) {
     const z = sim.nearestZone(player.x, player.z);
 
     // camera
-    const halfW0 = Math.tan(12 * Math.PI / 180) * off.length() * zoom * camera.aspect;
-    camShift += ((player.planted && !worldTasks?.active ? halfW0 * 0.5 : 0) - camShift) * Math.min(1, dt * 4); // reading a card: keep the student and the fight on the left half
-    const tx = player.x + camShift, tz = player.z - 1.2;
+    const tH = Math.tan(camera.fov * Math.PI / 360), upright = camera.aspect < 1, halfW0 = tH * off.length() * zoom * camera.aspect;
+    // reading a card: keep the student and the fight beside it (left half), or above it in portrait, where the card is at the bottom
+    camShift += ((player.planted && !worldTasks?.active ? (upright ? tH * off.length() * zoom * 0.55 : halfW0 * 0.5) : 0) - camShift) * Math.min(1, dt * 4);
+    const tx = player.x + (upright ? 0 : camShift), tz = player.z - 1.2 + (upright ? camShift : 0);
     focus.x += (tx - focus.x) * Math.min(1, dt * 5); focus.z += (tz - focus.z) * Math.min(1, dt * 5);
-    const halfW = Math.tan(12 * Math.PI / 180) * off.length() * zoom * camera.aspect, lim = params.has('zoom') ? 0 : Math.max(0, arena.w / 2 - halfW + 0.5);
+    const halfW = tH * off.length() * zoom * camera.aspect, lim = params.has('zoom') ? 0 : Math.max(0, arena.w / 2 - halfW + 0.5);
     focus.x = Math.max(-lim, Math.min(lim, focus.x));
     if (!params.has('zoom')) focus.z = Math.max(arena.z0 + 5, Math.min(arena.z0 + arena.h - 3.5, focus.z));
     shake = Math.max(0, shake - dt);

@@ -94,7 +94,7 @@ h2 { margin: 0 0 8px; }
 #rotate { display: none; z-index: 60; }
 #rotate .phone { font-size: 56px; animation: turn 2s ease-in-out infinite; }
 @keyframes turn { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
-@media (orientation: portrait) and (pointer: coarse) { #rotate { display: flex; } }
+/* portrait is the main way to play on phones (the browser bars take less room); landscape works too */
 @media (prefers-reduced-motion: reduce) { #rotate .phone, #zone.contested, #super.ready { animation: none; } }
 
 @media (max-height: 430px) {
@@ -409,3 +409,68 @@ body.station #newrival, body.station #coach { display: none !important; } /* the
 body.station #banner { display: none; } /* the fight's banners wait; the station caption carries the news */
 /* long banners shrink and wrap on small screens instead of running off the sides */
 @media (max-width: 760px), (max-height: 430px) { #banner { font-size: 28px; white-space: normal; text-align: center; width: 88vw; line-height: 1.1; } #banner.count { font-size: 72px; } #banner.go { font-size: 58px; } }
+
+/* ---------- the start screen fits a phone without scrolling ---------- */
+@media (orientation: portrait) and (max-width: 560px) {
+  .screen { padding: 8px; }
+  #start .card { padding: 10px 12px 8px; }
+  #start h1 { font-size: 32px; }
+  #start .sub { font-size: 13px; margin: 0 0 4px; }
+  #start .step { margin: 6px 0; }
+  #start .row4 { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  #start .team-btn { flex-direction: row; justify-content: flex-start; gap: 8px; min-height: 46px; padding: 4px 10px; }
+  #start .team-btn svg { width: 30px; height: 30px; flex: none; }
+  #start .row3 { gap: 6px; }
+  #start .kit-btn { padding: 5px 3px; min-height: 0; }
+  #start .kit-btn .ico { font-size: 18px; } #start .kit-btn b { font-size: 14px; line-height: 1.1; } #start .kit-btn small { font-size: 10.5px; }
+  #start .pace-btn { min-height: 40px; padding: 0 16px; }
+  #start .play-btn { min-height: 50px; font-size: 21px; margin-top: 6px; }
+  #start .note { margin-top: 6px; }
+}
+@media (orientation: portrait) and (max-height: 620px) { #start .kit-btn small, #start .sub { display: none; } }
+@media (orientation: landscape) and (max-height: 520px) {
+  #start .card { max-width: 860px; display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: 't k' 's w' 'm p' 'm b' 'm n'; column-gap: 16px; align-items: center; padding: 8px 14px; }
+  #start h1 { grid-area: t; font-size: 30px; } #start .sub { grid-area: s; font-size: 13px; margin: 0; }
+  #start .st-team { grid-area: m; align-self: start; } #start .st-kit { grid-area: k; } #start .st-who { grid-area: w; } #start .st-pace { grid-area: p; }
+  #start .play-btn { grid-area: b; min-height: 46px; font-size: 20px; margin-top: 4px; } #start .note { grid-area: n; margin-top: 4px; }
+  #start .row4 { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  #start .team-btn { flex-direction: row; justify-content: flex-start; gap: 8px; min-height: 44px; padding: 4px 10px; } #start .team-btn svg { width: 30px; height: 30px; }
+  #start .step { margin: 3px 0; } #start .kit-btn { padding: 4px 2px; min-height: 0; } #start .kit-btn small { display: none; } #start .pace-btn { min-height: 38px; }
+}
+@media (orientation: portrait) and (max-width: 350px) { #start .team-btn { font-size: 14px; gap: 5px; padding: 4px 6px; } #start .team-btn svg { width: 24px; height: 24px; } #start .kit-btn b { font-size: 13px; } }
+@media (orientation: landscape) and (max-height: 520px) { #start h1 { align-self: end; } #start .sub { align-self: start; } }
+
+/* ---------- portrait phones: the HUD round the edges, the card as a bottom sheet ---------- */
+@media (orientation: portrait) and (max-width: 600px) {
+  #minimap { width: 76px; height: 76px; }
+  #map-btn { left: max(8px, env(safe-area-inset-left)); top: calc(max(6px, env(safe-area-inset-top)) + 82px); height: 34px; min-width: 0; padding: 0 8px; font-size: 13px; }
+  #topbar { flex-direction: column; gap: 3px; top: max(6px, env(safe-area-inset-top)); width: calc(100vw - 190px); max-width: 260px; }
+  #score { font-size: 14px; padding: 2px 8px; } #score span svg { width: 18px; height: 18px; }
+  #zone { min-width: 0; width: 100%; padding: 3px 8px 5px; } #zone-label { font-size: 12.5px; line-height: 1.15; }
+  #flakes { top: calc(56px + env(safe-area-inset-top)); right: max(8px, env(safe-area-inset-right)); font-size: 15px; }
+  #lives { top: calc(122px + env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); padding: 1px 8px; } #lives i { font-size: 18px; }
+  #feed { top: calc(92px + env(safe-area-inset-top)); } .feed-item { font-size: 12px; }
+  #coach, #minimap:not([hidden]) ~ #coach { left: 50%; transform: translateX(-50%); top: calc(max(6px, env(safe-area-inset-top)) + 96px); max-width: calc(100vw - 120px); width: max-content; font-size: 13.5px; }
+  #newrival { left: 8px; right: 8px; top: auto; bottom: calc(150px + env(safe-area-inset-bottom)); max-width: none; font-size: 13px; }
+  #banner { top: 30%; }
+  #attack { width: 96px; height: 96px; } #super { width: 64px; height: 64px; right: calc(max(16px, env(safe-area-inset-right)) + 116px); }
+  /* the flat task card slides up from the bottom */
+  .taskcard:not(.world) { top: auto; left: max(6px, env(safe-area-inset-left)); right: max(6px, env(safe-area-inset-right)); bottom: max(6px, env(safe-area-inset-bottom)); width: auto; height: min(62vh, 560px); transform: translateY(115%); }
+  .taskcard:not(.world).in { transform: translateY(0); }
+  body.reading #banner { left: 50%; top: 18%; width: 90vw; font-size: 26px; }
+  /* inside a station the card is a slim strip along the top */
+  .taskcard.world { width: calc(100vw - 12px); top: max(6px, env(safe-area-inset-top)); border-width: 3px; border-radius: 16px; }
+  .taskcard.world .tc-head { padding: 5px 8px; gap: 6px; } .taskcard.world .tc-icon { display: none; }
+  .taskcard.world .tc-title { font-size: 14px; } .taskcard.world .tc-coach { font-size: 11.5px; line-height: 1.2; }
+  .taskcard.world .tc-foot { padding: 4px 6px; gap: 5px; } .taskcard.world .tc-say { width: 36px; height: 34px; font-size: 16px; } .taskcard.world .tc-leave { font-size: 12px; padding: 0 8px; min-height: 34px; }
+  .taskcard.world .tc-timer { width: 30px; height: 30px; }
+  .wt-caption { font-size: 15px; max-width: calc(100vw - 20px); padding: 7px 12px; }
+  #pause { width: 44px; }
+  /* station labels wrap narrower */
+  .wt-label { font-size: 13.5px; }
+  .wt-opt { max-width: 30vw; padding: 5px 8px; min-height: 40px; border-width: 2px; box-shadow: 0 3px 0 #1c2340; } .wt-opt img { width: 30px; height: 30px; }
+  .wt-tile { min-width: 0; max-width: 40vw; white-space: normal; text-align: center; min-height: 40px; padding: 4px 8px; } .wt-tile img { width: 34px; height: 34px; }
+  .wt-target { padding: 4px 8px; max-width: 34vw; white-space: normal; } .wt-hit { width: 90px; height: 90px; }
+  .wt-card { min-height: 36px; padding: 4px 8px; } .wt-brick { min-height: 36px; padding: 4px 8px; } .wt-brick.ice { font-size: 18px; min-width: 36px; }
+  .wt-bell { font-size: 14px; padding: 5px 12px; } .wt-placed { font-size: 11.5px; }
+}

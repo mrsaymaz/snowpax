@@ -14,7 +14,12 @@ import { stage, pines, mounds, bunting, row, actor } from './stationkit.js';
 import { esc, shuffle } from './util.js';
 
 const L = (c) => new MeshLambertMaterial({ color: c });
-const frameFor = (s, desk, short) => { const c = innerHeight < 430 ? short : desk, d = innerWidth / innerHeight < 1.6 ? 1.12 : 1; s.frame([c.eye[0], c.eye[1], c.eye[2] * d], c.look); };
+// portrait phones get their own layouts, using the height: answers stack, the camera comes closer
+export const tall = () => innerWidth / innerHeight < 0.8;
+const frameFor = (s, desk, short, port = null) => {
+  if (port && tall()) { s.frame(port.eye, port.look, port.width); return; }
+  const c = innerHeight < 430 ? short : desk, d = innerWidth / innerHeight < 1.6 ? 1.12 : 1; s.frame([c.eye[0], c.eye[1], c.eye[2] * d], c.look);
+};
 const caption = st => `${st.context ? `<span class="ctx">${esc(st.context)}</span>` : ''}<span ${st.promptLang === 'tr' ? 'lang="tr"' : ''}>${esc(st.prompt)}</span>${st.hintTr ? ` <span class="tr">${esc(st.hintTr)}</span>` : ''}`;
 const sized = (s, el, min, pad) => Math.max(min, s.measure(el).w / s.pxPerMeter() + pad);
 
@@ -63,14 +68,15 @@ export function treehouseStation(s, { color = '#f5b616' } = {}) {
 const BIRD_COLS = ['#d9534f', '#3f8ed8', '#f2b705', '#4caf6a', '#9b6ad6'];
 export function treehouseChoice(ctx) {
   const s = ctx.world, st = ctx.step, K = s.set.K, A = s.set.A;
-  frameFor(s, { eye: [0, 3.3, 11.5], look: [0, 2.35, 0] }, { eye: [0, 3.6, 12.6], look: [0, 2.2, 0] });
+  const T = tall(); frameFor(s, { eye: [0, 3.3, 11.5], look: [0, 2.35, 0] }, { eye: [0, 3.6, 12.6], look: [0, 2.2, 0] }, { eye: [0, 3.0, 8.4], look: [0, 3.0, -0.9], width: 34 });
   s.say(caption(st));
   const els = st.options.map((o, i) => s.label(esc(o), { cls: 'wt-opt', onTap: () => pick(i) }));
-  const ws = els.map(el => sized(s, el, 1.5, 0.35)), xs = row(ws, 0.3);
+  const ws = els.map(el => sized(s, el, 1.5, 0.35)), xs = T ? st.options.map((o, i) => (i % 2 ? 0.95 : -0.95)) : row(ws, 0.3);
   const houses = st.options.map((o, i) => {
+    const drop = T ? i * 1.2 : 0; // portrait: a zigzag column, each on a longer rope
     const g = new Group(); g.position.set(xs[i], 4.15, -0.9); s.step.add(g); // hangs from the branch
-    const rope = new Mesh(new CylinderGeometry(0.015, 0.015, 0.9, 4), L('#d9c08a')); rope.position.y = -0.45; g.add(rope);
-    const house = new Group(); house.position.y = -1.25; g.add(house);
+    const rope = new Mesh(new CylinderGeometry(0.015, 0.015, 0.9 + drop, 4), L('#d9c08a')); rope.position.y = -(0.9 + drop) / 2; g.add(rope);
+    const house = new Group(); house.position.y = -1.25 - drop; g.add(house);
     const body = new Mesh(new RoundedBoxGeometry(0.62, 0.62, 0.52, 2, 0.05), L(BIRD_COLS[i % BIRD_COLS.length])); body.castShadow = true; house.add(body);
     const roof = new Mesh(new ConeGeometry(0.55, 0.4, 4), L('#7a4b2e')); roof.rotation.y = Math.PI / 4; roof.position.y = 0.5; house.add(roof);
     const cap = new Mesh(new ConeGeometry(0.5, 0.18, 4), K.snowM); cap.rotation.y = Math.PI / 4; cap.position.y = 0.62; house.add(cap);
@@ -127,11 +133,11 @@ function arrow() {
 }
 export function archerySort(ctx) {
   const s = ctx.world, st = ctx.step, K = s.set.K, A = s.set.A;
-  frameFor(s, { eye: [0, 3.4, 11.4], look: [0, 1.5, 0] }, { eye: [0, 3.8, 12.6], look: [0, 1.4, 0] });
+  const T = tall(); frameFor(s, { eye: [0, 3.4, 11.4], look: [0, 1.5, 0] }, { eye: [0, 3.8, 12.6], look: [0, 1.4, 0] }, { eye: [0, 4.4, 10.0], look: [0, 2.2, 0.9], width: 40 });
   s.say(esc(st.prompt));
-  const n = st.categories.length, tx = n === 2 ? [-2.6, 2.6] : [-3.6, 0, 3.6];
+  const n = st.categories.length, tx = T ? (n === 2 ? [-1.5, 1.5] : [-2.15, 0, 2.15]) : n === 2 ? [-2.6, 2.6] : [-3.6, 0, 3.6];
   const targets = st.categories.map((c, i) => {
-    const g = target(s); g.position.set(tx[i], 2.0, -1.2); s.step.add(g);
+    const g = target(s); g.position.set(tx[i], 2.0, -1.2); if (T && n > 2) g.scale.setScalar(0.8); s.step.add(g);
     const title = s.label(`<b>${esc(c.title)}</b>${c.titleTr ? `<small>${esc(c.titleTr)}</small>` : ''}`, { cls: 'wt-target', obj: g, at: [0, 1.35, 0], onTap: () => shoot(i) });
     const tapRing = s.label('', { cls: 'wt-hit', obj: g, at: [0, 0, 0.1], onTap: () => shoot(i) });
     return { g, title, tapRing, stuck: 0, list: [] };
@@ -144,8 +150,9 @@ export function archerySort(ctx) {
     el._pin.obj = plank; el._pin.at.set(0, 0, 0.06);
     const card = { c, el, plank, w, placed: false }; return card;
   });
-  const xs = row(cards.map(k => k.w), 0.25); cards.forEach((k, i) => { k.plank.position.set(xs[i], 0.92, 2.5); k.plank.rotation.x = -0.25; });
-  const select = k => { if (ctx.busy || k.placed || k.locked) return; if (sel) { sel.el.classList.remove('sel'); sel.plank.position.y = 0.92; } sel = k; k.el.classList.add('sel'); k.plank.position.y = 1.08; ctx.sound('tap'); };
+  const per = T ? 2 : cards.length; // portrait: two cards on the rack, the rest on the snow in front
+  for (let r = 0; r * per < cards.length; r++) { const rowCards = cards.slice(r * per, r * per + per), xs = row(rowCards.map(k => k.w), 0.25); rowCards.forEach((k, i) => { k.plank.position.set(xs[i], r ? 0.3 : 0.92, r ? 2.5 + r * 0.95 : 2.5); k.plank.rotation.x = -0.25; k.y0 = k.plank.position.y; }); }
+  const select = k => { if (ctx.busy || k.placed || k.locked) return; if (sel) { sel.el.classList.remove('sel'); sel.plank.position.y = sel.y0; } sel = k; k.el.classList.add('sel'); k.plank.position.y = k.y0 + 0.16; ctx.sound('tap'); };
   const place = (k, ok) => {
     k.placed = true; left--; k.el.classList.remove('sel'); const T = targets[k.c.cat];
     s.unlabel(k.el); k.plank.visible = false;
@@ -161,7 +168,7 @@ export function archerySort(ctx) {
   const shoot = i => {
     if (ctx.busy) return;
     if (!sel) { ctx.coach('Pick an arrow card first, then its target!'); return; }
-    const k = sel; sel = null; k.plank.position.y = 0.92;
+    const k = sel; sel = null; k.plank.position.y = k.y0;
     if (k.c.cat === i) {
       ctx.item(k.c.id, !missed.has(k.c.id)); ctx.sound('note', { freq: 659 + targets[i].stuck * 90 }); targets[i].stuck++;
       fire(k, i, () => { ctx.sound('thunk'); K.burst(targets[i].g.position.clone().setZ(targets[i].g.position.z + 0.5), undefined, 14, 1.6); A?.cheer(); }); place(k, true);
@@ -195,14 +202,14 @@ export function fountainStation(s, { color = '#f5b616' } = {}) {
 }
 export function fountainMatch(ctx) {
   const s = ctx.world, st = ctx.step, K = s.set.K, A = s.set.A;
-  frameFor(s, { eye: [0, 9.2, 10.6], look: [0, 0.1, -0.5] }, { eye: [0, 7.4, 8.2], look: [0, 0.1, 0.25] });
+  const T = tall(); frameFor(s, { eye: [0, 9.2, 10.6], look: [0, 0.1, -0.5] }, { eye: [0, 7.4, 8.2], look: [0, 0.1, 0.25] }, { eye: [0, 11.5, 5.6], look: [0, 0.1, -0.7], width: 42 });
   s.say(esc(st.prompt));
-  const right = shuffle(st.right, ctx.rng), n = st.left.length, zs = Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * 1.25);
+  const right = shuffle(st.right, ctx.rng), n = st.left.length, zs = Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * (T ? 1.75 : 1.25));
   const tileHTML = t => (t.pic ? `<img src="${esc(t.pic)}" alt="${esc(t.alt || '')}">` : `<span ${t.lang === 'tr' ? 'lang="tr"' : ''}>${esc(t.text)}</span>`);
   const tileM = new MeshStandardMaterial({ color: '#f2fbff', roughness: 0.2, transparent: true, opacity: 0.95 });
   const els = new Map(), tiles = new Map();
   const mk = (t, side, i) => {
-    const m = new Mesh(new RoundedBoxGeometry(2.3, 0.14, 0.95, 2, 0.05), tileM.clone()); m.position.set(side === 'L' ? -2.15 : 2.15, 0.34, zs[i]); m.castShadow = true; s.step.add(m);
+    const m = new Mesh(new RoundedBoxGeometry(T ? 1.9 : 2.3, 0.14, 0.95, 2, 0.05), tileM.clone()); m.position.set((side === 'L' ? -1 : 1) * (T ? 1.5 : 2.15), 0.34, zs[i]); m.castShadow = true; s.step.add(m);
     const el = s.label(tileHTML(t), { cls: 'wt-tile', obj: m, at: [0, 0.1, 0], onTap: () => pick(t.id, side) }); el.dataset.id = t.id; els.set(t.id, el); tiles.set(t.id, m);
   };
   st.left.forEach((t, i) => mk(t, 'L', i)); right.forEach((t, i) => mk(t, 'R', i));
@@ -211,7 +218,7 @@ export function fountainMatch(ctx) {
   const srcOf = lid => st.sourceIds?.[st.left.findIndex(l => l.id === lid)];
   const trail = (a, b, col, keep) => { // a skate trail carved across the ice
     const pa = tiles.get(a).position, pb = tiles.get(b).position, mid = pa.clone().lerp(pb, 0.5); mid.z += (pa.z === pb.z ? 0.9 : 0); mid.y = 0.3;
-    const curve = new QuadraticBezierCurve3(new Vector3(pa.x + (pa.x < 0 ? 1.1 : -1.1), 0.3, pa.z), mid, new Vector3(pb.x + (pb.x < 0 ? 1.1 : -1.1), 0.3, pb.z));
+    const e = T ? 0.9 : 1.1, curve = new QuadraticBezierCurve3(new Vector3(pa.x + (pa.x < 0 ? e : -e), 0.3, pa.z), mid, new Vector3(pb.x + (pb.x < 0 ? e : -e), 0.3, pb.z));
     const geo = new TubeGeometry(curve, 40, 0.05, 6), m = new Mesh(geo, new MeshBasicMaterial({ color: col, transparent: true, opacity: 0.95 })); s.step.add(m);
     const total = geo.index.count; geo.setDrawRange(0, 0); let t = 0;
     s.onTick(dt => { if (t > 1.5) return; t += dt; geo.setDrawRange(0, Math.floor(total * Math.min(1, t / 0.35))); if (!keep && t > 0.6) { m.material.opacity = Math.max(0, 1 - (t - 0.6) * 2.5); if (t > 1.0) m.visible = false; } });
@@ -281,15 +288,15 @@ function gull() {
 }
 export function bellListen(ctx) {
   const s = ctx.world, st = ctx.step, set = s.set, K = set.K, voice = ctx.speech.available;
-  frameFor(s, { eye: [0, 3.0, 10.6], look: [0, 1.9, 0] }, { eye: [0, 3.2, 11.6], look: [0, 1.8, 0] });
+  const T = tall(); frameFor(s, { eye: [0, 3.0, 10.6], look: [0, 1.9, 0] }, { eye: [0, 3.2, 11.6], look: [0, 1.8, 0] }, { eye: [0, 2.8, 9.6], look: [0, 2.9, 0.6], width: 38 });
   s.say(`${esc(st.prompt)}${voice ? '' : ` <span class="tr">${esc(st.fallbackText || st.speak)}</span>`}`);
   const play = () => { set.A?.throw(); set.ring(); ctx.sound('bell'); ctx.later(() => ctx.speech.say(st.speak), 250); };
   s.label('🔔 Ring the bell', { cls: 'wt-bell', at: innerHeight < 430 ? [1.75, 2.55, -1.6] : [0, 3.75, -1.6], onTap: play });
   if (voice) ctx.later(play, 450); else ctx.note('No English voice on this device: read the word instead.');
   const els = st.options.map((o, i) => s.label(st.pics?.[i] ? `<img src="${esc(st.pics[i])}" alt=""><span>${esc(o)}</span>` : esc(o), { cls: 'wt-opt gullsign', onTap: () => pick(i) }));
-  const ws = els.map(el => sized(s, el, 1.7, 0.4)), xs = row(ws, 0.7);
+  const ws = els.map(el => sized(s, el, 1.7, 0.4)), xs = T ? st.options.map((o, i) => (i % 2 ? 0.95 : -0.95)) : row(ws, 0.7);
   const gulls = st.options.map((o, i) => {
-    const g = gull(); g.position.set(xs[i], 2.05 + (i % 2) * 0.2, 2.6); g.rotation.y = -Math.PI / 2 + (xs[i] > 0 ? 0.25 : -0.25); s.step.add(g);
+    const g = gull(); g.position.set(xs[i], T ? 2.7 - i * 0.95 : 2.05 + (i % 2) * 0.2, 2.6); g.rotation.y = -Math.PI / 2 + (xs[i] > 0 ? 0.25 : -0.25); s.step.add(g);
     els[i]._pin.obj = g; els[i]._pin.at.set(0, -0.62, 0);
     const ph = i * 1.3, y0 = g.position.y; s.onTick(() => { if (s.reduceMotion || g.userData.flying) return; const t = performance.now() / 1000; g.position.y = y0 + Math.sin(t * 2 + ph) * 0.12; g.userData.wings.forEach((w, k) => { w.rotation.x = (k ? 1 : -1) * Math.sin(t * 9 + ph) * 0.5; }); });
     return g;

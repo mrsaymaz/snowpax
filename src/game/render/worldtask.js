@@ -10,6 +10,13 @@
 import { Group, Vector3, Scene, PerspectiveCamera } from 'three';
 
 const EASE = t => t * t * (3 - 2 * t);
+// the lens for a screen shape: the same width of the set on every screen. Tall (portrait) screens
+// get a wider lens, up to 72°, and beyond that the camera steps back (k > 1).
+function lens(aspect, width = 52) {
+  const h = width * Math.PI / 360, fov = Math.min(72, Math.max(34, 2 * Math.atan(Math.tan(h) / aspect) * 180 / Math.PI));
+  const hEff = Math.atan(Math.tan(fov * Math.PI / 360) * aspect);
+  return { fov, k: Math.max(1, Math.tan(h) / Math.tan(hEff)) };
+}
 
 export class WorldTasks {
   constructor({ layer, player = null, reduceMotion = false, stations = {}, sound = null }) {
@@ -37,7 +44,7 @@ export class WorldTasks {
       theme, group, persist, step, camPose: null, reduceMotion: this.reduceMotion, station, player: this.player, kick: 0, sound: (n, o) => wt.sound?.(n, o), scene, camera, set: null,
       showAt: performance.now() + (this.reduceMotion ? 0 : 160), // the cut hides under the flurry
       // the camera pose, in the station's space
-      frame(eye, look) { s.camPose = { eye: new Vector3(...eye), look: new Vector3(...look) }; s.eyeDist = s.camPose.eye.distanceTo(s.camPose.look); if (!s.camAt) s.camAt = { eye: s.camPose.eye.clone(), look: s.camPose.look.clone() }; },
+      frame(eye, look, width = 52) { s.lensW = width; const L = lens(innerWidth / innerHeight, width); camera.fov = L.fov; camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); const lk = new Vector3(...look); s.camPose = { eye: new Vector3(...eye).sub(lk).multiplyScalar(L.k).add(lk), look: lk }; s.eyeDist = s.camPose.eye.distanceTo(s.camPose.look); if (!s.camAt) s.camAt = { eye: s.camPose.eye.clone(), look: s.camPose.look.clone() }; },
       // pixels per metre at the look point once the camera has arrived (to size things to their labels)
       pxPerMeter() { return innerHeight / (2 * (s.eyeDist || 10) * Math.tan(camera.fov * Math.PI / 360)); },
       // an HTML label pinned to a 3D object (its local point at `at`), tappable
@@ -118,7 +125,8 @@ export class WorldTasks {
   // every frame: the station's camera, animations, then pin the labels to their things
   tick(dt) {
     const s = this.session; if (!s) return;
-    { const camera = s.camera; // fit the screen, ease to the framed pose if (Math.abs(camera.aspect - innerWidth / innerHeight) > 1e-3) { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+    { const camera = s.camera; // fit the screen, ease to the framed pose
+      if (Math.abs(camera.aspect - innerWidth / innerHeight) > 1e-3) { camera.aspect = innerWidth / innerHeight; camera.fov = lens(camera.aspect, s.lensW).fov; camera.updateProjectionMatrix(); }
       if (s.camPose && s.camAt) {
         const k = Math.min(1, dt * 3); s.camAt.eye.lerp(s.camPose.eye, k); s.camAt.look.lerp(s.camPose.look, k);
         s.kick = Math.max(0, s.kick - dt * 3); const push = this.reduceMotion ? 0 : Math.sin(s.kick * Math.PI) * 0.035; // a little nudge in on a right answer
