@@ -100,7 +100,7 @@ export class Kid {
   }
   // Replace the many small parts with merged meshes: body+head+hat, outlines, each arm, each leg, the snowman.
   bake() {
-    const vc = this.vc = LOOK.v2 ? addRim(toon({ vertexColors: true, transparent: true, emissive: new Color(0) }), 0.28) : new MeshLambertMaterial({ vertexColors: true, transparent: true, emissive: new Color(0) });
+    const vc = this.vc = new MeshLambertMaterial({ vertexColors: true, transparent: true, emissive: new Color(0) }); // kids keep smooth 3D shading in every look
     const isOutline = m => m.material === this.outlineMat;
     const swapGroup = grp => {
       const direct = grp.children.filter(m => m.isMesh && !this.arms.includes(m) && !this.legs.includes(m));

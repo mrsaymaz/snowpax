@@ -1,0 +1,122 @@
+// Three design directions for the team kids (the characters with the most screen time), all with
+// smooth 3D shading:
+//   A 'puffer'  – a chunky kid in a quilted puffer jacket with a fur collar, big mittens, boots
+//   B 'vinyl'   – a designer-toy figure: big glossy head, smooth pill shapes, clear-coat shine
+//   C 'plush'   – a knitted plush toy: knit fabric, button eyes, stitched seams, pom-poms
+// Hats by kit: thrower = beanie, lobber = earmuffs, sprayer = cap with goggles.
+import {
+  Group, Mesh, MeshStandardMaterial, MeshPhysicalMaterial, MeshLambertMaterial, MeshBasicMaterial, SphereGeometry, CapsuleGeometry, CylinderGeometry,
+  TorusGeometry, BoxGeometry, ConeGeometry, CircleGeometry, PlaneGeometry, CanvasTexture, SRGBColorSpace, RepeatWrapping, Color, DoubleSide,
+} from 'three';
+import { CONFIG } from '../../config.js';
+import { emblemSVG } from '../../emblems.js';
+
+export const DESIGNS = ['puffer', 'vinyl', 'plush'];
+const SKINS = ['#f3c9a5', '#e0a87e', '#c68863', '#a86f4d', '#f6d5bb'];
+const HAIR = ['#3b2a20', '#6a3f22', '#c98a3c', '#1f1a1a', '#8a4b2a'];
+
+const texCache = new Map();
+function canvas(key, w, h, draw) { if (texCache.has(key)) return texCache.get(key); const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; t.anisotropy = 4; texCache.set(key, t); return t; }
+
+// faces: drawn crisp on a patch over the front of the head
+function faceTex(style, mood = 'happy') {
+  return canvas('face' + style + mood, 256, 256, (g, W) => {
+    const eye = (x, y, big) => {
+      if (style === 'plush') return; // plush kids get real button eyes
+      if (style === 'vinyl') { g.fillStyle = '#141826'; g.beginPath(); g.ellipse(x, y, big * 0.78, big, 0, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.ellipse(x - big * 0.25, y - big * 0.4, big * 0.28, big * 0.34, 0, 0, 7); g.fill(); g.beginPath(); g.arc(x + big * 0.3, y + big * 0.35, big * 0.12, 0, 7); g.fill(); return; }
+      g.fillStyle = '#fff'; g.beginPath(); g.ellipse(x, y, big * 0.8, big, 0, 0, 7); g.fill();
+      g.fillStyle = '#5a3a2a'; g.beginPath(); g.ellipse(x, y + big * 0.12, big * 0.55, big * 0.68, 0, 0, 7); g.fill();
+      g.fillStyle = '#1c2340'; g.beginPath(); g.ellipse(x, y + big * 0.15, big * 0.33, big * 0.42, 0, 0, 7); g.fill();
+      g.fillStyle = '#fff'; g.beginPath(); g.arc(x - big * 0.22, y - big * 0.2, big * 0.2, 0, 7); g.fill(); g.beginPath(); g.arc(x + big * 0.2, y + big * 0.32, big * 0.09, 0, 7); g.fill();
+      g.strokeStyle = '#1c2340'; g.lineWidth = 5; g.beginPath(); g.ellipse(x, y, big * 0.8, big, 0, 0, 7); g.stroke();
+    };
+    const big = style === 'vinyl' ? 30 : style === 'plush' ? 16 : 26, ey = style === 'vinyl' ? 118 : 116, ex = style === 'vinyl' ? 52 : 44;
+    eye(W / 2 - ex, ey, big); eye(W / 2 + ex, ey, big);
+    if (style !== 'plush') { g.strokeStyle = '#3b2a20'; g.lineWidth = 7; g.lineCap = 'round'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(W / 2 + s * (ex - 18), ey - big - 16); g.quadraticCurveTo(W / 2 + s * ex, ey - big - 24, W / 2 + s * (ex + 18), ey - big - 12); g.stroke(); } }
+    g.fillStyle = 'rgba(255,120,130,0.45)'; for (const s of [-1, 1]) { g.beginPath(); g.ellipse(W / 2 + s * (ex + 26), ey + 44, 22, 13, 0, 0, 7); g.fill(); }
+    g.strokeStyle = '#1c2340'; g.lineWidth = style === 'plush' ? 4 : 6; g.lineCap = 'round';
+    if (style === 'plush') { g.setLineDash([7, 6]); g.beginPath(); g.arc(W / 2, ey + 34, 22, 0.25 * Math.PI, 0.75 * Math.PI); g.stroke(); g.setLineDash([]); }
+    else if (mood === 'happy') { g.fillStyle = '#7a2a2a'; g.beginPath(); g.moveTo(W / 2 - 22, ey + 40); g.quadraticCurveTo(W / 2, ey + 70, W / 2 + 22, ey + 40); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#ff8a8a'; g.beginPath(); g.ellipse(W / 2, ey + 55, 9, 5, 0, 0, 7); g.fill(); }
+  });
+}
+const knitTex = col => canvas('knit' + col, 64, 64, (g, W) => { g.fillStyle = col; g.fillRect(0, 0, W, W); g.strokeStyle = 'rgba(0,0,0,0.16)'; g.lineWidth = 3; for (let y = 0; y < W; y += 8) for (let x = 0; x < W; x += 8) { g.beginPath(); g.moveTo(x, y); g.lineTo(x + 4, y + 7); g.lineTo(x + 8, y); g.stroke(); } g.strokeStyle = 'rgba(255,255,255,0.12)'; g.lineWidth = 1.5; for (let y = 2; y < W; y += 8) for (let x = 0; x < W; x += 8) { g.beginPath(); g.moveTo(x + 1, y); g.lineTo(x + 4, y + 5); g.stroke(); } });
+const emblemTex = team => canvas('emb' + team, 128, 128, (g, W) => { g.fillStyle = '#fff'; g.beginPath(); g.arc(64, 64, 62, 0, 7); g.fill(); const im = new Image(); im.onload = () => { g.drawImage(im, 8, 8, 112, 112); texCache.get('emb' + team).needsUpdate = true; }; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(emblemSVG(team, 112).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')); });
+
+// one kid model: { design, team, kit, skin (index), hair (index) }
+export function buildKid({ design = 'puffer', team = 'hufflepuff', kit = 'thrower', skin = 0, hair = 0, mood = 'happy' } = {}) {
+  const T = CONFIG.teams[team], root = new Group(), col = T.color, dark = T.dark, skinCol = SKINS[skin % SKINS.length], hairCol = HAIR[hair % HAIR.length];
+  const fab = c => design === 'vinyl' ? new MeshPhysicalMaterial({ color: c, roughness: 0.32, clearcoat: 0.8, clearcoatRoughness: 0.2 }) : design === 'plush' ? new MeshLambertMaterial({ color: '#ffffff', map: knitTex(c) }) : new MeshStandardMaterial({ color: c, roughness: 0.72, metalness: 0 });
+  const skinM = design === 'vinyl' ? new MeshPhysicalMaterial({ color: skinCol, roughness: 0.38, clearcoat: 0.6 }) : design === 'plush' ? new MeshLambertMaterial({ color: skinCol }) : new MeshStandardMaterial({ color: skinCol, roughness: 0.6 });
+  const M = { team: fab(col), dark: fab(dark), white: fab('#f6f4ef'), boot: fab(design === 'plush' ? '#8a5a3c' : '#5a3a2a'), pants: fab('#34405e'), hair: fab(hairCol), scarf: fab(kit === 'lobber' ? '#ffd166' : kit === 'sprayer' ? '#7bdff2' : '#f4f1ea') };
+  const add = (geo, m, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = sx, sz = sx, parent = root) => { const o = new Mesh(geo, m); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); o.scale.set(sx, sy, sz); o.castShadow = true; parent.add(o); return o; };
+  const S = (r, a = 24, b = 16) => new SphereGeometry(r, a, b);
+  const hy = design === 'vinyl' ? 1.38 : design === 'puffer' ? 1.44 : 1.4, hr = design === 'vinyl' ? 0.56 : design === 'plush' ? 0.48 : 0.53;
+
+  // legs and boots
+  for (const s of [-1, 1]) {
+    add(new CapsuleGeometry(0.13, 0.18, 6, 12), M.pants, s * 0.15, 0.32, 0);
+    if (design === 'vinyl') add(new CapsuleGeometry(0.15, 0.12, 6, 12), M.boot, s * 0.15, 0.1, 0.05, Math.PI / 2, 0, 0);
+    else { add(S(0.17, 16, 12), M.boot, s * 0.15, 0.1, 0.05, 0, 0, 0, 1, 0.75, 1.35); add(new TorusGeometry(0.14, 0.05, 8, 16), M.white, s * 0.15, 0.2, 0.02, Math.PI / 2); add(new CylinderGeometry(0.17, 0.18, 0.04, 16), fab('#2b2f45'), s * 0.15, 0.02, 0.06, 0, 0, 0, 1, 1, 1.3); }
+  }
+  // body
+  if (design === 'puffer') {
+    add(new CapsuleGeometry(0.35, 0.34, 8, 20), M.team, 0, 0.8, 0);
+    [0.6, 0.79, 0.98].forEach((y, k) => add(new TorusGeometry(0.33 - k * 0.025, 0.1, 12, 28), M.team, 0, y, 0, Math.PI / 2)); // quilted puffer
+    add(new BoxGeometry(0.04, 0.55, 0.04), M.dark, 0, 0.8, 0.43);
+    add(new TorusGeometry(0.47, 0.06, 6, 20, Math.PI), M.dark, 0, 0.46, 0, Math.PI / 2, 0, 0, 0.82, 0.82, 0.82); // hem
+    for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; add(S(0.11, 10, 8), M.white, Math.sin(a) * 0.27, 1.12 + (k % 2) * 0.02, Math.cos(a) * 0.27); } // fur collar
+  } else if (design === 'vinyl') {
+    add(new CapsuleGeometry(0.34, 0.24, 10, 24), M.team, 0, 0.74, 0);
+    add(new CylinderGeometry(0.36, 0.36, 0.12, 24), M.dark, 0, 0.5, 0);
+  } else {
+    add(S(0.42, 24, 18), M.team, 0, 0.8, 0, 0, 0, 0, 1, 1.05, 0.95);
+    add(new TorusGeometry(0.4, 0.015, 4, 32), fab('#1c2340'), 0, 0.8, 0, Math.PI / 2); // a seam
+    for (const y of [0.92, 0.72]) add(new CylinderGeometry(0.045, 0.045, 0.03, 12), M.white, 0, y, 0.41, Math.PI / 2); // buttons
+  }
+  // chest badge with the team emblem
+  const badge = add(new CircleGeometry(0.12, 24), new MeshBasicMaterial({ map: emblemTex(team), transparent: true }), design === 'puffer' ? 0.17 : 0, design === 'vinyl' ? 0.82 : 0.9, design === 'vinyl' ? 0.355 : design === 'plush' ? 0.42 : 0.45);
+  badge.castShadow = false; if (design !== 'plush') badge.rotation.x = -0.1;
+  // scarf
+  add(new TorusGeometry(design === 'vinyl' ? 0.3 : 0.31, 0.09, 10, 22), M.scarf, 0, 1.14, 0, Math.PI / 2); add(new BoxGeometry(0.16, 0.42, 0.07), M.scarf, 0.14, 0.92, 0.3, 0.15, 0, 0.15);
+  // arms and mittens
+  for (const s of [-1, 1]) {
+    const arm = new Group(); arm.position.set(s * (design === 'vinyl' ? 0.42 : 0.44), 1.0, 0); arm.rotation.z = s * 0.35; root.add(arm);
+    add(new CapsuleGeometry(0.12, design === 'vinyl' ? 0.16 : 0.26, 6, 12), M.team, 0, -0.18, 0, 0, 0, 0, 1, 1, 1, arm);
+    if (design === 'puffer') add(new TorusGeometry(0.11, 0.045, 8, 14), M.white, 0, -0.34, 0, Math.PI / 2, 0, 0, 1, 1, 1, arm);
+    add(S(design === 'puffer' ? 0.15 : 0.13, 14, 10), design === 'plush' ? M.white : M.dark, 0, design === 'vinyl' ? -0.34 : -0.42, 0, 0, 0, 0, 1, 1, 1, arm);
+  }
+  // head, face, ears, hair. Eyes sit on the head's equator; every hat stops above the brows.
+  add(S(hr, 32, 24), skinM, 0, hy, 0, 0, 0, 0, 1.04, 0.98, 1);
+  const face = add(new SphereGeometry(hr * 1.008, 32, 16, Math.PI / 2 - 1.0, 2.0, Math.PI / 2 - 0.7, 1.55), new MeshBasicMaterial({ map: faceTex(design === 'plush' ? 'plush' : 'vinyl', mood), transparent: true }), 0, hy, 0, 0, 0, 0, 1.04, 0.98, 1); face.castShadow = false;
+  if (design === 'plush') { const btn = new MeshStandardMaterial({ color: '#1c2340', roughness: 0.25 }); for (const s of [-1, 1]) { add(S(0.065, 14, 10), btn, s * hr * 0.35, hy + 0.01, hr * 0.92, 0, 0, 0, 1, 1, 0.45); add(new TorusGeometry(0.035, 0.008, 4, 12), fab('#ffffff'), s * hr * 0.35, hy + 0.01, hr * 0.92 + 0.03); } }
+  for (const s of [-1, 1]) add(S(0.09, 12, 10), skinM, s * hr * 1.0, hy - 0.04, 0, 0, 0, 0, 0.6, 1, 1);
+  const capY = hy + hr * 0.47, capR = hr * 0.93;               // where every hat's edge sits
+  add(new SphereGeometry(hr * 1.035, 28, 12, 0, Math.PI * 2, 0, 1.1), M.hair, 0, hy, -0.01, 0, 0, 0, 1.04, 1, 1); // hair on top
+  add(new SphereGeometry(hr * 1.04, 24, 16, Math.PI * 1.5 - 1.85, 3.7, 0.5, 1.45), M.hair, 0, hy, -0.01, 0, 0, 0, 1.04, 1, 1); // hair down the back and sides
+  for (const s of [-1, 0, 1]) add(S(0.11, 12, 10), M.hair, s * 0.15, capY - 0.02, hr * 0.84 - Math.abs(s) * 0.05, 0.5, 0, s * 0.3, 1.15, 0.6, 0.7); // fringe
+  const dome = (m, sy = 1.08) => add(new SphereGeometry(hr * 1.07, 28, 12, 0, Math.PI * 2, 0, 1.12), m, 0, hy + 0.02, 0, 0, 0, 0, 1.04, sy, 1.04);
+  const nBefore = root.children.length;
+  if (kit === 'lobber') {                                       // earmuffs: a band over the top, cups on the ears
+    add(new TorusGeometry(hr * 1.1, 0.045, 8, 28, Math.PI), M.dark, 0, hy - 0.02, 0);
+    for (const s of [-1, 1]) { add(new CylinderGeometry(0.17, 0.17, 0.12, 20), M.dark, s * hr * 1.06, hy - 0.04, 0, 0, 0, Math.PI / 2); add(S(0.16, 14, 10), design === 'vinyl' ? M.team : M.white, s * hr * 1.14, hy - 0.04, 0, 0, 0, 0, 0.5, 1, 1); }
+  } else if (kit === 'sprayer') {                               // cap with goggles pushed up on it
+    dome(M.team, 1.0);
+    add(new CylinderGeometry(hr * 0.72, hr * 0.78, 0.05, 24, 1, false, -1.3, 2.6), M.dark, 0, capY, hr * 0.38, 0.12, 0, 0); // visor
+    if (design === 'puffer') add(S(0.08, 10, 8), M.white, 0, hy + hr * 1.1, 0);
+    const a = 0.72, gy = hy + 0.02 + hr * 1.07 * Math.sin(a), gz = hr * 1.07 * Math.cos(a) * 1.04;
+    add(new TorusGeometry(hr * 1.07 * Math.cos(a) * 1.05, 0.03, 6, 32), fab('#3d4a6b'), 0, gy, 0, Math.PI / 2);
+    const lens = new MeshStandardMaterial({ color: '#ffb347', roughness: 0.15, emissive: new Color('#a85a00'), emissiveIntensity: 0.35 });
+    for (const s of [-1, 1]) { const g = new Group(); g.position.set(s * 0.13, gy, gz - 0.02); g.rotation.set(Math.PI / 2 - a, s * 0.28, 0); root.add(g); add(new CylinderGeometry(0.1, 0.1, 0.07, 20), fab('#3d4a6b'), 0, 0, 0, 0, 0, 0, 1, 1, 1, g); add(new CylinderGeometry(0.075, 0.075, 0.075, 20), lens, 0, 0.005, 0, 0, 0, 0, 1, 1, 1, g); }
+  } else {                                                      // beanie with a cuff and a pom-pom
+    dome(design === 'plush' ? fab(col) : M.team, design === 'vinyl' ? 1.12 : 1.22);
+    if (design === 'puffer') for (const y of [0.16, 0.3]) add(new TorusGeometry(capR * (1 - y * 0.9), 0.02, 6, 28), M.white, 0, capY + y, 0, Math.PI / 2);
+    add(new TorusGeometry(capR + 0.03, 0.075, 10, 28), M.dark, 0, capY + 0.03, 0, Math.PI / 2, 0, 0, 1.04, 1, 1);
+    add(S(design === 'vinyl' ? 0.18 : 0.15, 16, 12), M.white, 0, hy + hr * (design === 'vinyl' ? 1.2 : 1.3) + 0.1, 0); // pom-pom
+    if (design === 'puffer') for (const s of [-1, 1]) { add(new BoxGeometry(0.1, 0.24, 0.16), M.team, s * hr * 1.0, hy - 0.08, -0.02, 0, 0, s * 0.12); add(S(0.05, 8, 6), M.white, s * hr * 1.0, hy - 0.26, -0.02); } // ear flaps
+  }
+  // hats are pushed back on the head so the eyes stay clear from the high game camera
+  const tilt = kit === 'lobber' ? 0 : kit === 'sprayer' ? 0.42 : 0.36;
+  if (tilt) { const pivot = new Group(); pivot.position.y = hy; pivot.rotation.x = -tilt; for (const o of root.children.slice(nBefore)) { o.position.y -= hy; pivot.add(o); } root.add(pivot); }
+  root.userData = { design, team, kit };
+  return root;
+}
