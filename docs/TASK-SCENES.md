@@ -13,6 +13,20 @@ There are two ways to play it:
 - **On the real landmark (`?tasks=arena`).** The camera swoops to the real castle in the arena,
   as described below.
 
+**The stations, one per outpost and its task family** (`cards/castle3d.js`, `cards/stations.js`,
+shared pieces in `cards/stationkit.js`):
+
+| Outpost · family | Station |
+|---|---|
+| Treehouse · Answer | Birdhouses hang from a snowy branch, each with an answer sign. Tap one and a snowball flies at it: the right one bursts into confetti, a wrong one swings. |
+| Archers' Lodge · Sorting | Category titles over archery targets, in front of a log lodge. Pick an arrow card from the rack, then a target. The arrow flies and sticks, and the word joins the list under the target. A wrong target and the arrow bounces off. |
+| Kızılay Fountain · Matching | Ice tiles on the frozen fountain. Tap a word, then its match, and a golden skate trail carves across the ice and the tiles turn mosaic colours. A wrong pair leaves a red trail that fades. |
+| Snow Castle · Builder | Snow bricks onto the castle wall, which grows a course with every sentence (above). |
+| Admiral's Bell · Listening | A pier on the frozen Golden Horn, a ferry and the far shore. Ring the bell to hear the word. Gulls carry the answers; the right gull flies to the bell and rings it. |
+
+Inside a station, the coach bubble and the "New rivals!" card stay hidden (the strip carries the
+coaching), and so do the arena's damage numbers. Cocoa questions and any other kind keep the card.
+
 On the real landmark:
 
 - **Camera:** it swoops in to the landmark and back when the task ends.
@@ -106,7 +120,7 @@ Register it in `LANDMARK_SCENES` under the outpost's theme and the step kinds it
 `cards.html?family=build&theme=sururi&unit=g5u1&seed=3`. In the game, `?scenes=basic` shows the
 plain cards everywhere, to compare.
 
-## Next scenes (to become 3D actions too)
+## Card scenes still to make (the flat fallback)
 
 | Outpost · family | Scene |
 |---|---|

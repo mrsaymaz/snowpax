@@ -370,3 +370,34 @@ body.worldtask.reading #banner { left: 50%; width: auto; font-size: 34px; top: 3
 @keyframes wt-flurry { 0% { opacity: 0; transform: scale(1.15); } 30% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1); } }
 body.station #feed { opacity: 0.6; }
 body.station #fx-layer, body.station #feed { display: none; }
+/* station labels: answers, arrow cards, targets, ice tiles, the bell */
+.wt-caption .ctx { display: block; font-size: 14px; font-weight: 700; color: #ffe6a8; margin-bottom: 2px; }
+.wt-opt { max-width: 280px; white-space: normal; text-align: center; padding: 8px 14px; min-height: 44px; border-radius: 12px; border: 3px solid #1c2340; background: #fffaf0; box-shadow: 0 4px 0 #1c2340; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.wt-opt img { width: 40px; height: 40px; object-fit: contain; }
+.wt-opt.gullsign { background: #f4fbff; }
+.wt-opt.show { border-color: #f2b705; box-shadow: 0 0 0 4px #ffd166, 0 4px 0 #1c2340; }
+.wt-opt.wrong { background: #ffe8ea; border-color: #d9534f; }
+.wt-opt.right { background: #e3f8e6; border-color: #2e9e57; }
+.wt-card { padding: 6px 12px; min-height: 40px; border-radius: 9px; border: 2px solid #8a5f3e; background: #fff6e4; box-shadow: 0 3px 0 #8a5f3e; }
+.wt-card.sel { border-color: #f2b705; box-shadow: 0 0 0 4px #ffd166; transform-origin: center; }
+.wt-card.wrong { background: #ffe8ea; border-color: #d9534f; }
+.wt-target { padding: 6px 14px; border-radius: 12px; border: 3px solid #1c2340; background: #fff; box-shadow: 0 4px 0 #1c2340; text-align: center; line-height: 1.15; }
+.wt-target small { display: block; font-size: 12px; color: #5b6c86; font-weight: 700; }
+.wt-target.show { border-color: #f2b705; box-shadow: 0 0 0 4px #ffd166, 0 4px 0 #1c2340; }
+.wt-target.no { background: #ffe8ea; border-color: #d9534f; }
+.wt-hit { width: 120px; height: 120px; border-radius: 50%; border: 0; background: transparent; }
+.wt-placed { font-size: 13px; padding: 3px 9px; border-radius: 8px; background: rgba(227, 248, 230, 0.95); border: 2px solid #2e9e57; pointer-events: none; }
+.wt-placed.fixed { background: rgba(255, 244, 214, 0.95); border-color: #e0a100; }
+.wt-tile { min-width: 120px; min-height: 44px; padding: 6px 12px; border-radius: 12px; border: 2px solid #6cb8e8; background: rgba(242, 251, 255, 0.95); box-shadow: 0 3px 0 #6cb8e8; display: flex; align-items: center; justify-content: center; }
+.wt-tile img { width: 44px; height: 44px; object-fit: contain; }
+.wt-tile.sel { border-color: #f2b705; box-shadow: 0 0 0 4px #ffd166; }
+.wt-tile.show { border-color: #f2b705; box-shadow: 0 0 0 4px #ffd166, 0 0 18px rgba(255, 207, 60, 0.9); } /* no transform animations: labels are positioned by transform */
+.wt-tile.right { background: rgba(227, 248, 230, 0.95); border-color: #2e9e57; box-shadow: none; pointer-events: none; }
+.wt-tile.wrong { background: #ffe8ea; border-color: #d9534f; }
+.wt-bell { padding: 8px 16px; border-radius: 999px; border: 3px solid #1c2340; background: #ffd166; box-shadow: 0 4px 0 #1c2340; font-size: 17px; }
+@media (max-height: 430px) {
+  .wt-opt { max-width: 200px; min-height: 36px; padding: 4px 9px; } .wt-opt img { width: 28px; height: 28px; }
+  .wt-tile { min-width: 90px; min-height: 34px; padding: 3px 8px; } .wt-tile img { width: 30px; height: 30px; }
+  .wt-target { padding: 3px 9px; } .wt-hit { width: 80px; height: 80px; } .wt-card { min-height: 32px; padding: 3px 8px; } .wt-bell { font-size: 13px; padding: 4px 10px; }
+}
+body.station #newrival, body.station #coach { display: none !important; } /* the strip carries the coaching inside a station */

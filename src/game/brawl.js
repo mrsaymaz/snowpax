@@ -29,6 +29,7 @@ import { ShowdownView } from './render/showdown.js';
 import { useBasicScenes } from './cards/scenes.js';
 import { WorldTasks } from './render/worldtask.js';
 import { castleStation } from './cards/castle3d.js';
+import { treehouseStation, archeryStation, fountainStation, bellStation } from './cards/stations.js';
 import { InstancedMesh, MeshLambertMaterial, SphereGeometry, Object3D } from 'three';
 
 const $ = s => document.querySelector(s);
@@ -187,7 +188,7 @@ async function startGame(myTeam, kit, pace) {
   // English tasks as 3D actions on the real landmarks (where a landmark has one; ?scenes=basic for the plain cards)
   // stations by default (a staged set opens, like Languini's stations); ?tasks=arena plays them on the real landmark
   const worldTasks = arena.world ? new WorldTasks({ scene, layer: $('#wt-layer'), groundH: (x, z) => groundH(x, z), fx, zones: () => sim.zones, player, reduceMotion,
-    mode: params.get('tasks') === 'arena' ? 'arena' : 'station', stations: { sururi: s => castleStation(s, { color: myCol }) } }) : null;
+    mode: params.get('tasks') === 'arena' ? 'arena' : 'station', stations: { sururi: s => castleStation(s, { color: myCol }), boulevard: s => treehouseStation(s, { color: myCol }), archery: s => archeryStation(s, { color: myCol }), kizilay: s => fountainStation(s, { color: myCol }), waterfront: s => bellStation(s, { color: myCol }) } }) : null;
   const flow = unit ? new OutpostFlow({
     sim, player, unit, unitProgress, save, writeSave, pace, rng, root: $('#taskcard'), familyOverride: params.get('family'), world: worldTasks, worldColor: myCol,
     ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play, fx, fireworks: z => { if (reduceMotion) return; for (const col of [myCol, '#ffffff', '#ffd166', '#7cc4f0']) fx.emit(z.x, 3.5, z.z, 40, col, 6, 1.4, 1.2); } },

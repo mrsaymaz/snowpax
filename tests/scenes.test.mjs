@@ -30,8 +30,11 @@ test('sentence blocks come back in sentence order', () => {
   }
 });
 
-test('the Snow Castle is a 3D action on the real castle; other landmarks keep their cards for now', () => {
+test('every outpost plays its own task family as a 3D station; other kinds fall back to cards', async () => {
+  const st = await import('../src/game/cards/stations.js');
   assert.equal(worldSceneFor('order', 'sururi'), castleWorldOrder); assert.equal(worldSceneFor('spell', 'sururi'), castleWorldSpell);
-  assert.equal(worldSceneFor('choice', 'sururi'), null); assert.equal(worldSceneFor('order', 'boulevard'), null);
+  assert.equal(worldSceneFor('choice', 'boulevard'), st.treehouseChoice); assert.equal(worldSceneFor('sort', 'archery'), st.archerySort);
+  assert.equal(worldSceneFor('match', 'kizilay'), st.fountainMatch); assert.equal(worldSceneFor('listen', 'waterfront'), st.bellListen);
+  assert.equal(worldSceneFor('choice', 'sururi'), null); assert.equal(worldSceneFor('order', 'boulevard'), null); assert.equal(worldSceneFor('choice', 'cocoa'), null);
   useBasicScenes(true); assert.equal(worldSceneFor('order', 'sururi'), null); useBasicScenes(false);
 });

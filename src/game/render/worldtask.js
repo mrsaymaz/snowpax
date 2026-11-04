@@ -61,7 +61,8 @@ export class WorldTasks {
       puff(obj, n = 14, color = '#ffffff') { if (!wt.fx || wt.reduceMotion) return; const p = obj.getWorldPosition(new Vector3()); wt.fx.emit(p.x, p.y, p.z, n, color, 2.6, 0.5, 0.9); },
       say(text) { wt.caption.innerHTML = text; wt.caption.hidden = !text; wt.caption.classList.remove('show'); void wt.caption.offsetWidth; if (text) wt.caption.classList.add('show'); },
       // a step is over: its things and labels go; persistent ones stay
-      clearStep() { for (const tw of s.tweens.splice(0)) { tw.run(1); tw.done?.(); } // anything still moving lands now
+      onTick(fn) { s.stepTicks.push(fn); }, stepTicks: [],
+      clearStep() { s.stepTicks = []; for (const tw of s.tweens.splice(0)) { tw.run(1); tw.done?.(); } // anything still moving lands now
         for (const L of [...labels]) if (!L.persistent) { L.el.remove(); labels.delete(L); } for (const c of [...step.children]) { step.remove(c); c.traverse?.(o => { if (o.isMesh) o.geometry.dispose(); }); } s.say(''); },
       tweens: [],
       // move an object along an arc (from its place to `to`, local), then call done
@@ -97,6 +98,7 @@ export class WorldTasks {
       if (s.camPose && s.camAt) { const k = Math.min(1, dt * 3); s.camAt.eye.lerp(s.camPose.eye, k); s.camAt.look.lerp(s.camPose.look, k); camera.position.copy(s.camAt.eye); camera.lookAt(s.camAt.look); camera.updateMatrixWorld(); }
       s.set?.tick?.(dt);
     }
+    for (const f of s.stepTicks) f(dt);
     for (const tw of [...s.tweens]) { tw.t += dt; const k = Math.min(1, tw.t / tw.T); tw.run(k); if (k >= 1) { s.tweens.splice(s.tweens.indexOf(tw), 1); tw.done?.(); } }
     const v = new Vector3(), W = innerWidth, H = innerHeight, show = s.station ? performance.now() >= s.showAt : this.blend > 0.85;
     for (const L of s.labels) {

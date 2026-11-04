@@ -4,6 +4,7 @@
 import { choiceScene, listenScene, matchScene, sortScene, orderScene, spellScene } from './basic.js';
 import { castleOrderScene, castleSpellScene } from './castle.js';
 import { castleWorldOrder, castleWorldSpell } from './castle3d.js';
+import { treehouseChoice, archerySort, fountainMatch, bellListen } from './stations.js';
 
 export const DEFAULT_SCENES = { choice: choiceScene, listen: listenScene, match: matchScene, sort: sortScene, order: orderScene, spell: spellScene };
 
@@ -16,6 +17,10 @@ export const LANDMARK_SCENES = {
 // flat scene above is the fallback (card lab, the Showdown far from the castle)
 export const WORLD_SCENES = {
   sururi: { order: castleWorldOrder, spell: castleWorldSpell },
+  boulevard: { choice: treehouseChoice },
+  archery: { sort: archerySort },
+  kizilay: { match: fountainMatch },
+  waterfront: { listen: bellListen },
 };
 
 let basicOnly = false;
