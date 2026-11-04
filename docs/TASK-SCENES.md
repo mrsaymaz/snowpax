@@ -24,6 +24,17 @@ shared pieces in `cards/stationkit.js`):
 | Snow Castle · Builder | Snow bricks onto the castle wall, which grows a course with every sentence (above). |
 | Admiral's Bell · Listening | A pier on the frozen Golden Horn, a ferry and the far shore. Ring the bell to hear the word. Gulls carry the answers; the right gull flies to the bell and rings it. |
 
+**Polish shared by every station:**
+- **Your own kid:** the player's girl or boy in their team jacket and kit hat stands in the station.
+  They throw the snowball, shoot the arrow, toss the brick, ring the bell, cheer on a right answer
+  and shrug on a wrong one.
+- **The look:** a painted distance behind every set (snowy hills, pines and the Istanbul skyline),
+  snow that sparkles, a warm sun with a cool rim light, falling snow.
+- **Right answers:** a gold star flies from what you tapped into the progress bar, and the camera
+  nudges in a little.
+- **First time at a station:** a finger visits every option in turn, the same way for each,
+  so it shows how to answer, never which answer. It stops as soon as you tap.
+
 Inside a station, the coach bubble and the "New rivals!" card stay hidden (the strip carries the
 coaching), and so do the arena's damage numbers. Cocoa questions and any other kind keep the card.
 

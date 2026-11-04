@@ -20,6 +20,8 @@ export class WorldTasks {
   constructor({ scene, layer, groundH = () => 0, fx = null, zones = () => [], player = null, reduceMotion = false, mode = 'station', stations = {} }) {
     Object.assign(this, { scene, layer, groundH, fx, zones, player, reduceMotion, mode, stations });
     this.wipe = document.createElement('div'); this.wipe.className = 'wt-wipe'; document.body.appendChild(this.wipe);
+    this.finger = document.createElement('div'); this.finger.className = 'wt-finger'; this.finger.textContent = '👆'; this.finger.hidden = true; layer.appendChild(this.finger);
+    this.toured = new Set(); this.lastTap = null;
     this.session = null; this.blend = 0; this.lastPose = null;
     this.caption = document.createElement('div'); this.caption.className = 'wt-caption'; this.caption.hidden = true; layer.appendChild(this.caption);
   }
@@ -42,7 +44,7 @@ export class WorldTasks {
     const persist = new Group(), step = new Group(); group.add(persist, step);
     const labels = new Set(), wt = this;
     const s = this.session = {
-      theme, zone: z, group, persist, step, camPose: null, reduceMotion: this.reduceMotion, station, showAt: performance.now() + (station && !this.reduceMotion ? 160 : 0), scene: station ? scene : null, camera, set: null, // showAt: the cut hides under the flurry
+      theme, zone: z, group, persist, step, camPose: null, reduceMotion: this.reduceMotion, station, player: this.player, kick: 0, showAt: performance.now() + (station && !this.reduceMotion ? 160 : 0), scene: station ? scene : null, camera, set: null, // showAt: the cut hides under the flurry
       // camera target, in the landmark's (or station's) local space
       frame(eye, look) { s.camPose = { eye: group.localToWorld(new Vector3(...eye)), look: group.localToWorld(new Vector3(...look)) }; s.eyeDist = s.camPose.eye.distanceTo(s.camPose.look); if (station && !s.camAt) { s.camAt = { eye: s.camPose.eye.clone(), look: s.camPose.look.clone() }; } },
       // pixels per metre at the look point once the camera has arrived (to size things to their labels)
@@ -53,7 +55,7 @@ export class WorldTasks {
         const el = document.createElement(onTap ? 'button' : 'div'); if (onTap) el.type = 'button';
         el.className = 'wt-label ' + cls; el.innerHTML = html; wt.layer.appendChild(el);
         const L = { el, obj, at: new Vector3(...at), persistent }; labels.add(L);
-        if (onTap) el.addEventListener('click', e => { e.preventDefault(); onTap(); });
+        if (onTap) el.addEventListener('click', e => { e.preventDefault(); wt.lastTap = el; wt.stopTour(); onTap(); });
         el._pin = L; return el;
       },
       unlabel(el) { for (const L of labels) if (L.el === el) { labels.delete(L); el.remove(); } },
@@ -81,8 +83,28 @@ export class WorldTasks {
     document.body.classList.add('worldtask'); document.body.classList.toggle('station', station); this.layer.hidden = false;
     return s;
   }
+  // a right answer: a star flies from what was tapped into the progress bar, and the camera nudges in
+  reward(ok) {
+    const s = this.session; if (!s || !ok) return;
+    s.kick = 1;
+    const from = this.lastTap?.getBoundingClientRect(), bar = document.querySelector('#taskcard .tc-bar')?.getBoundingClientRect();
+    if (!from || !bar || this.reduceMotion) return;
+    const st = document.createElement('div'); st.className = 'wt-star'; st.textContent = '★'; document.body.appendChild(st);
+    const x0 = from.left + from.width / 2, y0 = from.top + from.height / 2, x1 = bar.left + bar.width * (0.2 + Math.random() * 0.6), y1 = bar.top + bar.height / 2;
+    st.animate([{ transform: `translate(${x0}px, ${y0}px) translate(-50%, -50%) scale(0.6)`, opacity: 1 }, { transform: `translate(${(x0 + x1) / 2}px, ${Math.min(y0, y1) - 60}px) translate(-50%, -50%) scale(1.4)`, opacity: 1, offset: 0.5 }, { transform: `translate(${x1}px, ${y1}px) translate(-50%, -50%) scale(0.5)`, opacity: 0.2 }], { duration: 650, easing: 'cubic-bezier(.4,.1,.3,1)' }).onfinish = () => st.remove();
+  }
+  // the first time a station opens: a finger visits every option in turn, the same way, never hinting the answer
+  tour() {
+    const s = this.session; if (!s?.station || this.toured.has(s.theme) || this.reduceMotion) return;
+    this.toured.add(s.theme);
+    const targets = [...this.layer.querySelectorAll('button.wt-label:not(.wt-bell):not(.placed)')].slice(0, 6); if (!targets.length) return;
+    let k = 0; const f = this.finger; f.hidden = false;
+    const next = () => { if (!this.session || k >= targets.length) { this.stopTour(); return; } const r = targets[k++].getBoundingClientRect(); f.style.transform = `translate(${r.left + r.width / 2}px, ${r.bottom - 4}px)`; f.classList.remove('tap'); void f.offsetWidth; f.classList.add('tap'); this.tourT = setTimeout(next, 650); };
+    this.tourT = setTimeout(next, 550);
+  }
+  stopTour() { clearTimeout(this.tourT); this.finger.hidden = true; }
   close() {
-    const s = this.session; if (!s) return;
+    const s = this.session; if (!s) return; this.stopTour();
     for (const L of s.labels) L.el.remove();
     this.scene.remove(s.group); s.group.traverse(o => { if (o.isMesh) { o.geometry.dispose(); } });
     if (s.station) this.flurry();
@@ -95,7 +117,11 @@ export class WorldTasks {
     const s = this.session; if (!s) return;
     if (s.station) { // the station's own camera: fit the screen, ease to the framed pose
       camera = s.camera; if (Math.abs(camera.aspect - innerWidth / innerHeight) > 1e-3) { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
-      if (s.camPose && s.camAt) { const k = Math.min(1, dt * 3); s.camAt.eye.lerp(s.camPose.eye, k); s.camAt.look.lerp(s.camPose.look, k); camera.position.copy(s.camAt.eye); camera.lookAt(s.camAt.look); camera.updateMatrixWorld(); }
+      if (s.camPose && s.camAt) {
+        const k = Math.min(1, dt * 3); s.camAt.eye.lerp(s.camPose.eye, k); s.camAt.look.lerp(s.camPose.look, k);
+        s.kick = Math.max(0, s.kick - dt * 3); const push = this.reduceMotion ? 0 : Math.sin(s.kick * Math.PI) * 0.035; // a little nudge in on a right answer
+        camera.position.copy(s.camAt.eye).lerp(s.camAt.look, push); camera.lookAt(s.camAt.look); camera.updateMatrixWorld();
+      }
       s.set?.tick?.(dt);
     }
     for (const f of s.stepTicks) f(dt);

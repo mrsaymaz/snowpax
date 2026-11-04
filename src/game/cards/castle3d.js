@@ -9,6 +9,7 @@
 //                       courses drop into a snow wall in front of it
 import { Mesh, MeshLambertMaterial, MeshStandardMaterial, MeshBasicMaterial, BoxGeometry, CylinderGeometry, ConeGeometry, PlaneGeometry, SphereGeometry, TorusGeometry, Shape, ShapeGeometry, LineSegments, EdgesGeometry, LineBasicMaterial, Color, DoubleSide, HemisphereLight, DirectionalLight, CanvasTexture, SRGBColorSpace, RepeatWrapping, Fog, Points, PointsMaterial, BufferGeometry, Float32BufferAttribute, Group } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { stage, actor } from './stationkit.js';
 import { esc, shuffle, blockOrder } from './util.js';
 
 const NOTES = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5, 1567.98, 1760, 1975.5, 2093];
@@ -94,7 +95,7 @@ function build3d(ctx, { kind, pieces, expected, sayAtEnd, revealText, revealTr, 
     s.fly(it.mesh, [slots[i].x, slots[i].y, slots[i].z], { T: 0.5, lift: 1.3, spin: ice ? 0.6 : 0.15, done: () => { ghosts[i].visible = false; s.puff(it.mesh, 8); } });
   };
   const complete = right => {
-    done = true; ctx.sound('capture');
+    done = true; ctx.sound('capture'); s.set?.A?.cheer();
     ctx.item(ctx.step.sourceIds?.[0], right);
     ctx.reveal(revealText, revealTr); if (sayAtEnd) ctx.speech.say(sayAtEnd);
     s.fly(flag, [flag.position.x, L.flagUp, flag.position.z], { T: 0.7, lift: 0 });
@@ -113,13 +114,13 @@ function build3d(ctx, { kind, pieces, expected, sayAtEnd, revealText, revealTr, 
   const tap = it => {
     if (ctx.busy || done || it.used) return;
     if (it.p.key === expected[next].key) {
-      ctx.sound('note', { freq: NOTES[Math.min(next, NOTES.length - 1)] });
+      ctx.sound('note', { freq: NOTES[Math.min(next, NOTES.length - 1)] }); s.set?.A?.throw();
       lay(it, next); next++;
       while (next < expected.length && expected[next].given) next++;
       if (tried) glowNext();
       if (next >= expected.length) ctx.later(() => complete(!tried), ctx.reduceMotion ? 50 : 560);
     } else {
-      s.wobble(it.mesh); it.el.classList.remove('wrong'); void it.el.offsetWidth; it.el.classList.add('wrong'); ctx.sound('tap');
+      s.wobble(it.mesh); s.set?.A?.oops(); it.el.classList.remove('wrong'); void it.el.offsetWidth; it.el.classList.add('wrong'); ctx.sound('tap');
       if (!tried) { tried = true; ctx.coach(wrongCoach); }
       glowNext();
     }
@@ -155,12 +156,7 @@ function canvasTex(w, h, draw, repeat = null) { const c = document.createElement
 
 export function castleStation(s, { color = '#f5b616' } = {}) {
   const P = s.persist, scene = s.scene, base = 2.0;
-  scene.background = canvasTex(4, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#7fb6ea'); gr.addColorStop(0.55, '#cfe6fb'); gr.addColorStop(1, '#f4f9ff'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
-  scene.fog = new Fog('#e6f1fc', 18, 46);
-  const hemi = new HemisphereLight('#eef5ff', '#8fa0cc', 1.15); P.add(hemi);
-  const sun = new DirectionalLight('#fff3df', 2.1); sun.position.set(5, 9, 7); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -8, right: 8, top: 8, bottom: -4, near: 1, far: 30 }); sun.shadow.bias = -0.0005; P.add(sun);
-  const snowM = new MeshLambertMaterial({ color: '#f6f9ff' }), shade = new MeshLambertMaterial({ color: '#dfe8f6' });
-  const ground = new Mesh(new PlaneGeometry(80, 50), new MeshLambertMaterial({ color: '#e4ecf8' })); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; P.add(ground);
+  const K = stage(s), snowM = K.snowM; // sky, painted distance, light, sparkly snow, falling snow
   // the wall up close: snow bricks with soft blue mortar
   const brick = canvasTex(256, 128, (g, w, h) => { g.fillStyle = '#f4f8fe'; g.fillRect(0, 0, w, h); g.strokeStyle = '#c9d9ee'; g.lineWidth = 4; for (let r = 0; r < 4; r++) { const y = r * h / 4; g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); for (let c = 0; c < 4; c++) { const x = c * w / 4 + (r % 2 ? w / 8 : 0); g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + h / 4); g.stroke(); } } }, [3.5, 2]);
   const wallM = new MeshLambertMaterial({ map: brick });
@@ -197,18 +193,15 @@ export function castleStation(s, { color = '#f5b616' } = {}) {
   for (const x of [-0.38, 0.38]) { const r = new Mesh(new BoxGeometry(0.06, 0.08, 1.8), sledR); r.position.set(x, 0.1, 0); sled.add(r); }
   for (const [x, z] of [[-0.2, -0.4], [0.2, -0.35], [0, 0.25]]) { const b = new Mesh(new RoundedBoxGeometry(0.42, 0.28, 0.3, 2, 0.05), snowM); b.position.set(x, 0.45, z); b.castShadow = true; sled.add(b); }
   const shovel = new Mesh(new BoxGeometry(0.34, 0.04, 0.42), new MeshLambertMaterial({ color: '#d9534f' })); shovel.position.set(5.2, 0.6, 1.6); shovel.rotation.set(-1.2, 0.4, 0); P.add(shovel);
-  // falling snow
-  const N = 260, pos = new Float32Array(N * 3); for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - 0.5) * 22; pos[i * 3 + 1] = Math.random() * 9; pos[i * 3 + 2] = (Math.random() - 0.5) * 14 - 1; }
-  const pg = new BufferGeometry(); pg.setAttribute('position', new Float32BufferAttribute(pos, 3));
-  const snow = new Points(pg, new PointsMaterial({ color: '#ffffff', size: 0.07, transparent: true, opacity: 0.9, depthWrite: false })); P.add(snow);
+  const A = actor(s, P, { at: [-3.1, 0, 3.5], face: Math.PI - 0.5 });
   let t = 0;
   const set = {
     base, top: base, courses: 0, flag, flagLow: 7.4, flagTop: 8.45,
     // the wall is taller: the towers stay, the wall's top course shows a fresh snow line
     raise() {},
+    A,
     tick(dt) {
-      t += dt; if (s.reduceMotion) return;
-      const a = pg.attributes.position; for (let i = 0; i < N; i++) { let y = a.array[i * 3 + 1] - dt * (0.5 + (i % 5) * 0.08); if (y < 0) y += 9; a.array[i * 3 + 1] = y; a.array[i * 3] += Math.sin(t + i) * dt * 0.08; } a.needsUpdate = true;
+      t += dt; K.tick(dt); A?.tick(dt); if (s.reduceMotion) return;
       flagsG.children.forEach((f, i) => { f.rotation.x = Math.sin(t * 2.2 + i) * 0.25; });
       flag.rotation.y = Math.sin(t * 3) * 0.12;
     },

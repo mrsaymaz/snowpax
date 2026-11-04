@@ -85,7 +85,7 @@ export class TaskCard {
     if (session) {
       this.root.classList.add('world'); session.clearStep();
       const ctx = this.sceneCtx(step, body, theme); ctx.world = session; ctx.worldColor = this.worldColor;
-      const end = ws(ctx); this.sceneEnd = typeof end === 'function' ? end : null; this.startTimer(step); return;
+      const end = ws(ctx); this.sceneEnd = typeof end === 'function' ? end : null; this.startTimer(step); this.world.tour(); return;
     }
     this.leaveWorld();
     const scene = sceneFor(step.kind, theme);
@@ -125,7 +125,7 @@ export class TaskCard {
     };
     run();
   }
-  item(id, ok) { this.onItem?.({ itemId: id, correctFirstTry: ok }); }
+  item(id, ok) { this.onItem?.({ itemId: id, correctFirstTry: ok }); if (this.inWorld) this.world.reward(ok); }
   async finish(delay = 0) { this.busy = true; this.timeTotal = 0; this.$('.tc-timer').hidden = true; if (delay) await wait(delay); if (this.step) { this.step = null; this.onStepDone?.(); } }
   reveal(text, tr = null) { const html = `✓ ${esc(text)}${tr ? ` <span class="tr">${esc(tr)}</span>` : ''}`; this.$('.tc-note').innerHTML = html; if (this.inWorld) this.world.session?.say(html); }
 }

@@ -10,7 +10,7 @@ import {
   PlaneGeometry, TubeGeometry, QuadraticBezierCurve3, Vector3, Color, DoubleSide, Shape, ShapeGeometry,
 } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
-import { stage, pines, mounds, bunting, row } from './stationkit.js';
+import { stage, pines, mounds, bunting, row, actor } from './stationkit.js';
 import { esc, shuffle } from './util.js';
 
 const L = (c) => new MeshLambertMaterial({ color: c });
@@ -57,11 +57,12 @@ export function treehouseStation(s, { color = '#f5b616' } = {}) {
   pines(P, [[-7.4, -2.6, 1.3], [7.6, -2.4, 1.4], [-8.8, 0.6, 1.0], [8.9, 0.8, 1.1], [-5.6, -5, 1.2], [5.8, -5.2, 1.3]], snowM);
   mounds(P, [[-5.6, 2.6, 1.0], [5.9, 2.9, 1.2], [-4.2, 4.4, 0.7], [4.4, 4.6, 0.8]], snowM);
   const wave = bunting(P, { x0: -4.6, x1: 4.6, y: 4.15, sag: 0.25, z: -0.75, n: 17, colors: [color, '#ffffff', '#7cc4f0', '#f3a6c8'] });
-  let t = 0; return { tick: dt => { t += dt; K.tick(dt); if (!s.reduceMotion) wave(t); }, K };
+  const A = actor(s, P, { at: [-2.9, 0, 3.6], face: Math.PI - 0.5 });
+  let t = 0; return { tick: dt => { t += dt; K.tick(dt); A?.tick(dt); if (!s.reduceMotion) wave(t); }, K, A };
 }
 const BIRD_COLS = ['#d9534f', '#3f8ed8', '#f2b705', '#4caf6a', '#9b6ad6'];
 export function treehouseChoice(ctx) {
-  const s = ctx.world, st = ctx.step, K = s.set.K;
+  const s = ctx.world, st = ctx.step, K = s.set.K, A = s.set.A;
   frameFor(s, { eye: [0, 3.3, 11.5], look: [0, 2.35, 0] }, { eye: [0, 3.6, 12.6], look: [0, 2.2, 0] });
   s.say(caption(st));
   const els = st.options.map((o, i) => s.label(esc(o), { cls: 'wt-opt', onTap: () => pick(i) }));
@@ -83,8 +84,8 @@ export function treehouseChoice(ctx) {
   const hitPoint = i => houses[i].house.getWorldPosition(new Vector3()).sub(s.group.position);
   const pick = chooser(ctx, {
     answerText: st.options[st.answer], glow,
-    onRight: i => { els[i].classList.add('right'); K.snowball(hitPoint(i), () => { K.burst(hitPoint(i)); s.wobble(houses[i].house); ctx.sound('superReady'); }); },
-    onWrong: i => { els[i].classList.remove('wrong'); void els[i].offsetWidth; els[i].classList.add('wrong'); K.snowball(hitPoint(i), () => s.wobble(houses[i].house)); },
+    onRight: i => { els[i].classList.add('right'); A?.throw(); K.snowball(hitPoint(i), () => { K.burst(hitPoint(i)); s.wobble(houses[i].house); ctx.sound('superReady'); A?.cheer(); }, A ? A.hand().toArray() : undefined); },
+    onWrong: i => { els[i].classList.remove('wrong'); void els[i].offsetWidth; els[i].classList.add('wrong'); A?.throw(); K.snowball(hitPoint(i), () => { s.wobble(houses[i].house); A?.oops(); }, A ? A.hand().toArray() : undefined); },
   });
 }
 
@@ -106,7 +107,8 @@ export function archeryStation(s, { color = '#f5b616' } = {}) {
   const rack = new Mesh(new BoxGeometry(8.6, 0.12, 0.3), logL); rack.position.set(0, 0.62, 2.45); rack.castShadow = true; P.add(rack);
   for (const x of [-4.2, 4.2]) { const leg = new Mesh(new BoxGeometry(0.12, 0.62, 0.12), log); leg.position.set(x, 0.31, 2.45); P.add(leg); }
   const wave = bunting(P, { x0: -3.2, x1: 3.2, y: 3.0, sag: 0.3, z: -5.0, n: 13, colors: [color, '#ffffff', '#e8b84a', '#c8443c'] });
-  let t = 0; return { tick: dt => { t += dt; K.tick(dt); if (!s.reduceMotion) wave(t); }, K };
+  const A = actor(s, P, { at: [-3.0, 0, 4.4], face: Math.PI - 0.5, scale: 0.75 });
+  let t = 0; return { tick: dt => { t += dt; K.tick(dt); A?.tick(dt); if (!s.reduceMotion) wave(t); }, K, A };
 }
 const RINGS = ['#ffffff', '#2b2f45', '#3f8ed8', '#d9534f', '#f2c14e'];
 function target(s) {
@@ -124,7 +126,7 @@ function arrow() {
   return g;
 }
 export function archerySort(ctx) {
-  const s = ctx.world, st = ctx.step, K = s.set.K;
+  const s = ctx.world, st = ctx.step, K = s.set.K, A = s.set.A;
   frameFor(s, { eye: [0, 3.4, 11.4], look: [0, 1.5, 0] }, { eye: [0, 3.8, 12.6], look: [0, 1.4, 0] });
   s.say(esc(st.prompt));
   const n = st.categories.length, tx = n === 2 ? [-2.6, 2.6] : [-3.6, 0, 3.6];
@@ -151,7 +153,7 @@ export function archerySort(ctx) {
     if (!left) ctx.finish(900);
   };
   const fire = (k, i, then) => {
-    const a = arrow(); a.position.copy(k.plank.position); s.step.add(a);
+    const a = arrow(); a.position.copy(A ? A.hand() : k.plank.position); A?.throw(); s.step.add(a);
     const T = targets[i], hit = [T.g.position.x + (ctx.rng() - 0.5) * 0.7, T.g.position.y + (ctx.rng() - 0.5) * 0.7, T.g.position.z + 0.5];
     a.lookAt(new Vector3(hit[0], hit[1], hit[2]).add(s.group.position)); a.rotateY(Math.PI);
     s.fly(a, hit, { T: 0.35, lift: 0.5, done: () => then(a) });
@@ -162,10 +164,10 @@ export function archerySort(ctx) {
     const k = sel; sel = null; k.plank.position.y = 0.92;
     if (k.c.cat === i) {
       ctx.item(k.c.id, !missed.has(k.c.id)); ctx.sound('note', { freq: 659 + targets[i].stuck * 90 }); targets[i].stuck++;
-      fire(k, i, () => K.burst(targets[i].g.position.clone().setZ(targets[i].g.position.z + 0.5), undefined, 14, 1.6)); place(k, true);
+      fire(k, i, () => { K.burst(targets[i].g.position.clone().setZ(targets[i].g.position.z + 0.5), undefined, 14, 1.6); A?.cheer(); }); place(k, true);
     } else {
       k.el.classList.remove('wrong'); void k.el.offsetWidth; k.el.classList.add('wrong'); targets[i].title.classList.add('no'); ctx.later(() => targets[i].title.classList.remove('no'), 500);
-      fire(k, i, a => s.fly(a, [a.position.x + 0.6, 0.05, a.position.z + 1.2], { T: 0.4, lift: 0.4, spin: 2 })); // bounces off
+      fire(k, i, a => { s.fly(a, [a.position.x + 0.6, 0.05, a.position.z + 1.2], { T: 0.4, lift: 0.4, spin: 2 }); A?.oops(); }); // bounces off
       if (!missed.has(k.c.id)) { missed.add(k.c.id); k.locked = true; ctx.item(k.c.id, false); ctx.coach(`"${k.c.text}" goes in "${st.categories[k.c.cat].title}".`); targets[k.c.cat].title.classList.add('show'); ctx.later(() => { targets[k.c.cat].title.classList.remove('show'); if (!k.placed) { fire(k, k.c.cat, () => {}); place(k, false); } }, 1000); }
     }
   };
@@ -188,10 +190,11 @@ export function fountainStation(s, { color = '#f5b616' } = {}) {
   const bowl = new Mesh(new CylinderGeometry(0.9, 0.6, 0.5, 20), L('#35b0b0')); bowl.position.y = 0.6; kiosk.add(bowl);
   pines(P, [[-7.8, -4.4, 1.3], [7.9, -4.2, 1.4], [-9.2, 0.8, 1.0], [9.3, 1.0, 1.1]], snowM);
   const wave = bunting(P, { x0: -5.6, x1: 5.6, y: 3.6, sag: 0.4, z: -5.2, n: 19, colors: [color, '#ffffff', '#35b0b0', '#2d6fb5'] });
-  let t = 0; return { tick: dt => { t += dt; K.tick(dt); if (!s.reduceMotion) wave(t); }, K };
+  const A = actor(s, P, { at: [-5.0, 0, 2.6], face: Math.PI - 0.9, scale: 0.9 });
+  let t = 0; return { tick: dt => { t += dt; K.tick(dt); A?.tick(dt); if (!s.reduceMotion) wave(t); }, K, A };
 }
 export function fountainMatch(ctx) {
-  const s = ctx.world, st = ctx.step, K = s.set.K;
+  const s = ctx.world, st = ctx.step, K = s.set.K, A = s.set.A;
   frameFor(s, { eye: [0, 9.2, 10.6], look: [0, 0.1, -0.5] }, { eye: [0, 7.4, 8.2], look: [0, 0.1, 0.25] });
   s.say(esc(st.prompt));
   const right = shuffle(st.right, ctx.rng), n = st.left.length, zs = Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * 1.25);
@@ -221,10 +224,10 @@ export function fountainMatch(ctx) {
     if (st.pairs[lid] === rid) {
       done.add(lid); trail(lid, rid, '#ffcf3c', true);
       for (const x of [lid, rid]) { els.get(x).classList.add('right'); els.get(x).classList.remove('show'); tiles.get(x).material.color.set(['#9be0d8', '#a9c8f0', '#ffe6a8', '#f6c7dc'][done.size % 4]); }
-      ctx.item(srcOf(lid), !missed.has(lid)); ctx.sound('note', { freq: 523 + done.size * 110 }); K.burst(tiles.get(rid).position.clone().setY(0.6), undefined, 12, 1.4);
+      ctx.item(srcOf(lid), !missed.has(lid)); A?.cheer(); ctx.sound('note', { freq: 523 + done.size * 110 }); K.burst(tiles.get(rid).position.clone().setY(0.6), undefined, 12, 1.4);
       if (done.size === st.left.length) { ctx.sound('capture'); ctx.finish(900); }
     } else {
-      trail(lid, rid, '#e0707a', false);
+      trail(lid, rid, '#e0707a', false); A?.oops();
       for (const x of [lid, rid]) { const el = els.get(x); el.classList.remove('wrong'); void el.offsetWidth; el.classList.add('wrong'); }
       if (!missed.has(lid)) { missed.add(lid); ctx.coach('Not that one. Look for the glowing match!'); }
       els.get(st.pairs[lid]).classList.add('show');
@@ -260,11 +263,12 @@ export function bellStation(s, { color = '#f5b616' } = {}) {
   const tcone = new Mesh(new ConeGeometry(1.1, 1.8, 16), L('#7a86a8')); tcone.position.set(6, 5.9, -16); P.add(tcone);
   for (const [x, w, h] of [[-12, 4, 2], [-7, 3, 2.6], [0, 5, 1.8], [10, 4, 2.4], [13.5, 3, 1.6]]) { const hs = new Mesh(new BoxGeometry(w, h, 2), L('#b7c2da')); hs.position.set(x, h / 2, -17); P.add(hs); }
   const wave = bunting(P, { x0: -0.95, x1: 0.95, y: 2.9, sag: 0.0, z: -1.45, n: 7, colors: [color, '#ffffff', '#2d6fb5'] });
+  const A = actor(s, P, { at: [-1.0, 0.38, 2.4], face: Math.PI - 0.35, scale: 0.7 });
   let t = 0, ringT = 0;
   return {
-    K, ring() { ringT = 1.6; },
+    K, A, ring() { ringT = 1.6; },
     bellPos: () => new Vector3(0, 2.4, -1.6),
-    tick: dt => { t += dt; K.tick(dt); if (s.reduceMotion) return; wave(t); ferry.position.x = -6.5 + Math.sin(t * 0.15) * 0.6; if (ringT > 0) { ringT -= dt; swing.rotation.z = Math.sin(t * 10) * 0.5 * Math.min(1, ringT); } else swing.rotation.z *= 0.9; },
+    tick: dt => { t += dt; K.tick(dt); A?.tick(dt); if (s.reduceMotion) return; wave(t); ferry.position.x = -6.5 + Math.sin(t * 0.15) * 0.6; if (ringT > 0) { ringT -= dt; swing.rotation.z = Math.sin(t * 10) * 0.5 * Math.min(1, ringT); } else swing.rotation.z *= 0.9; },
   };
 }
 function gull() {
@@ -279,7 +283,7 @@ export function bellListen(ctx) {
   const s = ctx.world, st = ctx.step, set = s.set, K = set.K, voice = ctx.speech.available;
   frameFor(s, { eye: [0, 3.0, 10.6], look: [0, 1.9, 0] }, { eye: [0, 3.2, 11.6], look: [0, 1.8, 0] });
   s.say(`${esc(st.prompt)}${voice ? '' : ` <span class="tr">${esc(st.fallbackText || st.speak)}</span>`}`);
-  const play = () => { set.ring(); ctx.sound('bell'); ctx.later(() => ctx.speech.say(st.speak), 250); };
+  const play = () => { set.A?.throw(); set.ring(); ctx.sound('bell'); ctx.later(() => ctx.speech.say(st.speak), 250); };
   s.label('🔔 Ring the bell', { cls: 'wt-bell', at: innerHeight < 430 ? [1.75, 2.55, -1.6] : [0, 3.75, -1.6], onTap: play });
   if (voice) ctx.later(play, 450); else ctx.note('No English voice on this device: read the word instead.');
   const els = st.options.map((o, i) => s.label(st.pics?.[i] ? `<img src="${esc(st.pics[i])}" alt=""><span>${esc(o)}</span>` : esc(o), { cls: 'wt-opt gullsign', onTap: () => pick(i) }));
@@ -293,7 +297,7 @@ export function bellListen(ctx) {
   const glow = i => els[i].classList.add('show');
   const pick = chooser(ctx, {
     answerText: st.options[st.answer], glow,
-    onRight: i => { const g = gulls[i]; g.userData.flying = true; els[i].classList.add('right'); const b = set.bellPos(); s.fly(g, [b.x + 0.5, b.y + 0.6, b.z + 0.3], { T: 0.7, lift: 0.8, done: () => { set.ring(); ctx.sound('bell'); K.burst(b); } }); },
-    onWrong: i => { els[i].classList.remove('wrong'); void els[i].offsetWidth; els[i].classList.add('wrong'); s.wobble(gulls[i]); },
+    onRight: i => { const g = gulls[i]; g.userData.flying = true; els[i].classList.add('right'); const b = set.bellPos(); s.fly(g, [b.x + 0.5, b.y + 0.6, b.z + 0.3], { T: 0.7, lift: 0.8, done: () => { set.ring(); ctx.sound('bell'); K.burst(b); set.A?.cheer(); } }); },
+    onWrong: i => { els[i].classList.remove('wrong'); void els[i].offsetWidth; els[i].classList.add('wrong'); s.wobble(gulls[i]); set.A?.oops(); },
   });
 }

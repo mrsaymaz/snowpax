@@ -2,9 +2,42 @@
 // falling snow, confetti bursts and snowballs. A set builder calls stage() first and adds its own
 // landmark; everything goes into the session's persist group, so it lasts for the whole visit.
 import {
-  Mesh, MeshLambertMaterial, MeshBasicMaterial, PlaneGeometry, SphereGeometry, ConeGeometry, HemisphereLight, DirectionalLight, CanvasTexture,
-  SRGBColorSpace, RepeatWrapping, Fog, Points, PointsMaterial, BufferGeometry, Float32BufferAttribute, Group, Shape, ShapeGeometry, DoubleSide, Vector3, Color,
+  Mesh, MeshLambertMaterial, MeshBasicMaterial, PlaneGeometry, SphereGeometry, ConeGeometry, CylinderGeometry, HemisphereLight, DirectionalLight, CanvasTexture,
+  SRGBColorSpace, RepeatWrapping, Fog, Points, PointsMaterial, BufferGeometry, Float32BufferAttribute, Group, Shape, ShapeGeometry, DoubleSide, BackSide, Vector3, Color,
 } from 'three';
+import { buildKid, bakeKid } from '../render/kids2.js';
+
+// the painted distance behind every station: layered snowy hills, pines and the Istanbul skyline
+let backdropTex = null;
+function paintBackdrop() {
+  if (backdropTex) return backdropTex;
+  backdropTex = canvasTex(2048, 512, (g, W, H) => {
+    const rnd = (k => () => (k = (k * 16807) % 2147483647) / 2147483647)(7);
+    const hills = (base, amp, col, step) => { g.fillStyle = col; g.beginPath(); g.moveTo(0, H); for (let x = 0; x <= W; x += step) g.lineTo(x, base - Math.sin(x * 0.004 + base) * amp - Math.sin(x * 0.011) * amp * 0.4); g.lineTo(W, H); g.fill(); };
+    hills(330, 40, 'rgba(176, 196, 228, 0.75)', 16);
+    // the skyline: domes, minarets and a round tower, very faint
+    g.fillStyle = 'rgba(150, 170, 210, 0.7)';
+    for (const [x, w, h] of [[300, 120, 70], [560, 90, 50], [1240, 160, 80], [1500, 100, 60], [1760, 130, 70]]) { g.fillRect(x - w / 2, 330 - h, w, h + 40); g.beginPath(); g.arc(x, 330 - h, w * 0.32, Math.PI, 0); g.fill(); for (const m of [-1, 1]) { g.fillRect(x + m * w * 0.62 - 4, 330 - h - 70, 8, h + 70); g.beginPath(); g.moveTo(x + m * w * 0.62 - 6, 330 - h - 70); g.lineTo(x + m * w * 0.62, 330 - h - 96); g.lineTo(x + m * w * 0.62 + 6, 330 - h - 70); g.fill(); } }
+    g.fillRect(1004, 200, 40, 160); g.beginPath(); g.moveTo(996, 202); g.lineTo(1024, 150); g.lineTo(1052, 202); g.fill();
+    hills(380, 30, 'rgba(206, 220, 242, 0.95)', 12);
+    g.fillStyle = 'rgba(120, 160, 170, 0.75)';
+    for (let x = 0; x < W; x += 22 + rnd() * 30) { const h = 26 + rnd() * 34, y = 392 + rnd() * 18; g.beginPath(); g.moveTo(x - h * 0.35, y); g.lineTo(x, y - h); g.lineTo(x + h * 0.35, y); g.fill(); }
+    hills(420, 18, '#e8eef9', 10);
+    const fade = g.createLinearGradient(0, 400, 0, H); fade.addColorStop(0, 'rgba(232,238,249,0)'); fade.addColorStop(1, '#e8eef9'); g.fillStyle = fade; g.fillRect(0, 400, W, H - 400);
+  });
+  return backdropTex;
+}
+let groundTex = null;
+function paintGround() {
+  if (groundTex) return groundTex;
+  groundTex = canvasTex(512, 512, (g, W) => {
+    g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, W);
+    for (let i = 0; i < 70; i++) { const x = Math.random() * W, y = Math.random() * W, r = 20 + Math.random() * 70, gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(190, 208, 236, 0.22)'); gr.addColorStop(1, 'rgba(190, 208, 236, 0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
+    for (let i = 0; i < 260; i++) { g.fillStyle = `rgba(255, 255, 255, ${0.6 + Math.random() * 0.4})`; g.fillRect(Math.random() * W, Math.random() * W, 2, 2); }
+    for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(150, 200, 255, 0.55)'; g.fillRect(Math.random() * W, Math.random() * W, 2, 2); }
+  }, [10, 6]);
+  return groundTex;
+}
 
 export function canvasTex(w, h, draw, repeat = null) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; if (repeat) { t.wrapS = t.wrapT = RepeatWrapping; t.repeat.set(...repeat); } return t; }
 
@@ -12,11 +45,14 @@ export function canvasTex(w, h, draw, repeat = null) { const c = document.create
 export function stage(s, { top = '#7fb6ea', mid = '#cfe6fb', bottom = '#f4f9ff', ground = '#e4ecf8', fog = '#e6f1fc', sun = '#fff3df', snow = true } = {}) {
   const P = s.persist, scene = s.scene, ticks = [];
   scene.background = canvasTex(4, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, top); gr.addColorStop(0.55, mid); gr.addColorStop(1, bottom); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
-  scene.fog = new Fog(fog, 18, 48);
-  P.add(new HemisphereLight('#eef5ff', '#8fa0cc', 1.15));
-  const d = new DirectionalLight(sun, 2.1); d.position.set(5, 9, 7); d.castShadow = true; d.shadow.mapSize.set(1024, 1024); Object.assign(d.shadow.camera, { left: -9, right: 9, top: 9, bottom: -4, near: 1, far: 32 }); d.shadow.bias = -0.0005; P.add(d);
+  scene.fog = new Fog(fog, 20, 52);
+  P.add(new HemisphereLight('#e8f0ff', '#93a3d2', 0.95));
+  const rim = new DirectionalLight('#bcd4ff', 0.7); rim.position.set(-5, 6, -8); P.add(rim); // a cool rim from behind
+  const d = new DirectionalLight(sun === '#fff3df' ? '#ffe7c4' : sun, 2.35); d.position.set(6, 8.5, 6.5); d.castShadow = true; d.shadow.mapSize.set(1024, 1024); Object.assign(d.shadow.camera, { left: -9, right: 9, top: 9, bottom: -4, near: 1, far: 32 }); d.shadow.bias = -0.0005; P.add(d);
   const snowM = new MeshLambertMaterial({ color: '#f6f9ff' });
-  const g = new Mesh(new PlaneGeometry(80, 50), new MeshLambertMaterial({ color: ground })); g.rotation.x = -Math.PI / 2; g.receiveShadow = true; P.add(g);
+  const g = new Mesh(new PlaneGeometry(80, 50), new MeshLambertMaterial({ color: ground, map: paintGround() })); g.rotation.x = -Math.PI / 2; g.receiveShadow = true; P.add(g);
+  const back = new Mesh(new CylinderGeometry(30, 30, 14, 48, 1, true, Math.PI * 0.5, Math.PI), new MeshBasicMaterial({ map: paintBackdrop(), transparent: true, side: BackSide, fog: false, depthWrite: false }));
+  back.position.set(0, 6.2, 4); back.renderOrder = -1; P.add(back); // the painted distance
   if (snow) {
     const N = 240, pos = new Float32Array(N * 3); for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - 0.5) * 22; pos[i * 3 + 1] = Math.random() * 9; pos[i * 3 + 2] = (Math.random() - 0.5) * 14 - 1; }
     const pg = new BufferGeometry(); pg.setAttribute('position', new Float32BufferAttribute(pos, 3));
@@ -54,3 +90,26 @@ export function bunting(P, { x0, x1, y, sag = 0.5, z = 0, n = 15, colors }) {
 export const board = (w, h, color) => new Mesh(new PlaneGeometry(w, h), new MeshBasicMaterial({ color, transparent: true, opacity: 0 }));
 // lay out n widths in a row centred on 0, with a gap; returns centre x's
 export function row(ws, gap) { const tot = ws.reduce((a, b) => a + b, 0) + gap * (ws.length - 1); let x = -tot / 2; return ws.map(w => { const c = x + w / 2; x += w + gap; return c; }); }
+
+// the student's own kid in the station: throws, cheers, shrugs (the player's look, team and kit)
+export function actor(s, P, { at = [-3.4, 0, 3.4], face = Math.PI - 0.6, scale = 0.82 } = {}) {
+  const c = s.player; if (!c) return null;
+  const kid = bakeKid(buildKid({ team: c.team, kit: c.kit, ...(c.look || {}) }));
+  kid.scale.setScalar(scale); kid.position.set(...at); kid.rotation.y = face; kid.traverse(o => { if (o.isMesh) o.castShadow = true; }); P.add(kid);
+  const shadow = new Mesh(new CylinderGeometry(0.5, 0.5, 0.01, 20), new MeshBasicMaterial({ color: '#4a6182', transparent: true, opacity: 0.22, depthWrite: false })); shadow.position.set(at[0], at[1] + 0.01, at[2]); P.add(shadow);
+  const [armL, armR] = kid.userData.arms, y0 = at[1];
+  let t = 0, act = null;
+  const run = (name, T, f) => { act = { name, T, t: 0, f }; };
+  return {
+    kid,
+    hand() { return armR.localToWorld(new Vector3(0, -0.42, 0)).sub(s.group.position); }, // where things leave from
+    throw() { if (s.reduceMotion) return; run('throw', 0.36, k => { armR.rotation.x = -2.8 * Math.sin(k * Math.PI); }); },
+    cheer() { if (s.reduceMotion) return; run('cheer', 0.7, k => { const u = Math.sin(k * Math.PI); armL.rotation.x = armR.rotation.x = -2.6 * u; kid.position.y = y0 + Math.abs(Math.sin(k * Math.PI * 2)) * 0.28; }); },
+    oops() { if (s.reduceMotion) return; run('oops', 0.6, k => { kid.rotation.y = face + Math.sin(k * Math.PI * 4) * 0.22 * (1 - k); armL.rotation.z = -0.35 - Math.sin(k * Math.PI) * 0.6; armR.rotation.z = 0.35 + Math.sin(k * Math.PI) * 0.6; }); },
+    tick(dt) {
+      t += dt;
+      if (act) { act.t += dt; const k = Math.min(1, act.t / act.T); act.f(k); if (k >= 1) { armL.rotation.x = armR.rotation.x = 0; armL.rotation.z = -0.35; armR.rotation.z = 0.35; kid.rotation.y = face; kid.position.y = y0; act = null; } }
+      else if (!s.reduceMotion) kid.position.y = y0 + Math.abs(Math.sin(t * 2.2)) * 0.03;
+    },
+  };
+}

@@ -401,3 +401,8 @@ body.station #fx-layer, body.station #feed { display: none; }
   .wt-target { padding: 3px 9px; } .wt-hit { width: 80px; height: 80px; } .wt-card { min-height: 32px; padding: 3px 8px; } .wt-bell { font-size: 13px; padding: 4px 10px; }
 }
 body.station #newrival, body.station #coach { display: none !important; } /* the strip carries the coaching inside a station */
+.wt-star { position: fixed; left: 0; top: 0; z-index: 60; pointer-events: none; font-size: 30px; color: #ffcf3c; text-shadow: 0 0 10px rgba(255, 207, 60, 0.9), 0 2px 0 #c98b00; }
+.wt-finger { position: fixed; left: 0; top: 0; z-index: 38; pointer-events: none; font-size: 40px; filter: drop-shadow(0 3px 2px rgba(0,0,0,0.35)); transition: transform 0.35s cubic-bezier(.3,.8,.4,1); margin-left: -14px; }
+.wt-finger[hidden] { display: none; }
+.wt-finger.tap { animation: wt-tap 0.5s ease-in-out; }
+@keyframes wt-tap { 0%, 100% { scale: 1; } 50% { scale: 0.82; } }
