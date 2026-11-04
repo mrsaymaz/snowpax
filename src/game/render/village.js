@@ -17,6 +17,7 @@ import { CONFIG } from '../../config.js';
 import { Grid, GRID } from '../grid.mjs';
 import { GridNav } from '../gridnav.mjs';
 import { buildSnowtown } from './snowtown.js';
+import { LOOK, toon, addRim, outlineMaterial } from './look.js';
 
 export const PAL = {
   snow: '#e6eef9', snowShade: '#cdd6ef', ice: '#bfe3f5', lavender: '#b7a9da', lavDeep: '#8e7fbf', slate: '#5d6b80', slateDark: '#3d475d', navy: '#24304f',
@@ -28,6 +29,7 @@ export const LIGHTING = { sky: '#9fb3db', fog: ['#aeb9df', 30, 62], hemi: ['#d3e
 // (pink-orange low sun, long blue shadows, windows and lamps glowing brighter).
 export const DAYLIGHT = {
   afternoon: { sky: '#b4bde6', fog: '#c3c6ea', hemi: ['#dae2ff', '#7d72b8', 1.12], sun: ['#fff0e0', 2.3], sunDir: [-11, 14, 7] },
+  morning: { sky: '#b9d3f0', fog: '#cfe0f4', hemi: ['#e6eeff', '#7d8cc4', 0.95], sun: ['#fff2de', 1.85], sunDir: [9, 14, 8] }, // the v2 sample: bright morning at Boulevard Park
   dusk: { sky: '#c3a3cc', fog: '#b9aad8', hemi: ['#c6c7f4', '#6556a8', 1.02], sun: ['#ffb68c', 2.0], sunDir: [-14, 8, 5] },
 };
 
@@ -100,9 +102,10 @@ const T = {
 // ---------- materials ----------
 const matCache = new Map();
 function M(kind, color, extra = {}) {
-  const key = kind + color + JSON.stringify(extra);
+  const key = (LOOK.v2 ? 'v2' : '') + kind + color + JSON.stringify(extra);
   if (matCache.has(key)) return matCache.get(key);
   let m;
+  if (LOOK.v2 && kind !== 'glow') { m = toon({ color, map: T[kind] && kind !== 'metal' ? T[kind]() : null, ...extra }); addCutout(m); if (kind !== 'snow') addRim(m, 0.07); matCache.set(key, m); return m; }
   if (kind === 'metal') m = new MeshStandardMaterial({ color, map: T.metal(), roughness: 0.55, metalness: 0.45, ...extra });
   else if (kind === 'glow') m = new MeshBasicMaterial({ color, ...extra });
   else m = new MeshLambertMaterial({ color, map: T[kind] ? T[kind]() : null, ...extra });
@@ -157,6 +160,7 @@ class Kit {
     for (const { mat, list } of buckets.values()) {
       const g = mergeGeometries(list); g.computeBoundingSphere();
       const mesh = new Mesh(g, mat); mesh.castShadow = shadows && !mat.isMeshBasicMaterial; mesh.receiveShadow = true; group.add(mesh);
+      if (LOOK.v2 && !mat.isMeshBasicMaterial && !mat.transparent) { const ink = new Mesh(g, outlineMaterial(0.045, '#1c2340', addCutout)); ink.renderOrder = -1; group.add(ink); } // cartoon outlines
     }
     for (const { geo, mat, list } of this.inst.values()) {
       const im = new InstancedMesh(geo, mat, list.length); list.forEach((m, i) => im.setMatrixAt(i, m));
@@ -190,7 +194,21 @@ function sign(text, w = 2.2, bg = '#2b3556') {
   const m = new Mesh(new PlaneGeometry(w, w * 160 / 512), new MeshBasicMaterial({ map: t, transparent: true })); return m;
 }
 
-export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'hufflepuff', quality = 'medium' } = {}) {
+export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'hufflepuff', quality = 'medium', look = 'v1', clip = null } = {}) {
+  LOOK.v2 = look === 'v2';
+  // a stage build: only the cells near one outpost (the rest becomes '~', nothing)
+  if (clip) {
+    const near = (x, z, pad = 0) => Math.hypot(x - clip.x, z - clip.z) <= clip.r + pad;
+    const cx0 = arena.x0, cz0 = arena.z0;
+    arena = { ...arena, clip,
+      rows: arena.rows.map((row, j) => [...row].map((c, i) => (near(cx0 + i + 0.5, cz0 + j + 0.5) ? c : '~')).join('')),
+      landmarks: arena.landmarks.filter(l => near(cx0 + (l.i ?? l.a?.[0] ?? 0) + 0.5, cz0 + (l.j ?? l.a?.[1] ?? 0) + 0.5, 2)),
+      scenery: arena.scenery.filter(s2 => s2.type !== 'cemetery' && near(cx0 + s2.x, cz0 + s2.z, 2)),
+      signposts: (arena.signposts || []).filter(sp => near(sp.x, sp.z)),
+      sledRuns: (arena.sledRuns || []).filter(r => near(r.pts[0][0], r.pts[0][1], 6)),
+      places: arena.places.filter(p => p.kind !== 'zone' || near(p.x, p.z, 2)),
+    };
+  }
   const group = new Group(), K = new Kit(), rows = arena.rows, W = arena.w, H = arena.h, x0 = arena.x0, z0 = arena.z0;
   const at = (i, j) => [x0 + i + 0.5, z0 + j + 0.5];
   const tiles = ch => { const out = []; for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (rows[j][i] === ch) out.push([i, j]); return out; };
@@ -385,7 +403,7 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   };
 
   // ---------- edge buildings and nature (quieter around the edges) ----------
-  if (arena.world) buildSnowtown({ arena: { ...arena, x0, z0 }, K, M, T, PAL, GEO, rbox, prism, rnd, at, group, glows, smokeSources, lights, low, lantern, windows, pine, rock, barrel, crate, firewood, shovel, mSnow, mStone, mStoneDark, mBeam, mWood, mMetal, mIce, mGlass, sign, life, pools, centreFlags, makeFlag });
+  if (arena.world) buildSnowtown({ arena: { ...arena, x0, z0 }, K, M, T, PAL, GEO, rbox, prism, rnd, at, group, glows, smokeSources, lights, low, lantern, windows, pine, rock, barrel, crate, firewood, shovel, mSnow, mStone, mStoneDark, mBeam, mWood, mMetal, mIce, mGlass, sign, life, pools, centreFlags, makeFlag, look });
   else {
   const used = new Set(), key = (i, j) => i + ',' + j;
   const isH = (i, j) => i >= 0 && j >= 0 && i < W && j < H && rows[j][i] === 'H' && !used.has(key(i, j));
@@ -540,7 +558,7 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   // warm pools of light on the snow under street lamps and round the fire barrels
   if (arena.world) for (const { x, z } of fires) pools.push([x, z, 2.2]);
   const poolGeo = new PlaneGeometry(1, 1); poolGeo.rotateX(-Math.PI / 2);
-  const poolMesh = new InstancedMesh(poolGeo, new MeshBasicMaterial({ map: glow(), blending: AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.35 }), Math.max(1, pools.length));
+  const poolMesh = new InstancedMesh(poolGeo, new MeshBasicMaterial({ map: glow(), blending: AdditiveBlending, depthWrite: false, transparent: true, opacity: LOOK.v2 ? 0.14 : 0.35 }), Math.max(1, pools.length));
   poolMesh.count = pools.length; poolMesh.renderOrder = 2;
   pools.forEach(([x, z, r], k) => { const o2 = new Object3D(); o2.position.set(x, 0.2, z); o2.scale.set(r * 2, 1, r * 2); o2.updateMatrix(); poolMesh.setMatrixAt(k, o2.matrix); });
   group.add(poolMesh);
@@ -608,7 +626,7 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
     setWeather({ snow = 1, wx = 0, wz = 0 } = {}) { this.snowMul = snow; this.windX = wx; this.windZ = wz; flakes.material.size = 0.16 * (snow > 1.5 ? 1.5 : 1); flakes.material.opacity = snow > 1.5 ? 1 : 0.9; },
     // 0 = late afternoon, 1 = dusk: lamps, windows and lantern glows brighten
     setDusk(k) {
-      glowMesh.material.opacity = 0.8 + 0.2 * k; poolMesh.material.opacity = 0.3 + 0.4 * k;
+      glowMesh.material.opacity = 0.8 + 0.2 * k; poolMesh.material.opacity = LOOK.v2 ? 0.14 : 0.3 + 0.4 * k;
       mGlass.color.set(PAL.amber).lerp(new Color('#ffd27a'), k);
     },
     setZone(progress, homeColor, rivalColor, contested, t, id = null) {

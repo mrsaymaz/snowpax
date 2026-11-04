@@ -5,6 +5,7 @@
 import { RingGeometry, Group, Mesh, MeshLambertMaterial, Object3D, Color, BufferAttribute, SphereGeometry, ConeGeometry, CylinderGeometry, TorusGeometry, BoxGeometry, CircleGeometry, MeshBasicMaterial, Sprite, SpriteMaterial, CanvasTexture, SRGBColorSpace } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { CONFIG } from '../../config.js';
+import { LOOK, toon, addRim, outlineMaterial } from './look.js';
 
 function bake(parts) {
   const o = new Object3D();
@@ -38,8 +39,9 @@ function shape(type, col, dark) {
 export class SnowmanView {
   constructor(c) {
     this.c = c; const team = CONFIG.teams[c.team] || { color: '#e0463c', dark: '#8a2a24' };
-    this.root = new Group(); this.mat = new MeshLambertMaterial({ vertexColors: true, emissive: new Color(0), transparent: true });
+    this.root = new Group(); this.mat = LOOK.v2 ? addRim(toon({ vertexColors: true, emissive: new Color(0), transparent: true }), 0.25) : new MeshLambertMaterial({ vertexColors: true, emissive: new Color(0), transparent: true });
     this.body = new Mesh(shape(c.minion, team.color, team.dark), this.mat); this.body.castShadow = true; this.root.add(this.body);
+    if (LOOK.v2) this.body.add(new Mesh(this.body.geometry, outlineMaterial(0.03))); // cartoon outline
     const sh = new Mesh(new CircleGeometry(0.55, 16), new MeshBasicMaterial({ color: '#4a6182', transparent: true, opacity: 0.3, depthWrite: false })); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.03; this.root.add(sh);
     // a ring in the rival team's colour, so white snowmen stand out on white snow
     const ring = new Mesh(new RingGeometry(0.55, 0.7, 28), new MeshBasicMaterial({ color: team.color, transparent: true, opacity: 0.9, depthWrite: false, depthTest: false })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05; ring.renderOrder = 6; this.root.add(ring); this.ring = ring;

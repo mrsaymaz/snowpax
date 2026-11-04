@@ -8,13 +8,14 @@ import {
   PlaneGeometry, TorusGeometry, CapsuleGeometry, CanvasTexture, RepeatWrapping, SRGBColorSpace, Color, CircleGeometry,
 } from 'three';
 import { makeGround } from '../terrain.mjs';
+import { addSparkle } from './look.js';
 
 const paint = (size, fn) => { const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d'); fn(g, size); const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; t.wrapS = t.wrapT = RepeatWrapping; t.anisotropy = 4; return t; };
 const blot = (g, x, y, r, rgb, a) => { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(${rgb},${a})`); gr.addColorStop(1, `rgba(${rgb},0)`); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); };
 
 export function buildSnowtown(ctx) {
   const { arena, K, M, T, PAL, GEO, rbox, prism, rnd, at, group, glows, smokeSources, lights, low, lantern, pine, rock, barrel, crate, firewood, shovel,
-    mSnow, mStone, mStoneDark, mBeam, mWood, mMetal, mIce, mGlass, sign, life, pools } = ctx;
+    mSnow, mStone, mStoneDark, mBeam, mWood, mMetal, mIce, mGlass, sign, life, pools, look } = ctx;
   const rows = arena.rows, W = arena.w, H = arena.h, ground = makeGround(arena.hills || []);
   const normalAt = (x, z) => { const e = 0.25, dx = (ground(x + e, z) - ground(x - e, z)) / (2 * e), dz = (ground(x, z + e) - ground(x, z - e)) / (2 * e), l = Math.hypot(dx, 1, dz); return [-dx / l, 1 / l, -dz / l]; };
   const ch = (i, j) => (i < 0 || j < 0 || i >= W || j >= H ? 'H' : rows[j][i]);
@@ -42,13 +43,13 @@ export function buildSnowtown(ctx) {
   const quads = { snow: [], plaza: [], yard: [], ice: [] };
   const corner = (i, j) => { let n = 0; for (const [a, b] of [[i - 1, j - 1], [i, j - 1], [i - 1, j], [i, j]]) if ('HSKQCGR'.includes(ch(a, b))) n++; return n; };
   const wear = (i, j) => (trod(ch(i - 1, j - 1)) + trod(ch(i, j - 1)) + trod(ch(i - 1, j)) + trod(ch(i, j))) / 4;
-  const TRODDEN = [0.6, 0.62, 0.85];
+  const TRODDEN = look === 'v2' ? [0.52, 0.58, 0.86] : [0.6, 0.62, 0.85]; // v2: cooler, deeper lanes for contrast
   // trodden lanes are sunk into the snow: the deep snow beside them stands a little higher
   const DEEP = 0.17;
   const wearAt = (x, z) => { const fx = x - arena.x0, fz = z - arena.z0, i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j; return (wear(i, j) * (1 - u) + wear(i + 1, j) * u) * (1 - v) + (wear(i, j + 1) * (1 - u) + wear(i + 1, j + 1) * u) * v; };
   const snowH = (x, z) => ground(x, z) + DEEP * (1 - wearAt(x, z));
   const snowNormal = (x, z) => { const e = 0.25, dx = (snowH(x + e, z) - snowH(x - e, z)) / (2 * e), dz = (snowH(x, z + e) - snowH(x, z - e)) / (2 * e), l = Math.hypot(dx, 1, dz); return [-dx / l, 1 / l, -dz / l]; };
-  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) quads[cat(ch(i, j))].push([i, j]);
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (ch(i, j) !== '~') quads[cat(ch(i, j))].push([i, j]); // '~': outside a stage build
   for (const [name, list] of Object.entries(quads)) {
     if (!list.length) continue;
     const P = [], N = [], U = [], Cc = [];
@@ -78,7 +79,7 @@ export function buildSnowtown(ctx) {
         for (let k = 0; k < 4; k++) { const a = v[k], b = v[(k + 1) % 4]; vert(x0 + 0.5, z0 + 0.5, cAo, mine); vert(b[0], b[1], ao[(k + 1) % 4], w[(k + 1) % 4]); vert(a[0], a[1], ao[k], w[k]); }
       } else for (const k of [0, 2, 1, 0, 3, 2]) vert(v[k][0], v[k][1], ao[k], w[k]); // upward winding
       // beyond the map edge: the snow or the frozen sea carries on into the haze
-      if (name === 'snow' || name === 'ice') {
+      if ((name === 'snow' || name === 'ice') && !arena.clip) {
         const E = 45, out = [];
         if (i === 0) out.push([x0 - E, z0, x0, z0 + 1]); if (i === W - 1) out.push([x0 + 1, z0, x0 + 1 + E, z0 + 1]);
         if (j === 0) out.push([x0, z0 - E, x0 + 1, z0]); if (j === H - 1) out.push([x0, z0 + 1, x0 + 1, z0 + 1 + E]);
@@ -88,7 +89,8 @@ export function buildSnowtown(ctx) {
       }
     }
     const geo = new BufferGeometry(); geo.setAttribute('position', new Float32BufferAttribute(P, 3)); geo.setAttribute('normal', new Float32BufferAttribute(N, 3)); geo.setAttribute('uv', new Float32BufferAttribute(U, 2)); geo.setAttribute('color', new Float32BufferAttribute(Cc, 3));
-    const mesh = new Mesh(geo, new MeshLambertMaterial({ map: TEX[name], vertexColors: true })); mesh.receiveShadow = true; group.add(mesh);
+    const tmat = new MeshLambertMaterial({ map: TEX[name], vertexColors: true }); if (look === 'v2' && name === 'snow') addSparkle(tmat);
+    const mesh = new Mesh(geo, tmat); mesh.receiveShadow = true; group.add(mesh);
   }
 
   // ---------- snowed-in houses ----------
@@ -593,6 +595,16 @@ export function buildSnowtown(ctx) {
       const sg = sign('Sururi Park', 1.6); sg.position.set(x, 2.35, z + 1.66); group.add(sg);
       lantern(x - 0.7, 1.7, z + 1.75, true); lantern(x + 0.7, 1.7, z + 1.75);
       flagAt(lm.outpost, x - 1.55, 6.2, z - 1.55); glows.push([x, 1.2, z + 1.8, 1.0]);
+    } else if (lm.type === 'stall') { // a winter street stall: striped awning, warm light, steam (roasted chestnuts, çay, salep)
+      const [x, z] = centre(lm), K2 = lm.kind, wood = M('wood', '#a5714f'), awn = K2 === 'cay' ? '#2d6fb5' : K2 === 'salep' ? '#7a4fa0' : '#c8443c';
+      K.add(rbox(1.8, 0.8, 0.9, 0.05), wood, x, 0, z); K.add(rbox(1.9, 0.9, 0.08, 0.02), M('wood', '#c99a6e'), x, 0.9, z);
+      for (const sx of [-0.85, 0.85]) K.add(new CylinderGeometry(0.05, 0.05, 1.5, 6), wood, x + sx, 1.3, z - 0.35);
+      for (let k = 0; k < 6; k++) K.add(rbox(0.32, 0.95, 0.06, 0.01), M('fabric', k % 2 ? '#f4f1ea' : awn), x - 0.8 + k * 0.32, 2.0, z + 0.05, -0.35);
+      K.add(rbox(1.95, 0.95, 0.14, 0.06, 3), mSnow, x, 2.12, z + 0.02, -0.35);
+      if (K2 === 'chestnut') { K.add(new CylinderGeometry(0.32, 0.26, 0.2, 14), M('metal', '#2b2f45'), x - 0.3, 1.02, z); for (let k = 0; k < 9; k++) K.add(new SphereGeometry(0.06, 6, 4), M('wood', '#6a3a22'), x - 0.3 + Math.cos(k) * 0.18, 1.14, z + Math.sin(k) * 0.18); glows.push([x - 0.3, 1.15, z, 0.9]); smokeSources.push([x - 0.3, 1.3, z]); }
+      if (K2 === 'cay') { K.add(new CylinderGeometry(0.16, 0.2, 0.5, 12), M('metal', '#d9a640'), x - 0.4, 1.2, z); K.add(new SphereGeometry(0.1, 8, 6), M('metal', '#d9a640'), x - 0.4, 1.5, z); for (let k = 0; k < 4; k++) K.add(new CylinderGeometry(0.04, 0.03, 0.1, 6), M('glow', '#c4502c'), x + 0.1 + k * 0.14, 0.99, z + 0.2); life.steam.push([x - 0.4, 1.6, z]); }
+      if (K2 === 'salep') { K.add(new CylinderGeometry(0.22, 0.22, 0.45, 12), M('metal', '#c9c6dc'), x - 0.35, 1.17, z); for (let k = 0; k < 3; k++) K.add(new CylinderGeometry(0.06, 0.05, 0.12, 8), M('plaster', '#f4ead6'), x + 0.2 + k * 0.16, 1.0, z + 0.2); life.steam.push([x - 0.35, 1.45, z]); }
+      lantern(x + 0.7, 1.6, z + 0.35, true); pools.push([x, z + 0.8, 2.0]);
     } else if (lm.type === 'slide') {
       const [x, z] = centre(lm);
       K.add(rbox(0.5, 0.5, 1.1, 0.04), M('metal', '#c8584a'), x - 0.3, 0, z); K.add(rbox(0.3, 1.3, 0.06, 0.02), M('metal', '#d99a3e'), x + 0.25, 0.55, z + 0.3, -0.75, 0, 0); K.add(rbox(0.32, 1.1, 0.12, 0.05), mSnow, x + 0.25, 0.62, z + 0.3, -0.75, 0, 0); K.add(GEO.snowCap, mSnow, x - 0.3, 1.1, z, 0, 0, 0, 0.32, 0.18, 0.32);

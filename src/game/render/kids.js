@@ -8,6 +8,7 @@ import {
 import { CONFIG } from '../../config.js';
 import { emblemSVG } from '../../emblems.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { LOOK, toon, addRim } from './look.js';
 
 // Merge meshes (in their parent's space, plus an optional extra matrix) into one geometry
 // with per-vertex colours, so a whole kid draws in a handful of calls.
@@ -99,7 +100,7 @@ export class Kid {
   }
   // Replace the many small parts with merged meshes: body+head+hat, outlines, each arm, each leg, the snowman.
   bake() {
-    const vc = this.vc = new MeshLambertMaterial({ vertexColors: true, transparent: true, emissive: new Color(0) });
+    const vc = this.vc = LOOK.v2 ? addRim(toon({ vertexColors: true, transparent: true, emissive: new Color(0) }), 0.28) : new MeshLambertMaterial({ vertexColors: true, transparent: true, emissive: new Color(0) });
     const isOutline = m => m.material === this.outlineMat;
     const swapGroup = grp => {
       const direct = grp.children.filter(m => m.isMesh && !this.arms.includes(m) && !this.legs.includes(m));

@@ -10,6 +10,7 @@ import { buildTileArena } from './tilemap.mjs';
 import { SCHOOLYARD } from './arenas/schoolyard.mjs';
 import { GRID } from './grid.mjs';
 import { buildVillage, LIGHTING, DAYLIGHT } from './render/village.js';
+import { LOOK, makePost, buildBackdrop } from './render/look.js';
 import { WorldLife } from './render/worldlife.js';
 import { makeGround } from './terrain.mjs';
 import { Kid } from './render/kids.js';
@@ -102,13 +103,28 @@ async function startGame(myTeam, kit, pace) {
   const sun = new DirectionalLight(LIGHTING.sun[0], LIGHTING.sun[1]); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.radius = 4;
   Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 60 }); sun.shadow.bias = -0.0006; scene.add(sun, sun.target);
 
-  const world = buildVillage(arena, { rivalTeam, homeTeam: myTeam, quality: LEVELS[level].name }); scene.add(world.group);
-  const life = arena.world ? new WorldLife(scene, world.life, { low: LEVELS[level].name === 'low', ground: groundH, pickups: sim.pickups }) : null;
+  // ?look=v2: the stage sample look (cartoon shading, outlines, glow, a build of only the stage area)
+  const V2 = params.get('look') === 'v2' && arena.world && !params.has('free');
+  const stageClip = z => ({ x: z.x, z: z.z, r: 16.5 });
+  const firstZone = sim.zones.find(q => q.id === 'boulevard') || sim.zones[0];
+  let world = buildVillage(arena, { rivalTeam, homeTeam: myTeam, quality: LEVELS[level].name, look: V2 ? 'v2' : 'v1', clip: V2 ? stageClip(firstZone) : null }); scene.add(world.group);
+  let life = arena.world ? new WorldLife(scene, world.life, { low: LEVELS[level].name === 'low', ground: groundH, pickups: sim.pickups }) : null;
+  let backdrop = V2 ? buildBackdrop(firstZone.x, firstZone.z, { rIn: 17, seed: 3 }) : null; if (backdrop) scene.add(backdrop);
+  // a stage build: only the area round this outpost, plus the painted backdrop beyond the snowbanks
+  const rebuildWorld = z => {
+    if (!V2) return;
+    scene.remove(world.group); world.group.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+    world = buildVillage(arena, { rivalTeam, homeTeam: myTeam, quality: LEVELS[level].name, look: 'v2', clip: stageClip(z) }); scene.add(world.group);
+    if (life) scene.remove(life.g); life = new WorldLife(scene, world.life, { low: LEVELS[level].name === 'low', ground: groundH, pickups: sim.pickups });
+    if (backdrop) scene.remove(backdrop); backdrop = buildBackdrop(z.x, z.z, { rIn: 17, seed: z.id.length * 7 }); scene.add(backdrop);
+    for (const zz of sim.zones) { if (zz.owner === 'home') world.setOwner(zz.id, myCol); delete zoneKeys[zz.id]; }
+    dayK = -1;
+  };
   // the light slides from late afternoon to dusk over the first five minutes (?dusk=0..1 to preview)
   const hemi = scene.children.find(o => o.isHemisphereLight), sunDir = [...LIGHTING.sunDir];
   const lerpC = (a, b, k) => new Color(a).lerp(new Color(b), k);
   const applyDay = k => {
-    const A = DAYLIGHT.afternoon, B = DAYLIGHT.dusk;
+    const A = V2 ? DAYLIGHT.morning : DAYLIGHT.afternoon, B = V2 ? DAYLIGHT.morning : DAYLIGHT.dusk;
     scene.background.copy(lerpC(A.sky, B.sky, k)); scene.fog.color.copy(lerpC(A.fog, B.fog, k));
     hemi.color.copy(lerpC(A.hemi[0], B.hemi[0], k)); hemi.groundColor.copy(lerpC(A.hemi[1], B.hemi[1], k)); hemi.intensity = A.hemi[2] + (B.hemi[2] - A.hemi[2]) * k;
     sun.color.copy(lerpC(A.sun[0], B.sun[0], k)); sun.intensity = A.sun[1] + (B.sun[1] - A.sun[1]) * k;
@@ -123,6 +139,8 @@ async function startGame(myTeam, kit, pace) {
   const kids = new Map(sim.chars.map(c => [c.id, new Kid(c, { isPlayer: c === player })]));
   for (const k of kids.values()) scene.add(k.root);
   const camera = new PerspectiveCamera(24, innerWidth / innerHeight, 0.5, 140); // restrained perspective
+  const post = V2 && LEVELS[level].name !== 'low' ? makePost(renderer, LEVELS[level].name) : null; // glow + colour grade
+  const draw = (sc, cam) => (post ? post.render(sc, cam) : renderer.render(sc, cam));
   const fx = new BrawlFx(scene, $('#fx-layer'), camera);
 
   // steep follow camera looking north
@@ -132,8 +150,8 @@ async function startGame(myTeam, kit, pace) {
   let stages = null; // set below once the HUD exists
   function resize() {
     const w = innerWidth, h = innerHeight; camera.aspect = w / h;
-    zoom = Math.min(1.35, Math.max(1, Math.min(w, h) / 390)) * (w / h < 1.5 ? 1.12 : 1) * (Number(params.get('zoom')) || 1);
-    camera.updateProjectionMatrix(); renderer.setSize(w, h, false); stages?.sled?.resize(w, h);
+    zoom = Math.min(1.35, Math.max(1, Math.min(w, h) / 390)) * (w / h < 1.5 ? 1.12 : 1) * (Number(params.get('zoom')) || 1) * (V2 ? 0.86 : 1); // v2: closer, bigger characters
+    camera.updateProjectionMatrix(); renderer.setSize(w, h, false); stages?.sled?.resize(w, h); post?.setSize(w, h);
     const dist = off.length() * zoom; scene.fog.near = base.fogNear = dist * 1.25; scene.fog.far = base.fogFar = dist * 2.9; // haze only beyond the arena
   }
   const quality = new AutoQuality(level, L => { renderer.setPixelRatio(Math.min(devicePixelRatio || 1, L.maxDpr)); renderer.shadowMap.enabled = L.name !== 'low'; sun.castShadow = L.name !== 'low'; resize(); scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); }, { forced: params.has('quality') ? level : null });
@@ -166,7 +184,7 @@ async function startGame(myTeam, kit, pace) {
     match, flow, unit, unitProgress, save, writeSave, pace, rng, team: myTeam, kit, reduceMotion,
     ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play,
       snapCamera: () => { focus.set(player.x, 0, player.z - 1.2); camShift = 0; },
-      showWall: cells => showWall(cells), onGone: list => dropSnowmen(list) },
+      showWall: cells => showWall(cells), onGone: list => dropSnowmen(list), rebuildWorld: z => rebuildWorld(z) },
   }) : null;
   // outposts held in earlier stages stay held
   if (stages) for (const st of STAGES) if (stageState(unitProgress)[st.id]?.done && st.outpost) { const zz = sim.zones.find(q => q.id === st.outpost); if (zz) { zz.owner = 'home'; zz.progress = 1; world.setOwner(zz.id, myCol); } }
@@ -269,8 +287,9 @@ async function startGame(myTeam, kit, pace) {
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     requestAnimationFrame(frame); quality.tick(dt);
-    if (paused) { renderer.render(stages?.mode === 'sled' ? stages.sled.scene : scene, stages?.mode === 'sled' ? stages.sled.camera : camera); return; }
-    if (stages?.mode === 'sled') { stages.update(dt); renderer.render(stages.sled.scene, stages.sled.camera); return; } // the sled journey has its own scene
+    LOOK.time.value += dt;
+    if (paused) { draw(stages?.mode === 'sled' ? stages.sled.scene : scene, stages?.mode === 'sled' ? stages.sled.camera : camera); return; }
+    if (stages?.mode === 'sled') { stages.update(dt); draw(stages.sled.scene, stages.sled.camera); return; } // the sled journey has its own scene
     const live = !pose && countdown <= 0 && (!stages || stages.mode === 'outpost');
     if (!pose && countdown > 0) {
       countdown -= dt; const n = Math.ceil(countdown);
@@ -388,7 +407,7 @@ async function startGame(myTeam, kit, pace) {
     sun.position.set(focus.x + sunDir[0], sunDir[1], focus.z + sunDir[2]); sun.target.position.set(focus.x, 0, focus.z - 2); sun.target.updateMatrixWorld();
     world.tick(dt, focus, reduceMotion, camera);
     if (arena.world) {
-      const k = forcedDusk ?? Math.min(1, sim.t / 300);
+      const k = V2 ? 0 : forcedDusk ?? Math.min(1, sim.t / 300); // the v2 sample: a fixed time of day per stage
       if (Math.abs(k - dayK) > 0.01) { dayK = k; applyDay(k); }
       life.tick(pose ? 0 : dt, sim.chars, camera, player, sim.weather);
       // weather blends in and out over about two seconds
@@ -420,7 +439,7 @@ async function startGame(myTeam, kit, pace) {
     $('#attack').classList.toggle('empty', player.ammo < 1);
     $('#attack').classList.toggle('quiet', sim.grid.has(player.x, player.z, GRID.ZONE));
     if (params.has('debug')) $('#debug').textContent = `${quality.fps.toFixed(0)} fps · ${LEVELS[quality.level].name}`;
-    renderer.render(scene, camera);
+    draw(scene, camera);
   }
   requestAnimationFrame(frame);
   globalThis.__snowpax = { match, sim, player, quality, renderer, world, life, flow, stages, scene, snowmen };

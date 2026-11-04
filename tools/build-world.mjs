@@ -190,9 +190,42 @@ for (const op of outposts) {
   } else if (op.landmark === 'snow-castle') { for (const [dx, dz] of [[-8, -2], [-8, 1]]) { clearAround(i + dx, j + dz, 1, 1); place(dz < 0 ? 'slide' : 'swings', i + dx, j + dz, 1, 1, { outpost: op.id }); } clearAround(i - 7, j - 9, 2, 2); place('giant-snowman', i - 7, j - 9, 2, 2, { outpost: op.id }); /* behind the lodge, so it never hides the play */ }
 }
 
+// 5a. hand-dressed stage arenas (the v2 stage sample: Boulevard Park first): hedges to hide in,
+//     snow walls for cover, benches, snowmen, lamps, plane trees and winter street stalls
+//     (roasted chestnuts, çay, salep), placed in a ring round the plaza; streets stay open so the
+//     waves can walk in.
+const DRESS = {
+  boulevard: [
+    { ch: '#', r: 5.3, at: [20, 110, 200, 290], onlyOn: 'P' },
+    { ch: 'B', r: 8.4, at: [40, 140, 220, 320], run: 3 },
+    { ch: 'b', r: 7.6, at: [70, 250, 340] },
+    { ch: 'n', r: 8.2, at: [95, 185] },
+    { ch: 'l', r: 9.4, at: [10, 100, 190, 280] },
+    { stall: 'chestnut', r: 9.8, at: [60, 75, 50] }, { stall: 'cay', r: 9.8, at: [300, 285, 315] }, { stall: 'salep', r: 10.2, at: [160, 175, 145] },
+    { ch: 'T', r: 11.3, every: 30 },
+  ],
+};
+function dressStage(op) {
+  const plan = DRESS[op.id]; if (!plan) return;
+  const free = (i, j, onlyOn) => inB(i, j) && (onlyOn ? onlyOn.includes(get(i, j)) : '.RH'.includes(get(i, j)));
+  const spot = (r, deg) => { const a = deg * Math.PI / 180; return [Math.floor(op.i + Math.cos(a) * r), Math.floor(op.j + Math.sin(a) * r)]; };
+  for (const it of plan) {
+    if (it.stall) { // a 2×1 stall, first angle that fits
+      for (const deg of it.at) { const [i, j] = spot(it.r, deg); if (free(i, j) && free(i + 1, j)) { set(i, j, 'G'); set(i + 1, j, 'G'); landmarks.push({ type: 'stall', kind: it.stall, i, j, w: 2, h: 1, outpost: op.id }); break; } }
+      continue;
+    }
+    const angles = it.every ? Array.from({ length: Math.floor(360 / it.every) }, (_, k) => k * it.every) : it.at;
+    for (const deg of angles) {
+      const run = it.run || 1, a = deg * Math.PI / 180, ti = -Math.sin(a), tj = Math.cos(a); // along the ring
+      for (let k = 0; k < run; k++) { const [i, j] = spot(it.r, deg); const ii = Math.round(i + ti * (k - (run - 1) / 2)), jj = Math.round(j + tj * (k - (run - 1) / 2)); if (free(ii, jj, it.onlyOn)) set(ii, jj, it.ch); }
+    }
+  }
+}
+
 // 5b. the town under the snow. Almost every building is buried: open snow fills the blocks.
 //     A few houses near the outposts and Our School still show their street front (H); elsewhere
 //     only the odd roof ridge or chimney pokes out of the drifts (R, low cover).
+for (const op of outposts) dressStage(op);
 const near = (i, j, R) => outposts.some(o => Math.hypot(i - o.i, j - o.j) < R);
 const nearHome = (i, j, R) => { const [bx, bz] = toCell([0, 0]); return Math.hypot(i - bx, j - bz) < R; };
 const facesPath = (i, j) => [[0, 1], [0, -1]].some(([di, dj]) => '_=P'.includes(get(i + di, j + dj)));

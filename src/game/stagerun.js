@@ -84,6 +84,7 @@ export class StageRunner {
   arrive() {
     const st = this.cur, sim = this.sim, z = sim.zones.find(q => q.id === st.outpost), grid = this.match.grid;
     this.save.snowflakes = (this.save.snowflakes || 0) + this.runFlakes; this.writeSave(this.save);
+    this.ui.rebuildWorld?.(z); // v2 look: build only this stage's area
     this.mode = 'outpost'; document.body.classList.remove('sledding'); $('#runhud').hidden = true; $('#hud').hidden = false;
     this.zone = z; this.tStand = 0; this.waveIdx = 0; this.waves = []; this.finalT = null;
     // close the stage with snowbanks, find where the waves come in
