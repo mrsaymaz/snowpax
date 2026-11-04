@@ -81,8 +81,8 @@ export class Kid {
     for (const x of [-0.11, 0.11]) add(G.eyeP, ink, x, 1.72, 0.28, sm);
     // shadow + ring
     const shadow = new Mesh(G.shadow, new MeshBasicMaterial({ color: '#4a6182', transparent: true, opacity: 0.28, depthWrite: false })); shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.03; root.add(shadow);
-    this.ring = new Mesh(G.ring, new MeshBasicMaterial({ color: isPlayer ? '#ffffff' : this.team.color, transparent: true, opacity: 0.95, depthWrite: false })); this.ring.rotation.x = -Math.PI / 2; this.ring.position.y = 0.04; root.add(this.ring);
-    if (isPlayer) { const inner = new Mesh(new RingGeometry(0.4, 0.5, 32), new MeshBasicMaterial({ color: this.team.color, transparent: true, depthWrite: false })); inner.rotation.x = -Math.PI / 2; inner.position.y = 0.045; root.add(inner); this.innerRing = inner; }
+    this.ring = new Mesh(G.ring, new MeshBasicMaterial({ color: isPlayer ? '#ffffff' : this.team.color, transparent: true, opacity: 0.95, depthWrite: false, depthTest: false })); this.ring.renderOrder = 6; // shows even when wading in deep snow this.ring.rotation.x = -Math.PI / 2; this.ring.position.y = 0.04; root.add(this.ring);
+    if (isPlayer) { const inner = new Mesh(new RingGeometry(0.4, 0.5, 32), new MeshBasicMaterial({ color: this.team.color, transparent: true, depthWrite: false, depthTest: false })); inner.renderOrder = 6; inner.rotation.x = -Math.PI / 2; inner.position.y = 0.045; root.add(inner); this.innerRing = inner; }
     // bars
     this.bc = document.createElement('canvas'); this.bc.width = 160; this.bc.height = isPlayer ? 56 : 40;
     this.bt = new CanvasTexture(this.bc); this.bt.colorSpace = SRGBColorSpace;

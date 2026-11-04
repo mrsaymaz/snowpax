@@ -195,7 +195,9 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   const at = (i, j) => [x0 + i + 0.5, z0 + j + 0.5];
   const tiles = ch => { const out = []; for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (rows[j][i] === ch) out.push([i, j]); return out; };
   const low = quality === 'low';
-  const smokeSources = [], fires = [], glows = [], lights = [], pools = [], life = { perches: [], cats: [], steam: [] };
+  const smokeSources = [], fires = [], glows = [], lights = [], pools = [], life = { perches: [], cats: [], steam: [] }, centreFlags = new Map();
+  // the outpost flag (its colour shows who holds the outpost); landmark outposts put it on top of themselves
+  const makeFlag = (x, y, z) => { const f = new Mesh(new PlaneGeometry(1.1, 0.62, 8, 1), new MeshLambertMaterial({ color: '#ffffff', map: T.fabric(), side: DoubleSide })); f.position.set(x + 0.56, y, z); group.add(f); return f; };
 
   const mSnow = M('snow', PAL.snow), mStone = M('stone', PAL.stone), mStoneDark = M('stone', PAL.stoneDark), mBeam = M('beam', PAL.woodDark), mWood = M('wood', PAL.wood);
   const mShingle = M('shingle', '#6f7aa0'), mMetal = M('metal', PAL.metal), mIce = M('glow', '#d9f0ff', { transparent: true, opacity: 0.85 });
@@ -383,7 +385,7 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   };
 
   // ---------- edge buildings and nature (quieter around the edges) ----------
-  if (arena.world) buildSnowtown({ arena: { ...arena, x0, z0 }, K, M, T, PAL, GEO, rbox, prism, rnd, at, group, glows, smokeSources, lights, low, lantern, windows, pine, rock, barrel, crate, firewood, shovel, mSnow, mStone, mStoneDark, mBeam, mWood, mMetal, mIce, mGlass, sign, life, pools });
+  if (arena.world) buildSnowtown({ arena: { ...arena, x0, z0 }, K, M, T, PAL, GEO, rbox, prism, rnd, at, group, glows, smokeSources, lights, low, lantern, windows, pine, rock, barrel, crate, firewood, shovel, mSnow, mStone, mStoneDark, mBeam, mWood, mMetal, mIce, mGlass, sign, life, pools, centreFlags, makeFlag });
   else {
   const used = new Set(), key = (i, j) => i + ',' + j;
   const isH = (i, j) => i >= 0 && j >= 0 && i < W && j < H && rows[j][i] === 'H' && !used.has(key(i, j));
@@ -490,7 +492,7 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
     lights.push([cx, 1.8, cz + 1.9]);
     return flag;
   };
-  for (const zp of zonePlaces) flags.set(zp.id, lodge(zp.x, zp.z));
+  for (const zp of zonePlaces) flags.set(zp.id, centreFlags.get(zp.id) || lodge(zp.x, zp.z));
 
   // ---------- cover pieces ----------
   for (const [i, j] of tiles('#')) { const [x, z] = at(i, j); K.add(rbox(1.0, 1.0, 0.45, 0.06), mStone, x, 0, z); K.add(rbox(0.96, 0.94, 0.85, 0.26, 3), M('snow', '#dfe6f7'), x, 0.35, z); K.put('wallCap', GEO.snowCap, mSnow, x, 1.12, z, rnd(i, j) * 3, 0.42, 0.18, 0.42); }
@@ -519,7 +521,7 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   if (arena.world) for (const zp of zonePlaces) {
     const posts = [];
     for (let k = 0; k < 8; k++) {
-      const a = (k + 0.5) / 8 * Math.PI * 2, x = zp.x + Math.cos(a) * 4.9, z = zp.z + Math.sin(a) * 4.9;
+      const a = (k + 0.5) / 8 * Math.PI * 2, x = zp.x + Math.cos(a) * (zp.r + 1.7), z = zp.z + Math.sin(a) * (zp.r + 1.7);
       const ci = Math.floor(x - x0), cj = Math.floor(z - z0), c = rows[cj]?.[ci] || 'X';
       if ('HSKQCGRDlWO#f'.includes(c)) { posts.push(null); continue; }
       K.put('lpost', GEO.post, mBeam, x, 0.9, z, 0, 1.1, 1.8, 1.1); K.put('lpostCap', GEO.snowCap, mSnow, x, 1.8, z, 0, 0.2, 0.1, 0.2); K.put('lpostMound', GEO.snowCap, mSnow, x, 0, z, 0, 0.6, 0.25, 0.6);
@@ -540,7 +542,7 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   const poolGeo = new PlaneGeometry(1, 1); poolGeo.rotateX(-Math.PI / 2);
   const poolMesh = new InstancedMesh(poolGeo, new MeshBasicMaterial({ map: glow(), blending: AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.35 }), Math.max(1, pools.length));
   poolMesh.count = pools.length; poolMesh.renderOrder = 2;
-  pools.forEach(([x, z, r], k) => { const o2 = new Object3D(); o2.position.set(x, 0.03, z); o2.scale.set(r * 2, 1, r * 2); o2.updateMatrix(); poolMesh.setMatrixAt(k, o2.matrix); });
+  pools.forEach(([x, z, r], k) => { const o2 = new Object3D(); o2.position.set(x, 0.2, z); o2.scale.set(r * 2, 1, r * 2); o2.updateMatrix(); poolMesh.setMatrixAt(k, o2.matrix); });
   group.add(poolMesh);
   // the lantern bulbs
   const BULB_WARM = [new Color('#ffcf7a'), new Color('#fff1c9')];
@@ -552,7 +554,7 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   const discs = new Map();
   if (arena.world) for (const zp of zonePlaces) { // three stacked translucent circles: soft towards the edge
     const d = new Group(); d.visible = false; d.userData.mats = [];
-    for (const r of [7, 5.6, 4.2]) { const m = new MeshBasicMaterial({ color: '#ffffff', transparent: true, depthWrite: false, opacity: 0.13 }); const c = new Mesh(new CircleGeometry(r, 40), m); c.rotation.x = -Math.PI / 2; c.renderOrder = 2; d.add(c); d.userData.mats.push(m); }
+    for (const r of [zp.r + 3.4, zp.r + 2.0, zp.r + 0.6]) { const m = new MeshBasicMaterial({ color: '#ffffff', transparent: true, depthWrite: false, opacity: 0.13 }); const c = new Mesh(new CircleGeometry(r, 40), m); c.rotation.x = -Math.PI / 2; c.renderOrder = 2; d.add(c); d.userData.mats.push(m); }
     d.position.set(zp.x, 0.07, zp.z); group.add(d); discs.set(zp.id, d);
   }
 

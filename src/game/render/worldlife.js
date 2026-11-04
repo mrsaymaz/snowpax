@@ -142,7 +142,7 @@ export class WorldLife {
     if (d > 2) { w.x = c.x; w.z = c.z; return; } // respawned or knocked back: no trail across the map
     const yaw = Math.atan2(c.x - w.x, c.z - w.z), k = this.fpI = (this.fpI + 1) % this.FP;
     w.side = -w.side; w.x = c.x; w.z = c.z;
-    this.o.position.set(c.x + Math.cos(yaw) * 0.1 * w.side, this.ground(c.x, c.z) + 0.02, c.z - Math.sin(yaw) * 0.1 * w.side); this.o.rotation.set(0, yaw, 0); this.o.scale.setScalar(1); this.o.updateMatrix();
+    this.o.position.set(c.x + Math.cos(yaw) * 0.1 * w.side, this.ground(c.x, c.z) + 0.19, c.z - Math.sin(yaw) * 0.1 * w.side); this.o.rotation.set(0, yaw, 0); this.o.scale.setScalar(1); this.o.updateMatrix();
     this.prints.setMatrixAt(k, this.o.matrix); this.prints.instanceMatrix.needsUpdate = true; this.fpAge[k] = 0;
   }
 

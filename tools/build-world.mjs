@@ -25,11 +25,11 @@ const base = CONFIG.arenas[0].base;
 
 // Outposts (confirmed with Mr. Saymaz) and their landmarks.
 const OUTPOSTS = [
-  { id: 'boulevard', family: 'answer', label: 'Boulevard Park', lat: 41.04235, lng: 28.96738, landmark: 'footbridge' },
+  { id: 'boulevard', family: 'answer', label: 'Boulevard Park', lat: 41.04235, lng: 28.96738, landmark: 'treehouse' },
   { id: 'archery', family: 'sort', label: 'Archery Ground', lat: 41.04282, lng: 28.95960, landmark: 'archers-lodge' },
   { id: 'kizilay', family: 'match', label: 'Kızılay Square', lat: 41.034234, lng: 28.967138, landmark: 'fountain' },
   { id: 'waterfront', family: 'listen', label: 'Waterfront Park', lat: 41.03036, lng: 28.96705, landmark: 'admiral' },
-  { id: 'sururi', family: 'build', label: 'Sururi Park', lat: 41.03741, lng: 28.97180, landmark: 'pavilion' },
+  { id: 'sururi', family: 'build', label: 'Sururi Park', lat: 41.03741, lng: 28.97180, landmark: 'snow-castle' },
 ];
 const RIVAL_CAMP = { x: -60, z: -470 }; // metres: north of the school, between the archery ground and the boulevard
 
@@ -124,19 +124,20 @@ for (const [, n] of nodes) if (isWorship(n.tags)) { const [x, z] = toCell(metres
 // quiet zones: a one-tile buffer around places of worship and cemeteries (walkable, no snowballs)
 for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if ('QC'.includes(g[j][i])) for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) if ('._=p'.includes(get(i + di, j + dj))) g[j + dj][i + di] = get(i + di, j + dj) === '=' ? '+' : 'q';
 
-// 5. outposts: plaza, lodge, fire barrels, cover, drifts, landmark
+// 5. outposts: each outpost IS its landmark, a big centrepiece on a 4×4 core in the middle of a
+//    round plaza, with the capture ring round it, fire barrels, cover and snowdrifts
 const outposts = [];
 const cellOfLatLng = (lat, lng) => toCell(metres(lat, lng));
+const CORE = 2, PLAZA_R = 6.2, RING_R = 3.9;
 for (const op of OUTPOSTS) {
   let [cx, cz] = cellOfLatLng(op.lat, op.lng);
-  cx = Math.round(cx); cz = Math.round(cz); // plaza centred on a cell corner: the lodge is 2×2
-  const R = 5.4;
-  for (let j = cz - 6; j < cz + 6; j++) for (let i = cx - 6; i < cx + 6; i++) if (land(i, j) && Math.hypot(i + 0.5 - cx, j + 0.5 - cz) <= R) g[j][i] = 'P';
-  for (const [i, j] of [[cx - 1, cz - 1], [cx, cz - 1], [cx - 1, cz], [cx, cz]]) set(i, j, 'O');
-  for (const [dx, dz] of [[-3, -3], [2, -3], [-3, 2], [2, 2]]) set(cx + dx, cz + dz, 'f', 'P');
-  for (const [dx, dz] of [[-5, -1], [4, 0]]) set(cx + dx, cz + dz, 'd', 'P');
-  for (const [dx, dz] of [[-1, -4], [0, 3]]) set(cx + dx, cz + dz, '#', 'P');
-  outposts.push({ ...op, i: cx, j: cz, r: 3.4 });
+  cx = Math.round(cx); cz = Math.round(cz); // centred on a cell corner
+  for (let j = cz - 7; j < cz + 7; j++) for (let i = cx - 7; i < cx + 7; i++) if (land(i, j) && Math.hypot(i + 0.5 - cx, j + 0.5 - cz) <= PLAZA_R) g[j][i] = 'P';
+  for (let j = cz - CORE; j < cz + CORE; j++) for (let i = cx - CORE; i < cx + CORE; i++) set(i, j, 'O');
+  for (const [dx, dz] of [[-5, -3], [4, -3], [-5, 2], [4, 2]]) set(cx + dx, cz + dz, 'f', 'P');
+  for (const [dx, dz] of [[-6, -1], [5, 0]]) set(cx + dx, cz + dz, 'd', 'P');
+  for (const [dx, dz] of [[-4, 5], [3, -6]]) set(cx + dx, cz + dz, '#', 'P');
+  outposts.push({ ...op, i: cx, j: cz, r: RING_R });
 }
 // landmarks next to each plaza
 const landmarks = [];
@@ -144,9 +145,10 @@ const place = (type, i0, j0, w, h, extra = {}) => { for (let j = j0; j < j0 + h;
 const clearAround = (i0, j0, w, h, pad = 1) => { for (let j = j0 - pad; j < j0 + h + pad; j++) for (let i = i0 - pad; i < i0 + w + pad; i++) if (land(i, j) && 'HR.'.includes(get(i, j))) set(i, j, 'P'); };
 for (const op of outposts) {
   const { i, j } = op;
-  if (op.landmark === 'footbridge') { // a footbridge over the boulevard: find the boulevard next to the park
+  landmarks.push({ type: op.landmark, i: i - CORE, j: j - CORE, w: CORE * 2, h: CORE * 2, outpost: op.id, centre: true }); // the outpost itself
+  if (op.id === 'boulevard') { // a footbridge over the boulevard: find the boulevard next to the park
     let best = null, bd = Infinity;
-    for (let jj = j - 12; jj <= j + 12; jj++) for (let ii = i - 12; ii <= i + 12; ii++) if (get(ii, jj) === '=') { const d = Math.hypot(ii - i, jj - j); if (d > 5.5 && d < bd) { bd = d; best = [ii, jj]; } }
+    for (let jj = j - 12; jj <= j + 12; jj++) for (let ii = i - 12; ii <= i + 12; ii++) if (get(ii, jj) === '=') { const d = Math.hypot(ii - i, jj - j); if (d > 7 && d < bd) { bd = d; best = [ii, jj]; } }
     if (best) {
       // which way does the boulevard run here? count road cells along each axis
       const [bi, bj] = best; let runZ = 0, runX = 0;
@@ -163,18 +165,16 @@ for (const op of outposts) {
   } else if (op.landmark === 'archers-lodge') {
     // the Archers' Lodge, straw targets, and the tall marble record stones (menzil taşları) that
     // mark famous long shots across the archery ground
-    clearAround(i + 6, j - 4, 4, 3); place('archers-lodge', i + 6, j - 4, 4, 3, { outpost: op.id });
-    for (const [dx, dz] of [[-6, -6], [-7, 4], [-3, 7]]) { if (!land(i + dx, j + dz)) continue; clearAround(i + dx, j + dz, 1, 1); place('target', i + dx, j + dz, 1, 1, { outpost: op.id }); }
-    [[-6, 0], [5, -8], [-3, -8], [-9, -3], [0, -9], [-9, 3], [9, -1]].forEach(([dx, dz], k) => { if (!land(i + dx, j + dz)) return; clearAround(i + dx, j + dz, 1, 1, 0); place('marker-stone', i + dx, j + dz, 1, 1, { outpost: op.id, n: k }); });
+    for (const [dx, dz] of [[-8, -6], [-8, 5], [-3, 8]]) { if (!land(i + dx, j + dz)) continue; clearAround(i + dx, j + dz, 1, 1); place('target', i + dx, j + dz, 1, 1, { outpost: op.id }); }
+    [[-8, 0], [5, -9], [-3, -9], [-10, -3], [0, -10], [-10, 3], [9, -2], [-6, -8]].forEach(([dx, dz], k) => { if (!land(i + dx, j + dz)) return; clearAround(i + dx, j + dz, 1, 1, 0); place('marker-stone', i + dx, j + dz, 1, 1, { outpost: op.id, n: k }); });
   }
-  else if (op.landmark === 'fountain') { clearAround(i - 1, j - 8, 2, 2); place('fountain', i - 1, j - 8, 2, 2, { outpost: op.id }); clearAround(i + 6, j - 2, 2, 2); place('plane-tree', i + 6, j - 2, 2, 2, { outpost: op.id }); place('simit-cart', i + 3, j + 3, 1, 1, { outpost: op.id }); }
+  else if (op.landmark === 'fountain') { clearAround(i + 7, j - 3, 2, 2); place('plane-tree', i + 7, j - 3, 2, 2, { outpost: op.id }); clearAround(i + 4, j + 4, 1, 1); place('simit-cart', i + 4, j + 4, 1, 1, { outpost: op.id }); }
   else if (op.landmark === 'admiral') {
-    clearAround(i - 2, j - 9, 3, 3); place('admiral', i - 2, j - 9, 3, 3, { outpost: op.id }); // the admiral with his lion, a big statue on the waterfront
     // the ferry pier: from the plaza into the frozen Golden Horn (walkable), a ferry stuck in the ice at the end
     // which way is the water closest? (the Golden Horn bends round Kasımpaşa)
     const dirs = [[0, 1], [-1, 0], [1, 0], [0, -1]].map(([di, dj]) => { let k = 5; while (k < 30 && land(i + di * k, j + dj * k)) k++; return { di, dj, k }; }).sort((a, b) => a.k - b.k);
     const { di, dj } = dirs[0], wide = [-dj, di]; // pier is two tiles wide, across the direction of travel
-    let k = 2, ci = i + di * k, cj = j + dj * k;
+    let k = 3, ci = i + di * k, cj = j + dj * k;
     while (land(ci, cj) && k < 30) { for (const s2 of [0, -1]) { const a = ci + wide[0] * s2, b = cj + wide[1] * s2; if (land(a, b) && !'OfdG#'.includes(get(a, b))) set(a, b, 'P'); } k++; ci = i + di * k; cj = j + dj * k; }
     const cells = []; for (let m = 0; m < 6 && inB(ci, cj); m++, k++, ci = i + di * k, cj = j + dj * k) for (const s2 of [0, -1]) { set(ci + wide[0] * s2, cj + wide[1] * s2, 'j'); cells.push([ci + wide[0] * s2, cj + wide[1] * s2]); }
     const is = cells.map(c => c[0]), js = cells.map(c => c[1]);
@@ -187,7 +187,7 @@ for (const op of outposts) {
     // docked head-on beyond the end of the pier, one tile of ice between
     const ferry = dj ? { i: Math.min(...is), j: dj > 0 ? Math.max(...js) + 2 : Math.min(...js) - 6, w: 2, h: 4 } : { i: di > 0 ? Math.max(...is) + 2 : Math.min(...is) - 6, j: Math.min(...js), w: 4, h: 2 };
     landmarks.push({ type: 'ferry', ...ferry, along: dj ? 'z' : 'x', outpost: op.id });
-  } else if (op.landmark === 'pavilion') { clearAround(i + 6, j - 2, 2, 2); place('pavilion', i + 6, j - 2, 2, 2, { outpost: op.id }); for (const [dx, dz] of [[-7, -2], [-7, 1]]) { clearAround(i + dx, j + dz, 1, 1); place(dz < 0 ? 'slide' : 'swings', i + dx, j + dz, 1, 1, { outpost: op.id }); } clearAround(i - 6, j - 8, 2, 2); place('giant-snowman', i - 6, j - 8, 2, 2, { outpost: op.id }); /* behind the lodge, so it never hides the play */ }
+  } else if (op.landmark === 'snow-castle') { for (const [dx, dz] of [[-8, -2], [-8, 1]]) { clearAround(i + dx, j + dz, 1, 1); place(dz < 0 ? 'slide' : 'swings', i + dx, j + dz, 1, 1, { outpost: op.id }); } clearAround(i - 7, j - 9, 2, 2); place('giant-snowman', i - 7, j - 9, 2, 2, { outpost: op.id }); /* behind the lodge, so it never hides the play */ }
 }
 
 // 5b. the town under the snow. Almost every building is buried: open snow fills the blocks.
@@ -254,7 +254,7 @@ const hills = [], sledRuns = [];
 {
   const PROTECT = 'WQCq+GOPf#SYhrKjD';
   const RUNS = [
-    { id: 'archery-run', label: 'Archery Hill', from: 'archery', start: [5, 6], to: 'home' },
+    { id: 'archery-run', label: 'Archery Hill', from: 'archery', start: [7, 10], to: 'home' },
     { id: 'boulevard-run', label: 'Boulevard Run', from: 'boulevard', start: [-7, 7], to: 'kizilay', end: [-3, -9] },
     { id: 'sururi-run', label: 'Sururi Run', from: 'sururi', start: [-6, 6], to: 'kizilay', end: [8, -4] },
   ];
@@ -327,8 +327,54 @@ const pickups = [];
   }
 }
 
+// 8e. trees, hedges, fences and signposts make the paths easy to follow:
+//     plane trees line the boulevard, mixed trees along the streets, groves out in the open snow,
+//     hedges (hide in them) and picket fences beside the paths, fingerposts at junctions
+const signposts = [];
+{
+  const PATH = '_=';
+  const besidePath = (i, j) => [[1, 0], [-1, 0], [0, 1], [0, -1]].find(([di, dj]) => PATH.includes(get(i + di, j + dj)));
+  const clearOf = (i, j, chars, r) => { for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) if (chars.includes(get(i + di, j + dj))) return false; return true; };
+  const okSpot = (i, j) => get(i, j) === '.' && !near(i, j, 8) && !nearHome(i, j, 4) && clearOf(i, j, 'lusGO', 1);
+  const trees = []; const spaced = (i, j, r) => !trees.some(([a, b]) => Math.max(Math.abs(a - i), Math.abs(b - j)) < r);
+  const STREET_TREES = 'tTvyx';
+  for (let j = 2; j < H - 2; j++) for (let i = 2; i < W - 2; i++) {
+    if (!okSpot(i, j)) continue; const side = besidePath(i, j); if (!side) continue;
+    const boulevard = get(i + side[0], j + side[1]) === '=';
+    if (boulevard ? spaced(i, j, 3) && rand() < 0.8 : spaced(i, j, 5) && rand() < 0.45) { set(i, j, boulevard ? 'T' : STREET_TREES[Math.floor(rand() * STREET_TREES.length)]); trees.push([i, j]); }
+  }
+  for (let n = 0; n < 22; n++) { // groves in the open snow
+    const gi = 3 + Math.floor(rand() * (W - 6)), gj = 3 + Math.floor(rand() * (H - 6));
+    if (!okSpot(gi, gj) || besidePath(gi, gj)) continue;
+    const kind = ['t', 'x', 'v', 't', 'x', 'y'][n % 6];
+    for (let k = 0; k < 6; k++) { const i = gi + Math.round((rand() - 0.5) * 4), j = gj + Math.round((rand() - 0.5) * 4); if (okSpot(i, j) && !besidePath(i, j) && spaced(i, j, 2)) { set(i, j, rand() < 0.75 ? kind : 't'); trees.push([i, j]); } }
+  }
+  // hedges (walk in to hide) and picket fences, in short runs along the paths
+  const runAlong = (i, j, ch, len) => { const side = besidePath(i, j); if (!side) return 0; const [di, dj] = side[0] ? [0, 1] : [1, 0]; let n = 0; for (let k = 0; k < len; k++) { const a = i + di * k, b = j + dj * k; if (!okSpot(a, b) || !besidePath(a, b)) break; set(a, b, ch); n++; } return n; };
+  let hedges = 0, fences = 0;
+  for (let j = 2; j < H - 2 && (hedges < 30 || fences < 30); j++) for (let i = 2; i < W - 2; i++) {
+    if (!okSpot(i, j) || !besidePath(i, j)) continue;
+    const byHouse = !clearOf(i, j, 'H', 3);
+    if (byHouse && fences < 30 && rand() < 0.35) fences += runAlong(i, j, 'F', 2 + Math.floor(rand() * 3)) ? 1 : 0;
+    else if (hedges < 30 && rand() < 0.03) hedges += runAlong(i, j, 'B', 2 + Math.floor(rand() * 3)) ? 1 : 0;
+  }
+  // fingerposts at junctions, pointing to the nearest outposts and Our School
+  const [hx, hz] = toCell([0, 0]);
+  const dests = [...outposts.map(o => ({ label: o.label, i: o.i, j: o.j })), { label: 'Our School', i: hx, j: hz }];
+  for (let j = 3; j < H - 3; j++) for (let i = 3; i < W - 3; i++) {
+    if (!PATH.includes(get(i, j)) || near(i, j, 9) || nearHome(i, j, 6) || signposts.some(sp => Math.hypot(sp.i - i, sp.j - j) < 20)) continue;
+    const arms = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([di, dj]) => PATH.includes(get(i + di * 2, j + dj * 2)));
+    if (arms.length < 3) continue;
+    const spot = [[1, 1], [-1, 1], [1, -1], [-1, -1], [2, 0], [-2, 0], [0, 2]].map(([di, dj]) => [i + di, j + dj]).find(([a, b]) => okSpot(a, b));
+    if (!spot) continue;
+    const arrows = dests.map(d => ({ label: d.label, ang: +Math.atan2(d.i - spot[0], d.j - spot[1]).toFixed(2), d: Math.hypot(d.i - spot[0], d.j - spot[1]) })).filter(d => d.d > 10).sort((a, b) => a.d - b.d).slice(0, 3).map(({ label, ang }) => ({ label, ang }));
+    set(spot[0], spot[1], 'k'); signposts.push({ i: spot[0], j: spot[1], arrows });
+  }
+  console.log(`trees ${trees.length}, hedge runs ${hedges}, fence runs ${fences}, signposts ${signposts.length}`);
+}
+
 // 9. everything walkable must be reachable from the school: fill pockets, open blocked outposts
-const WALK = new Set(['.', '_', '=', 'p', 'P', 'Y', 'h', 'r', 'q', '+', 'd', 'j', 'u', 's']);
+const WALK = new Set(['.', '_', '=', 'p', 'P', 'Y', 'h', 'r', 'q', '+', 'd', 'j', 'u', 's', 'B']);
 const flood = () => {
   const seen = new Uint8Array(W * H), st = [home];
   while (st.length) { const [i, j] = st.pop(); if (!inB(i, j) || seen[j * W + i] || !WALK.has(g[j][i])) continue; seen[j * W + i] = 1; st.push([i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]); }
@@ -351,7 +397,7 @@ const out = {
   v: 3, id: 'arena1', name: 'Home Turf', kind: 'tiles', world: true, tile: TILE, w: W, h: H,
   credit: '© OpenStreetMap contributors',
   rows, outposts: outposts.map(({ lat, lng, ...o }) => o), landmarks, scenery,
-  home, rival, hills, sledRuns, pickups,
+  home, rival, hills, sledRuns, pickups, signposts,
 };
 mkdirSync(join(ROOT, 'public/arenas'), { recursive: true });
 writeFileSync(join(ROOT, 'public/arenas/arena1.json'), JSON.stringify(out));

@@ -40,7 +40,7 @@ test('the town is mostly under the snow: open snow and paths, only a few houses 
   const land = cells.length - count('W');
   assert.ok(count('H') < 200, `visible house cells: ${count('H')}`);
   assert.ok(count('R') < 300, `buried roofs: ${count('R')}`);
-  assert.ok(count('._=+dcqus') / land > 0.75, 'open snow and paths cover most of the land');
+  assert.ok(count('._=+dcqusBP') / land > 0.75, 'open snow, paths and squares cover most of the land');
 });
 
 test('places of worship and the cemetery are quiet scenery: no outpost near them', () => {
@@ -61,4 +61,15 @@ test('street lamps line the paths, a simit cart stands at Kızılay Square, the 
   let touchesPlaza = false, overIce = false;
   for (let j = pier.j - 1; j <= pier.j + pier.h; j++) for (let i = pier.i - 1; i <= pier.i + pier.w; i++) { if (at(i, j) === 'P') touchesPlaza = true; if (at(i, j) === 'W') overIce = true; }
   assert.ok(touchesPlaza && overIce, 'the pier runs from the plaza out over the frozen sea');
+});
+
+test('each outpost is its landmark: a solid 4×4 centrepiece in a round plaza; fingerposts point the way', () => {
+  for (const o of def.outposts) {
+    for (let j = o.j - 2; j < o.j + 2; j++) for (let i = o.i - 2; i < o.i + 2; i++) assert.equal(def.rows[j][i], 'O', `${o.id} core`);
+    assert.ok(def.landmarks.find(l => l.outpost === o.id && l.centre && l.type === o.landmark));
+  }
+  assert.ok(def.signposts.length >= 8);
+  for (const sp of def.signposts) { assert.equal(def.rows[sp.j][sp.i], 'k'); assert.ok(sp.arrows.length >= 1 && sp.arrows.every(a => typeof a.label === 'string' && Number.isFinite(a.ang))); }
+  const trees = [...def.rows.join('')].filter(c => 'tTvyx'.includes(c)).length;
+  assert.ok(trees > 100, `trees: ${trees}`);
 });

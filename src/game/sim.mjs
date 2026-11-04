@@ -25,7 +25,7 @@ export const WORLD = {
   sled: { start: 2.5, push: 2.2, gravity: 9, max: 9.5, board: 0.75, cooldown: 1.5, cost: 2.6 },
   cocoa: { warmth: 40, respawn: 25, reach: 0.8 },
   flake: { reach: 0.85 },
-  dump: { reach: 1.4, damage: 6, slow: 1.1, cooldown: 4, tiles: 'HRtl' },
+  dump: { reach: 1.4, damage: 6, slow: 1.1, cooldown: 4, tiles: 'HRtlTvyx' },
   gust: { every: [25, 45], seconds: 6, strength: 2.4, dir: [-Math.SQRT1_2, Math.SQRT1_2] }, // poyraz: from the north-east
   weather: { first: [55, 80], every: [60, 100], blizzard: 18, sun: 15, blizzardSight: 7, sunRegen: 1.6 },
 };

@@ -2,7 +2,7 @@
 // navigation and renderer use. One tile = one world unit; x = east (columns), z = south (rows).
 import { GRID } from './grid.mjs';
 
-const SOLID = 'HSKMFctLb#nOfQCWGRDl';     // tiles you cannot walk through (G = landmark, R = buried roof, D = edge snowbank, l = street lamp)
+const SOLID = 'HSKMFctLb#nOfQCWGRDlTvyxk'; // tiles you cannot walk through (G = landmark, R = buried roof, D = edge snowbank, l = street lamp, T v y x = trees, k = signpost)
 const TALL = 'HSKM';                      // edge buildings
 export const TILE = {
   '.': 'snow', '_': 'street', Y: 'yard', '#': 'wall', b: 'bench', c: 'car', n: 'snowman', t: 'tree', L: 'lamp', F: 'fence',
@@ -53,6 +53,7 @@ export function buildTileArena(def) {
     hills: (def.hills || []).map(hl => ({ x: x0 + hl.i, z: z0 + hl.j, r: hl.r, h: hl.h })),
     sledRuns: (def.sledRuns || []).map(r => ({ ...r, pts: r.pts.map(([i, j]) => [x0 + i, z0 + j]) })),
     pickups: (def.pickups || []).map(pk => ({ id: pk.id, kind: pk.kind, x: x0 + pk.i + 0.5, z: z0 + pk.j + 0.5 })),
+    signposts: (def.signposts || []).map(sp => ({ ...sp, x: x0 + sp.i + 0.5, z: z0 + sp.j + 0.5 })),
     graph: null,
   };
 }
