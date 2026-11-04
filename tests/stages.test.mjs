@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { STAGES, starsFor, isUnlocked, nextStage, finishStage, totalStars, Lives, plannedMinutes, stageState } from '../src/game/stages.mjs';
+import { STAGES, starsFor, isUnlocked, nextStage, finishStage, totalStars, Lives, stageState } from '../src/game/stages.mjs';
 import { WAVES, minionList, stageWall, setWall, entryPoints, RIVAL_INFO } from '../src/game/waves.mjs';
 import { newUnitProgress } from '../src/rules/progress.mjs';
 import { createMatch } from '../src/game/match.mjs';
@@ -32,9 +32,11 @@ test('stages unlock one by one; stars come from first-try accuracy and the best 
   assert.equal(totalStars(up), 3);
 });
 
-test('three lives; the plan of the whole arena lands in 10–12 minutes', () => {
+test('three lives; the whole arena, timed from the real tasks it deals, lands in 10–12 minutes', async () => {
   const l = new Lives(); assert.equal(l.left, 3); l.lose(); l.lose(); assert.ok(!l.out); l.lose(); assert.ok(l.out); l.reset(); assert.equal(l.left, 3);
-  const m = plannedMinutes(); assert.ok(m >= 10 && m <= 12, `planned ${m.toFixed(1)} min`);
+  const { arenaTime } = await import('../src/game/timing.mjs');
+  const unit = JSON.parse(readFileSync(new URL('../content/grade5.json', import.meta.url), 'utf8')).units.find(u => u.id === 'g5u1');
+  for (let seed = 1; seed <= 10; seed++) { const r = arenaTime(unit, { rng: makeRng(seed) }); assert.ok(r.minutes >= 10 && r.minutes <= 12, `seed ${seed}: ${r.minutes.toFixed(1)} min ${JSON.stringify(r.parts)}`); }
 });
 
 test('every outpost stage has two waves and a final one; each brings in its new rival type', () => {
@@ -83,4 +85,34 @@ test('benched rival kids are off the field: not seen, not hit, not moving', () =
   assert.ok(!m.sim.enemiesOf(m.player).includes(r)); assert.equal(m.sim.hit(r, { dmg: 99, owner: m.player.id, kind: 'straight', vx: 1, vz: 0, x: 0, z: 0 }), false);
   m.step(0.5, {}); assert.equal(r.x, 0);
   assert.ok(m.grid.has(0, 0, GRID.BLOCK) || true);
+});
+
+test('the Showdown: five banners, one per task family, each raised by its share of answers', async () => {
+  const { Visit } = await import('../src/game/visit.mjs');
+  const { BANNERS } = await import('../src/game/waves.mjs');
+  const unit = JSON.parse(readFileSync(new URL('../content/grade5.json', import.meta.url), 'utf8')).units.find(u => u.id === 'g5u1');
+  assert.deepEqual(BANNERS.map(b => b.outpost), STAGES.filter(s => s.outpost).map(s => s.outpost).sort((a, b) => BANNERS.findIndex(x => x.outpost === a) - BANNERS.findIndex(x => x.outpost === b)));
+  for (const b of BANNERS) assert.equal(b.family, STAGES.find(s => s.outpost === b.outpost).family);
+  const v = new Visit({ unit, family: 'mixed', rng: makeRng(5), families: BANNERS.map(b => b.family), perFamily: 2 });
+  const seen = [];
+  let guard = 0;
+  while (!v.finished && guard++ < 60) {
+    const st = v.next(); assert.ok(st, 'a step'); seen.push(v.family);
+    const n = st.kind === 'match' ? st.left.length : st.kind === 'sort' ? st.cards.length : 1;
+    for (let k = 0; k < n; k++) v.answer(true);
+  }
+  assert.ok(v.finished); assert.equal(v.bannersUp, 5); assert.equal(v.progress, 1);
+  assert.deepEqual([...new Set(seen)], BANNERS.map(b => b.family), 'families in banner order');
+  assert.ok(v.done >= 10 && v.done <= 14, `${v.done} items`);
+});
+
+test('the Showdown circle sits in the open near Our School; its waves bring the captain', async () => {
+  const { schoolyardSpot } = await import('../src/game/waves.mjs');
+  const m = createMatch({ arena: buildTileArena(def), myTeam: 'hufflepuff', rivalTeam: 'gryffindor', rng: makeRng(6) });
+  const z = { id: 'schoolyard', ...schoolyardSpot(m.grid, m.base) };
+  assert.ok(Math.hypot(z.x - m.base.x, z.z - m.base.z) <= 12); assert.ok(m.grid.freeCircle(z.x, z.z, z.r));
+  const cells = stageWall(m.grid, z); assert.ok(cells.length > 20); setWall(m.grid, cells, true);
+  for (const p of entryPoints(m.grid, z)) assert.ok(m.nav.path(p.x, p.z, z.x, z.z + z.r - 0.3), 'waves can walk in');
+  setWall(m.grid, cells, false);
+  const w = WAVES.showdown; assert.equal(w.length, 3); assert.ok(w[1].m.captain === 1 && w[2].final);
 });

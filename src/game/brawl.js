@@ -25,6 +25,7 @@ import { ensureUnit, startRun } from '../rules/progress.mjs';
 import { StageRunner } from './stagerun.js';
 import { stageState, STAGES } from './stages.mjs';
 import { SnowmanView } from './render/snowmen.js';
+import { ShowdownView } from './render/showdown.js';
 import { InstancedMesh, MeshLambertMaterial, SphereGeometry, Object3D } from 'three';
 
 const $ = s => document.querySelector(s);
@@ -184,11 +185,17 @@ async function startGame(myTeam, kit, pace) {
     ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play, fx, fireworks: z => { if (reduceMotion) return; for (const col of [myCol, '#ffffff', '#ffd166', '#7cc4f0']) fx.emit(z.x, 3.5, z.z, 40, col, 6, 1.4, 1.2); } },
   }) : null;
   // Arena 1 plays as stages (?free for the old free-roaming world)
+  const showdownView = new ShowdownView(scene, { color: myCol, dark: CONFIG.teams[myTeam].dark, groundY: (x, z) => groundH(x, z), reduceMotion });
+  const fireworks = z => { if (reduceMotion) return; for (const col of [myCol, '#ffffff', '#ffd166', '#7cc4f0']) fx.emit(z.x, 3.5, z.z, 40, col, 6, 1.4, 1.2); };
   stages = flow && !params.has('free') ? new StageRunner({
     match, flow, unit, unitProgress, save, writeSave, pace, rng, team: myTeam, kit, reduceMotion,
     ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play,
       snapCamera: () => { focus.set(player.x, 0, player.z - 1.2); camShift = 0; },
-      showWall: cells => showWall(cells), onGone: list => dropSnowmen(list), rebuildWorld: z => rebuildWorld(z) },
+      showWall: cells => showWall(cells), onGone: list => dropSnowmen(list), rebuildWorld: z => rebuildWorld(z), fireworks,
+      showdown: {
+        start: (z, b) => showdownView.start(z, b), raise: k => showdownView.raise(k), giantBall: (f, t, s) => showdownView.giantBall(f, t, s), ring: () => showdownView.ring(), stop: () => showdownView.stop(),
+        burst: at => { fx.emit(at.x, 1.4, at.z, reduceMotion ? 20 : 70, '#ffffff', 9, 1.4, 1.6); fx.emit(at.x, 1.4, at.z, reduceMotion ? 8 : 30, '#bfe0ff', 6, 1.2, 1.2); },
+      } },
   }) : null;
   // outposts held in earlier stages stay held
   if (stages) for (const st of STAGES) if (stageState(unitProgress)[st.id]?.done && st.outpost) { const zz = sim.zones.find(q => q.id === st.outpost); if (zz) { zz.owner = 'home'; zz.progress = 1; world.setOwner(zz.id, myCol); } }
@@ -409,7 +416,7 @@ async function startGame(myTeam, kit, pace) {
     camera.position.set(focus.x + off.x * zoom + (Math.random() - 0.5) * j, off.y * zoom + camY, focus.z + off.z * zoom + (Math.random() - 0.5) * j);
     camera.lookAt(focus.x, camY, focus.z); camera.updateMatrixWorld();
     sun.position.set(focus.x + sunDir[0], sunDir[1], focus.z + sunDir[2]); sun.target.position.set(focus.x, 0, focus.z - 2); sun.target.updateMatrixWorld();
-    world.tick(dt, focus, reduceMotion, camera);
+    world.tick(dt, focus, reduceMotion, camera); showdownView.tick(dt);
     if (arena.world) {
       const k = V2 ? 0 : forcedDusk ?? Math.min(1, sim.t / 300); // the v2 sample: a fixed time of day per stage
       if (Math.abs(k - dayK) > 0.01) { dayK = k; applyDay(k); }
@@ -434,7 +441,7 @@ async function startGame(myTeam, kit, pace) {
     // HUD
     const p = Math.round(Math.abs(z.progress) * 100);
     $('#zone-bar .home').style.width = (z.progress > 0 ? p : 0) + '%'; $('#zone-bar .rival').style.width = (z.progress < 0 ? p : 0) + '%';
-    $('#zone-label').textContent = `${z.label}: ` + (flow?.busy && flow.zone === z ? (flow.mode === 'defend' ? 'answer to refill snowballs' : `answer to seize ${p}%`) : flow?.waveZone === z ? 'defend it!' : z.owner === 'home' ? 'yours!' : z.owner === 'rival' ? 'rivals hold it' : z.contested ? 'contested!' : z.home ? `seizing… ${p}%` : z.rival ? `rivals seizing… ${p}%` : `${Math.round(Math.hypot(z.x - player.x, z.z - player.z))} steps away`);
+    $('#zone-label').textContent = `${z.label}: ` + (z.showdown ? (z.owner === 'home' ? 'giant snowball!' : `banners ${stages?.bannersUp || 0} of 5`) : flow?.busy && flow.zone === z ? (flow.mode === 'defend' ? 'answer to refill snowballs' : `answer to seize ${p}%`) : flow?.waveZone === z ? 'defend it!' : z.owner === 'home' ? 'yours!' : z.owner === 'rival' ? 'rivals hold it' : z.contested ? 'contested!' : z.home ? `seizing… ${p}%` : z.rival ? `rivals seizing… ${p}%` : `${Math.round(Math.hypot(z.x - player.x, z.z - player.z))} steps away`);
     drawMini();
     $('#zone').classList.toggle('contested', !!z.contested);
     $('#score .h').textContent = score.home; $('#score .r').textContent = score.rival;

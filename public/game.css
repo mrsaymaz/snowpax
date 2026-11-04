@@ -203,6 +203,7 @@ h2 { margin: 0 0 8px; }
 .theme-boulevard { --edge: #7a4f34; --accent: #c8584a; --bg: linear-gradient(#fdf8f0, #f1e5d2); --head: repeating-linear-gradient(0deg, #8a5a3c 0 10px, #7a4f34 10px 12px); }
 .theme-sururi { --edge: #5aa7d8; --accent: #f3a6c8; --bg: linear-gradient(#f8fbff, #eaf3ff); --head: linear-gradient(90deg, #7cc4f0, #8fdcb5 50%, #f6d365); }
 .theme-sururi .tc-head { color: #1d2733; }
+.theme-schoolyard { --edge: #a8453c; --accent: #f2c14e; --bg: linear-gradient(#fffaf0, #fbefd9); --head: linear-gradient(90deg, #a8453c, #d0703c 55%, #f2c14e); }
 .theme-cocoa { --edge: #8a3a24; --accent: #e0463c; --bg: linear-gradient(#fff7ef, #fbe9da); --head: linear-gradient(90deg, #8a3a24, #c0532f); }
 body.reading #joy-base, body.reading #joy-knob, body.reading #attack, body.reading #super { opacity: 0.25; pointer-events: none; }
 .fx-num.word { color: #ffd166; font-size: 22px; text-shadow: 0 2px 0 #6a4a10, 0 0 8px rgba(0,0,0,0.35); white-space: nowrap; }
@@ -269,6 +270,12 @@ body.sledding #coach { z-index: 45; }
 .rs-card p { margin: 4px 0; font-size: 16px; }
 .rs-btns { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 10px; }
 .rs-btns .play-btn, .rs-btns .menu-btn { width: auto; padding: 0 20px; }
+.rs-sub { margin: 0 0 6px !important; color: var(--muted); font-weight: 700; }
+.rs-stages { list-style: none; padding: 0; margin: 6px auto 8px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: 620px; }
+.rs-stages li { display: flex; align-items: center; gap: 6px; background: #f2f6ff; border: 2px solid #d5def2; border-radius: 12px; padding: 4px 8px; text-align: left; font-size: 13px; }
+.rs-stages li span { width: 30px; height: 30px; flex: none; } .rs-stages li span svg { width: 100%; height: 100%; }
+.rs-stages li b { flex: 1; line-height: 1.1; } .rs-stages li i { font-style: normal; color: #ffb703; letter-spacing: 1px; white-space: nowrap; }
+@media (max-width: 560px) { .rs-stages { grid-template-columns: repeat(2, 1fr); } }
 #newrival { position: fixed; left: 12px; top: 130px; z-index: 30; max-width: 280px; background: #fff; border: 3px solid var(--ink); border-radius: 16px; padding: 8px 12px; box-shadow: 0 4px 0 #b8382f; font: 600 13px system-ui, sans-serif; color: var(--ink); transform: translateX(-120%); transition: transform 0.3s; display: flex; flex-direction: column; gap: 2px; }
 #newrival.show { transform: translateX(0); }
 #newrival b { color: #b8382f; font-size: 15px; text-transform: uppercase; }

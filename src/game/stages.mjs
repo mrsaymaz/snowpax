@@ -10,12 +10,12 @@ export const LIVES = 3;
 // ride: the themed sled track; spell: the run has letters to spell a word (practice only).
 // newRival: the rival type this stage introduces ("New rivals!" card).
 export const STAGES = [
-  { id: 'boulevard', outpost: 'boulevard', family: 'answer', title: 'Boulevard Park', ride: { theme: 'boulevard', seconds: 46, spell: false }, newRival: 'waddler' },
-  { id: 'archery', outpost: 'archery', family: 'sort', title: 'Archery Ground', ride: { theme: 'archery', seconds: 50, spell: true }, newRival: 'shield' },
-  { id: 'kizilay', outpost: 'kizilay', family: 'match', title: 'Kızılay Square', ride: { theme: 'kizilay', seconds: 50, spell: false }, newRival: 'sledder' },
-  { id: 'sururi', outpost: 'sururi', family: 'build', title: 'Sururi Park', ride: { theme: 'sururi', seconds: 52, spell: true }, newRival: 'lobber' },
-  { id: 'waterfront', outpost: 'waterfront', family: 'listen', title: 'Waterfront Park', ride: { theme: 'waterfront', seconds: 56, spell: false }, newRival: null },
-  { id: 'showdown', outpost: null, family: null, title: 'Schoolyard Showdown', ride: { theme: 'home', seconds: 40, spell: true }, newRival: 'captain', final: true },
+  { id: 'boulevard', outpost: 'boulevard', family: 'answer', title: 'Boulevard Park', ride: { theme: 'boulevard', seconds: 36, spell: false }, newRival: 'waddler' },
+  { id: 'archery', outpost: 'archery', family: 'sort', title: 'Archery Ground', ride: { theme: 'archery', seconds: 38, spell: true }, newRival: 'shield' },
+  { id: 'kizilay', outpost: 'kizilay', family: 'match', title: 'Kızılay Square', ride: { theme: 'kizilay', seconds: 38, spell: false }, newRival: 'sledder' },
+  { id: 'sururi', outpost: 'sururi', family: 'build', title: 'Sururi Park', ride: { theme: 'sururi', seconds: 40, spell: true }, newRival: 'lobber' },
+  { id: 'waterfront', outpost: 'waterfront', family: 'listen', title: 'Waterfront Park', ride: { theme: 'waterfront', seconds: 42, spell: false }, newRival: null },
+  { id: 'showdown', outpost: null, family: null, title: 'Schoolyard Showdown', ride: { theme: 'home', seconds: 30, spell: true }, newRival: 'captain', final: true },
 ];
 export const stageById = id => STAGES.find(s => s.id === id);
 
@@ -55,10 +55,5 @@ export class Lives {
   reset() { this.left = this.max; }
 }
 
-// Rough time of a whole Arena 1 played through (brief: 10–12 minutes), from the stage plan.
-export function plannedMinutes({ standSeconds = 60, briefing = 20, victory = 20, showdown = 80 } = {}) {
-  let s = briefing + victory;
-  for (const st of STAGES) s += st.ride.seconds + (st.final ? showdown : standSeconds);
-  return s / 60;
-}
+// The time of a whole Arena 1 played through is worked out in timing.mjs (arenaTime).
 export const UNLOCK = CONFIG.demand.unlockAccuracy;
