@@ -5,7 +5,7 @@
 // recognisable landmark at each outpost. Called by buildVillage with its shared helpers.
 import {
   BufferGeometry, Float32BufferAttribute, Mesh, MeshLambertMaterial, BoxGeometry, SphereGeometry, CylinderGeometry, ConeGeometry,
-  PlaneGeometry, TorusGeometry, CapsuleGeometry, CanvasTexture, RepeatWrapping, SRGBColorSpace, Color,
+  PlaneGeometry, TorusGeometry, CapsuleGeometry, CanvasTexture, RepeatWrapping, SRGBColorSpace, Color, CircleGeometry,
 } from 'three';
 import { makeGround } from '../terrain.mjs';
 
@@ -344,24 +344,51 @@ export function buildSnowtown(ctx) {
       for (let k = 1; k < 4; k++) { const t = k / 4; K.add(new CylinderGeometry(0.06, 0.06, 2.85, 8), mMetal, ax + (bx - ax) * t, 1.42, az + (bz - az) * t); }
       const sg = sign('Boulevard Park', 2.0); sg.position.set(mx, 3.9, mz); sg.rotation.y = Math.abs(Math.sin(ry)) > 0.7 ? 0 : 0; group.add(sg);
       lantern(ax + 0.6, 3.25, az); lantern(bx - 0.6, 3.25, bz);
-    } else if (lm.type === 'archers-lodge') { // stone lodge with a columned porch and a tiled hip roof
-      const [x, z] = centre(lm);
-      K.add(rbox(2.9, 2.6, 0.5, 0.08), mStone, x, 0, z); K.add(rbox(2.6, 2.2, 1.7, 0.06), stoneLight, x, 0.45, z);
-      for (let k = 0; k < 4; k++) { K.add(new CylinderGeometry(0.1, 0.12, 1.5, 10), M('stone', '#e2deea'), x - 1.05 + k * 0.7, 1.2, z + 1.35); }
-      K.add(rbox(2.9, 0.5, 0.18, 0.05), mBeam, x, 1.95, z + 1.25);
-      K.add(new ConeGeometry(2.3, 1.1, 4), M('shingle', '#8a6a63'), x, 2.7, z, 0, Math.PI / 4); K.add(new ConeGeometry(2.0, 0.95, 4), mSnow, x, 2.85, z, 0, Math.PI / 4);
-      ctx.windows(x, z + 1.1, 'x', 2.6, [0, 1], 0.75, 0, 0.1);
-      const sg = sign("Archers' Lodge", 1.9); sg.position.set(x, 2.25, z + 1.55); group.add(sg);
-      lantern(x - 1.4, 1.5, z + 1.4); lantern(x + 1.4, 1.5, z + 1.4, true);
-    } else if (lm.type === 'target') { // straw archery target on an easel, rings, snow on top
+    } else if (lm.type === 'archers-lodge') { // Ottoman archers' lodge: stone hall with lead domes, an arched portico, a gate crowned by a golden bow
+      const [x, z] = centre(lm), lead = M('metal', '#8492b4'), marble = M('plaster', '#f8f4fb'), gold = M('glow', '#e8b84a'), red = M('fabric', '#c8443c');
+      K.add(rbox(4.1, 3.0, 0.32, 0.08), mStone, x, 0, z);
+      K.add(rbox(3.7, 1.7, 1.75, 0.06), marble, x, 0.3, z - 0.55); // the hall
+      K.add(rbox(3.9, 1.9, 0.14, 0.05), mStone, x, 2.02, z - 0.55); // cornice
+      for (const dx of [-1.15, 0, 1.15]) { // three lead domes with drums and gold finials
+        K.add(new CylinderGeometry(0.44, 0.48, 0.28, 16), marble, x + dx, 2.3, z - 0.55);
+        K.add(new SphereGeometry(0.47, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), lead, x + dx, 2.44, z - 0.55);
+        K.add(new SphereGeometry(0.49, 16, 4, 0, Math.PI * 2, 0, Math.PI / 4.2), mSnow, x + dx, 2.46, z - 0.55);
+        K.add(new SphereGeometry(0.06, 8, 6), gold, x + dx, 2.97, z - 0.55); K.add(new ConeGeometry(0.03, 0.22, 6), gold, x + dx, 3.12, z - 0.55);
+      }
+      // portico: five slim columns, pointed arches, a snowy roof
+      K.add(rbox(3.9, 1.05, 0.14, 0.03), mStone, x, 0.32, z + 0.82);
+      for (let k = 0; k < 5; k++) { const cx = x - 1.6 + k * 0.8; K.add(new CylinderGeometry(0.08, 0.09, 1.2, 10), marble, cx, 1.06, z + 1.2); K.add(rbox(0.22, 0.22, 0.1, 0.02), mStone, cx, 1.66, z + 1.2); }
+      for (let k = 0; k < 4; k++) { const cx = x - 1.2 + k * 0.8; K.add(new TorusGeometry(0.34, 0.085, 6, 12, Math.PI), M('plaster', '#d0573f'), cx, 1.68, z + 1.2); K.add(new TorusGeometry(0.34, 0.088, 6, 12, Math.PI / 3), marble, cx, 1.68, z + 1.2, 0, 0, Math.PI / 3); lantern(cx, 1.45, z + 1.05); } // arches in red and white stone, a lantern under each
+      K.add(rbox(3.95, 1.05, 0.12, 0.03), M('wood', '#a5714f'), x, 2.08, z + 0.78, 0.18); K.add(rbox(3.9, 1.0, 0.16, 0.08, 3), mSnow, x, 2.14, z + 0.78, 0.18);
+      for (let k = 0; k < 4; k++) { const wx = x - 1.2 + k * 0.8; K.add(new PlaneGeometry(0.44, 0.66), mGlass, wx, 1.0, z + 0.31); K.add(new CircleGeometry(0.22, 12, 0, Math.PI), mGlass, wx, 1.33, z + 0.311); } // arched windows, lit
+      // the gate: two stone pylons and a pointed arch, crowned by a big golden bow with crossed arrows
+      const gz = z + 1.75;
+      for (const sx of [-0.62, 0.62]) { K.add(rbox(0.36, 0.36, 1.9, 0.04), marble, x + sx, 0, gz); K.add(GEO.snowCap, mSnow, x + sx, 1.9, gz, 0, 0, 0, 0.42, 0.18, 0.42); lantern(x + sx, 1.45, gz + 0.25, sx > 0); }
+      K.add(new TorusGeometry(0.62, 0.09, 6, 16, Math.PI), M('stone', '#c96f5a'), x, 1.7, gz);
+      K.add(new TorusGeometry(0.85, 0.06, 6, 24, Math.PI * 0.8), gold, x, 2.15, gz + 0.05, 0, 0, Math.PI * 0.1); // the bow
+      K.add(rbox(1.62, 0.02, 0.02, 0.005), M('glow', '#fff3d6'), x, 2.17, gz + 0.06); // its string
+      for (const r of [0.6, -0.6]) { K.add(new CylinderGeometry(0.025, 0.025, 1.7, 6), gold, x, 2.45, gz + 0.08, 0, 0, r); K.add(new ConeGeometry(0.07, 0.18, 4), gold, x - Math.sin(r) * 0.9, 2.45 + Math.cos(r) * 0.9, gz + 0.08, 0, 0, r); }
+      const sg = sign("Archers' Lodge", 1.5); sg.position.set(x, 1.35, gz + 0.14); group.add(sg);
+      for (const sx of [-1.9, 1.9]) { // tall flagpoles with pennants
+        K.put('flagPole', GEO.post, mMetal, x + sx, 1.6, z + 1.5, 0, 0.8, 3.2, 0.8);
+        const pen = new BufferGeometry(); pen.setAttribute('position', new Float32BufferAttribute([0, 0, 0, 0.9, -0.22, 0, 0, -0.45, 0], 3)); pen.computeVertexNormals();
+        K.add(pen, sx < 0 ? red : M('fabric', '#e8b84a'), x + sx, 3.15, z + 1.5);
+      }
+    } else if (lm.type === 'target') { // a big straw target on an easel with arrows in it
       const [x, z] = centre(lm), rings = ['#f4efe2', '#2f2f3a', '#4f6fa8', '#c8584a', '#e6b93e'];
-      for (const dx of [-0.25, 0.25]) K.add(new CylinderGeometry(0.04, 0.04, 1.4, 6), mWood, x + dx, 0.65, z - 0.15, 0.2);
-      rings.forEach((col, k) => K.add(new CylinderGeometry(0.5 - k * 0.1, 0.5 - k * 0.1, 0.12 + k * 0.01, 20), M('fabric', col), x, 0.85, z, Math.PI / 2 - 0.15));
-      K.add(new CapsuleGeometry(0.1, 0.7, 3, 8), mSnow, x, 1.36, z - 0.06, 0, 0, Math.PI / 2);
-    } else if (lm.type === 'marker-stone') { // a tall archery record stone on a plinth
-      const [x, z] = centre(lm);
-      K.add(rbox(0.6, 0.6, 0.3, 0.05), mStone, x, 0, z); K.add(new CylinderGeometry(0.13, 0.17, 2.2, 10), M('stone', '#e2deea'), x, 1.4, z);
-      K.add(new SphereGeometry(0.17, 10, 6), M('stone', '#e2deea'), x, 2.55, z); K.add(GEO.snowCap, mSnow, x, 2.62, z, 0, 0, 0, 0.36, 0.2, 0.36);
+      for (const dx of [-0.32, 0.32]) K.add(new CylinderGeometry(0.05, 0.05, 1.7, 6), mWood, x + dx, 0.8, z - 0.18, 0.2);
+      K.add(new CylinderGeometry(0.66, 0.66, 0.18, 22), M('wood', '#d8c08a'), x, 1.02, z, Math.PI / 2 - 0.15);
+      rings.forEach((col, k) => K.add(new CylinderGeometry(0.6 - k * 0.12, 0.6 - k * 0.12, 0.2 + k * 0.01, 22), M('fabric', col), x, 1.02, z + 0.01, Math.PI / 2 - 0.15));
+      for (const [ax, ay] of [[0.08, 0.05], [-0.18, 0.2], [0.22, -0.15]]) { K.add(new CylinderGeometry(0.018, 0.018, 0.6, 5), mWood, x + ax, 1.02 + ay, z + 0.35, Math.PI / 2 - 0.15); K.add(rbox(0.12, 0.02, 0.1, 0.005), M('fabric', '#ffffff'), x + ax, 1.02 + ay + 0.08, z + 0.62); }
+      K.add(new CapsuleGeometry(0.12, 0.9, 3, 8), mSnow, x, 1.66, z - 0.08, 0, 0, Math.PI / 2);
+    } else if (lm.type === 'marker-stone') { // a menzil taşı: a tall white marble record stone with gold bands and a carved top
+      const [x, z] = centre(lm), h = 2.0 + ((lm.n || 0) * 0.37) % 1.3, marble = M('stone', '#f1eef6'), gold = M('glow', '#e2b450');
+      K.add(rbox(0.6, 0.6, 0.32, 0.05), mStone, x, 0, z); K.add(rbox(0.42, 0.42, 0.18, 0.04), marble, x, 0.32, z);
+      K.add(new CylinderGeometry(0.12, 0.16, h, 8), marble, x, 0.5 + h / 2, z);
+      for (const t of [0.35, 0.8]) K.add(new TorusGeometry(0.15 - t * 0.03, 0.025, 5, 12), gold, x, 0.5 + h * t, z, Math.PI / 2);
+      K.add(new PlaneGeometry(0.16, h * 0.28), M('glow', '#3d4a6b'), x, 0.5 + h * 0.58, z + 0.14); // the carved inscription panel
+      K.add(new CylinderGeometry(0.16, 0.12, 0.22, 10), marble, x, 0.6 + h, z); K.add(new SphereGeometry(0.15, 10, 8), marble, x, 0.8 + h, z);
+      K.add(GEO.snowCap, mSnow, x, 0.86 + h, z, 0, 0, 0, 0.34, 0.18, 0.34);
     } else if (lm.type === 'fountain') { // an old public fountain: marble block, arched niche, wide eaves, frozen spout
       const [x, z] = centre(lm);
       K.add(rbox(1.9, 0.9, 0.3, 0.06), mStone, x, 0, z); K.add(rbox(1.6, 0.7, 1.7, 0.05), M('stone', '#e6e2ee'), x, 0.3, z);
@@ -374,28 +401,76 @@ export function buildSnowtown(ctx) {
       const [x, z] = centre(lm);
       K.add(new CylinderGeometry(0.28, 0.42, 2.2, 10), M('wood', '#9a8c84'), x, 1.1, z);
       for (let k = 0; k < 7; k++) { const a = k / 7 * 6.28, r = k ? 0.85 : 0, y = 2.5 + (k % 2) * 0.35; K.add(new SphereGeometry(0.75, 10, 7), M('plaster', '#5d6f7a'), x + Math.cos(a) * r, y, z + Math.sin(a) * r); K.add(GEO.snowCap, mSnow, x + Math.cos(a) * r, y + 0.2, z + Math.sin(a) * r, 0, 0, 0, 1.45, 0.75, 1.45); }
-    } else if (lm.type === 'admiral') { // the admiral's monument with his lion, on a stepped pedestal
-      const [x, z] = centre(lm), bronze = M('metal', '#566476');
-      K.add(rbox(1.9, 1.9, 0.3, 0.06), mStone, x, 0, z); K.add(rbox(1.5, 1.5, 0.3, 0.06), mStone, x, 0.3, z); K.add(rbox(0.9, 0.9, 1.2, 0.05), M('stone', '#e2deea'), x, 0.6, z);
-      K.add(new CapsuleGeometry(0.25, 0.6, 4, 10), bronze, x, 2.25, z); K.add(new SphereGeometry(0.2, 12, 8), bronze, x, 2.85, z); K.add(new CylinderGeometry(0.24, 0.24, 0.08, 12), bronze, x, 3.02, z); K.add(new CylinderGeometry(0.14, 0.18, 0.22, 12), bronze, x, 3.15, z);
-      K.add(new CapsuleGeometry(0.07, 0.45, 3, 6), bronze, x + 0.32, 2.45, z + 0.1, 0, 0, -0.6);
-      K.add(new CapsuleGeometry(0.2, 0.55, 4, 8), bronze, x - 0.15, 1.95, z + 0.45, 0, 0, Math.PI / 2); K.add(new SphereGeometry(0.2, 10, 8), bronze, x - 0.55, 2.1, z + 0.45); K.add(new SphereGeometry(0.26, 10, 8), bronze, x - 0.6, 2.15, z + 0.45);
-      K.add(GEO.snowCap, mSnow, x, 3.2, z, 0, 0, 0, 0.32, 0.14, 0.32); K.add(GEO.snowCap, mSnow, x, 1.82, z, 0, 0, 0, 0.95, 0.12, 0.95);
-      const sg = sign('Waterfront Park', 1.9); sg.position.set(x, 1.15, z + 0.8); group.add(sg);
+    } else if (lm.type === 'admiral') { // Cezayirli Gazi Hasan Paşa with his lion: a big bronze statue on a granite pedestal, anchors and a chain fence
+      const [x, z] = centre(lm), bronze = M('plaster', '#6fae9f'), bronzeD = M('plaster', '#4f8a80'), granite = M('stone', '#8f93ac'), pale = M('stone', '#dcd8e8'), iron = M('metal', '#3d4a6b');
+      K.add(rbox(2.8, 2.8, 0.25, 0.06), granite, x, 0, z); K.add(rbox(2.2, 2.2, 0.3, 0.06), granite, x, 0.25, z);
+      K.add(rbox(1.3, 1.3, 1.5, 0.05), pale, x, 0.55, z - 0.3); K.add(rbox(1.5, 1.5, 0.16, 0.05), granite, x, 2.05, z - 0.3);
+      K.add(rbox(0.8, 0.04, 0.5, 0.02), M('metal', '#9a7b3e'), x, 1.15, z + 0.36); // bronze plaque
+      // the admiral: long kaftan, sash, beard and a tall turban; one arm points out over the Golden Horn
+      const top = 2.21, ax = x, az = z - 0.3;
+      K.add(new ConeGeometry(0.42, 1.15, 12), bronze, ax, top + 0.58, az); K.add(new CylinderGeometry(0.2, 0.26, 0.5, 12), bronze, ax, top + 1.3, az);
+      K.add(new TorusGeometry(0.24, 0.05, 6, 14), bronzeD, ax, top + 1.12, az, Math.PI / 2);
+      K.add(new SphereGeometry(0.18, 12, 10), bronze, ax, top + 1.72, az); K.add(new ConeGeometry(0.12, 0.26, 8), bronzeD, ax, top + 1.55, az + 0.1, Math.PI);
+      K.add(new CylinderGeometry(0.19, 0.2, 0.34, 12), bronze, ax, top + 2.0, az); K.add(new TorusGeometry(0.21, 0.07, 6, 14), bronzeD, ax, top + 1.88, az, Math.PI / 2);
+      K.add(new CapsuleGeometry(0.07, 0.55, 3, 8), bronze, ax - 0.42, top + 1.5, az + 0.1, 0, 0, Math.PI / 2.4); // pointing arm
+      K.add(new CapsuleGeometry(0.07, 0.45, 3, 8), bronze, ax + 0.27, top + 1.15, az + 0.1, 0, 0, -0.35);
+      K.add(GEO.snowCap, mSnow, ax, top + 2.17, az, 0, 0, 0, 0.42, 0.2, 0.42); // a snow cap on his turban
+      // the lion, sitting proudly on the front step, wearing a red scarf the kids gave him
+      const lx = x, lz = z + 0.85, ly = 0.55;
+      K.add(new CapsuleGeometry(0.22, 0.32, 4, 10), bronze, lx, ly + 0.32, lz - 0.08, -0.5);
+      for (const sx of [-0.12, 0.12]) K.add(new CylinderGeometry(0.06, 0.07, 0.42, 8), bronze, lx + sx, ly + 0.21, lz + 0.12);
+      K.add(new SphereGeometry(0.3, 14, 10), bronzeD, lx, ly + 0.72, lz + 0.05); // mane
+      for (let k = 0; k < 8; k++) { const ang = k / 8 * Math.PI * 2; K.add(new SphereGeometry(0.1, 8, 6), bronzeD, lx + Math.cos(ang) * 0.27, ly + 0.72 + Math.sin(ang) * 0.27, lz + 0.04); }
+      K.add(new SphereGeometry(0.19, 12, 10), bronze, lx, ly + 0.72, lz + 0.18); K.add(new SphereGeometry(0.08, 8, 6), bronzeD, lx, ly + 0.66, lz + 0.35);
+      for (const sx of [-0.13, 0.13]) K.add(new SphereGeometry(0.06, 6, 5), bronze, lx + sx, ly + 0.9, lz + 0.12);
+      K.add(new TorusGeometry(0.3, 0.12, 4, 10, Math.PI * 1.3), bronze, lx + 0.25, ly + 0.15, lz - 0.2, Math.PI / 2, 0, 0.4); // tail
+      K.add(new TorusGeometry(0.2, 0.06, 6, 14), M('fabric', '#d9443a'), lx, ly + 0.5, lz + 0.1, Math.PI / 2 - 0.3);
+      K.add(rbox(0.12, 0.05, 0.32, 0.02), M('fabric', '#d9443a'), lx + 0.12, ly + 0.36, lz + 0.26, 0.3);
+      K.add(GEO.snowCap, mSnow, lx, ly + 0.98, lz + 0.02, 0, 0, 0, 0.36, 0.14, 0.32);
+      // anchors at the front corners and a chain fence round the base
+      for (const sx of [-1.15, 1.15]) {
+        const fx = x + sx, fz = z + 1.15;
+        K.add(new CylinderGeometry(0.045, 0.045, 0.9, 8), iron, fx, 0.7, fz); K.add(new TorusGeometry(0.1, 0.03, 6, 10), iron, fx, 1.2, fz);
+        K.add(rbox(0.36, 0.06, 0.06, 0.02), iron, fx, 1.0, fz); K.add(new TorusGeometry(0.28, 0.04, 6, 12, Math.PI), iron, fx, 0.55, fz, 0, 0, Math.PI);
+        for (const k of [-1, 1]) K.add(new ConeGeometry(0.07, 0.16, 4), iron, fx + k * 0.28, 0.58, fz, 0, 0, k * 0.6);
+      }
+      for (const [bx, bz] of [[-1.35, -1.35], [1.35, -1.35], [-1.35, 1.35], [1.35, 1.35]]) { K.put('bollard', new CylinderGeometry(0.09, 0.11, 0.5, 8), iron, x + bx, 0.25, z + bz); K.put('bollardSnow', GEO.snowCap, mSnow, x + bx, 0.5, z + bz, 0, 0.14, 0.07, 0.14); }
+      for (const [[ax1, az1], [ax2, az2]] of [[[-1.35, -1.35], [1.35, -1.35]], [[1.35, -1.35], [1.35, 1.35]], [[-1.35, -1.35], [-1.35, 1.35]]]) for (let k = 0; k < 6; k++) { const t = (k + 0.5) / 6, sag = 0.12 * 4 * t * (1 - t); K.put('chain', new TorusGeometry(0.05, 0.015, 4, 8), iron, x + ax1 + (ax2 - ax1) * t, 0.42 - sag, z + az1 + (az2 - az1) * t, Math.atan2(ax2 - ax1, az2 - az1)); }
+      const sg = sign('Waterfront Park', 1.9); sg.position.set(x, 0.62, z + 1.45); group.add(sg);
+      lantern(x - 1.35, 1.0, z + 1.35, true); lantern(x + 1.35, 1.0, z + 1.35);
+      life.perches.push([ax, top + 2.3, az], [lx, ly + 1.05, lz]);
     } else if (lm.type === 'pier') { // wooden pier over the ice with bollards and a lamp
       const [x, z] = centre(lm), alongX = lm.along === 'x', L = alongX ? lm.w : lm.h;
       const P2 = (u, v) => (alongX ? [x + u, z + v] : [x + v, z + u]); // u along the pier, v across
       K.add(rbox(alongX ? L + 0.4 : 2.1, alongX ? 2.1 : L + 0.4, 0.22, 0.04), mWood, x, 0.12, z); K.add(rbox(alongX ? L : 1.9, alongX ? 1.9 : L, 0.12, 0.06), M('snow', '#e6ecf8'), x, 0.34, z);
       for (let k = 0; k <= L; k += 1.5) for (const s2 of [-1, 1]) { const [px, pz] = P2(-L / 2 + k, s2 * 1.0), [bx, bz] = P2(-L / 2 + k, s2 * 0.85); K.put('pierPost', new CylinderGeometry(0.1, 0.1, 0.8, 8), mWood, px, 0.1, pz); K.put('bollard', new CylinderGeometry(0.09, 0.11, 0.3, 8), mMetal, bx, 0.48, bz); life.perches.push([bx, 0.66, bz]); }
       const [lx, lz] = P2(L / 2 - 0.3, -0.9); lantern(lx, 1.5, lz, true); K.put('lampPost', GEO.post, mMetal, lx, 0.85, lz, 0, 1, 1.3, 1);
-    } else if (lm.type === 'ferry') { // a Golden Horn ferry stuck in the ice, snow on the deck, warm cabin windows
+    } else if (lm.type === 'iskele') { // the ferry pier building: a wooden pavilion with a deep roof, a clock and warm windows
+      const [x, z] = centre(lm), alongX = lm.along === 'x', ry = alongX ? (lm.dir > 0 ? -Math.PI / 2 : Math.PI / 2) : (lm.dir > 0 ? Math.PI : 0);
+      const cream = M('plaster', '#f3e9d8'), trim = M('wood', '#3f5f9a'), roof = M('shingle', '#5d6f9e');
+      K.add(rbox(2.1, 2.1, 0.22, 0.04), mWood, x, 0.1, z); K.add(rbox(1.7, 1.6, 1.2, 0.05), cream, x, 0.32, z, 0, ry);
+      for (const [u, v] of [[-0.85, -0.8], [0.85, -0.8], [-0.85, 0.8], [0.85, 0.8]]) { const px = x + (alongX ? v : u), pz = z + (alongX ? u : v); K.add(rbox(0.12, 0.12, 1.25, 0.02), trim, px, 0.3, pz); }
+      K.add(new ConeGeometry(1.75, 0.95, 4), roof, x, 2.0, z, 0, Math.PI / 4); K.add(new ConeGeometry(1.6, 0.9, 4), mSnow, x, 2.12, z, 0, Math.PI / 4);
+      K.add(new SphereGeometry(0.08, 8, 6), M('glow', '#e8b84a'), x, 2.6, z);
+      const fwd = alongX ? [-lm.dir, 0] : [0, -lm.dir], fx = x + fwd[0] * 0.82, fz = z + fwd[1] * 0.82, fry = Math.atan2(fwd[0], fwd[1]);
+      K.add(new CircleGeometry(0.22, 18), M('glow', '#fff8e6'), fx, 1.3, fz, 0, fry); K.add(new TorusGeometry(0.22, 0.03, 5, 18), trim, fx, 1.3, fz, 0, fry);
+      K.add(rbox(0.02, 0.15, 0.02, 0.005), M('glow', '#2b3556'), fx, 1.34, fz, 0, fry); K.add(rbox(0.11, 0.02, 0.02, 0.005), M('glow', '#2b3556'), fx + 0.04, 1.3, fz, 0, fry);
+      for (const s2 of [-0.45, 0.45]) { const wx = fx + (alongX ? 0 : s2), wz = fz + (alongX ? s2 : 0); K.add(new PlaneGeometry(0.32, 0.4), mGlass, wx + fwd[0] * 0.01, 0.95, wz + fwd[1] * 0.01, 0, fry); }
+      const sg = sign('Kasımpaşa Pier', 1.6); sg.position.set(x, 2.95, z); group.add(sg);
+      lantern(fx, 1.75, fz, true); smokeSources.push([x, 2.7, z]);
+      life.perches.push([x, 2.68, z]);
+    } else if (lm.type === 'ferry') { // a Golden Horn ferry stuck in the ice: white upper decks, navy hull, warm windows, lifebuoys, a smoking funnel
       const [x, z] = centre(lm), alongX = lm.along !== 'z', ry = alongX ? 0 : Math.PI / 2;
       const F = (u, v) => (alongX ? [x + u, z + v] : [x + v, z - u]);
-      K.add(rbox(4.0, 1.8, 0.8, 0.3, 3), M('metal', '#e8e4ee'), x, -0.15, z, 0, ry); K.add(rbox(4.05, 1.85, 0.18, 0.06), M('metal', '#3d4a6b'), x, 0.05, z, 0, ry);
-      K.add(rbox(2.6, 1.3, 0.75, 0.1), M('plaster', '#f0ecf4'), x, 0.65, z, 0, ry); K.add(rbox(2.7, 1.4, 0.12, 0.05), M('metal', '#3d4a6b'), x, 1.4, z, 0, ry); K.add(rbox(2.6, 1.3, 0.25, 0.12, 3), mSnow, x, 1.5, z, 0, ry);
-      for (let k = 0; k < 4; k++) { const [wx, wz] = F(-0.9 + k * 0.6, 0.66); K.add(new PlaneGeometry(0.4, 0.32), mGlass, wx, 1.0, wz, 0, ry); }
-      const [fx, fz] = F(0.6, 0); K.add(new CylinderGeometry(0.18, 0.2, 0.7, 12), M('metal', '#c8584a'), fx, 1.9, fz); K.add(new CylinderGeometry(0.22, 0.22, 0.12, 12), mSnow, fx, 2.28, fz);
-      smokeSources.push([fx, 2.4, fz]);
+      K.add(rbox(4.6, 1.9, 0.6, 0.3, 3), M('metal', '#2f3b63'), x, -0.2, z, 0, ry); K.add(rbox(4.5, 1.85, 0.4, 0.25, 3), M('plaster', '#f6f3f8'), x, 0.3, z, 0, ry);
+      K.add(rbox(4.6, 1.95, 0.08, 0.04), M('fabric', '#c8443c'), x, 0.36, z, 0, ry);
+      K.add(rbox(3.2, 1.4, 0.7, 0.1), M('plaster', '#f6f3f8'), x, 0.7, z, 0, ry); K.add(rbox(3.3, 1.5, 0.1, 0.05), M('metal', '#3d4a6b'), x, 1.4, z, 0, ry); K.add(rbox(3.2, 1.4, 0.24, 0.12, 3), mSnow, x, 1.48, z, 0, ry);
+      K.add(rbox(1.2, 1.0, 0.5, 0.08), M('plaster', '#f6f3f8'), x - (alongX ? 1.0 : 0), 1.5, z + (alongX ? 0 : 1.0), 0, ry); K.add(rbox(1.25, 1.05, 0.16, 0.08, 3), mSnow, x - (alongX ? 1.0 : 0), 2.02, z + (alongX ? 0 : 1.0), 0, ry);
+      for (let k = 0; k < 6; k++) for (const side of [0.71, -0.71]) { const [wx, wz] = F(-1.35 + k * 0.54, side); K.add(new PlaneGeometry(0.34, 0.3), mGlass, wx, 1.02, wz, 0, ry + (side < 0 ? Math.PI : 0)); }
+      for (const u of [-1.6, 1.6]) { const [bx, bz] = F(u, 0.97); K.add(new TorusGeometry(0.16, 0.05, 6, 12), M('fabric', '#ffffff'), bx, 0.55, bz, 0, ry); K.add(new TorusGeometry(0.165, 0.052, 6, 12, Math.PI / 2), M('fabric', '#d9443a'), bx, 0.55, bz, 0, ry); K.add(new TorusGeometry(0.165, 0.052, 6, 12, Math.PI / 2), M('fabric', '#d9443a'), bx, 0.55, bz, 0, ry, Math.PI); }
+      const [fx, fz] = F(0.7, 0); K.add(new CylinderGeometry(0.2, 0.24, 0.9, 14), M('plaster', '#f2c14e'), fx, 2.0, fz); K.add(new CylinderGeometry(0.205, 0.205, 0.22, 14), M('metal', '#2b2f45'), fx, 2.38, fz); K.add(new CylinderGeometry(0.26, 0.26, 0.1, 14), mSnow, fx, 2.52, fz);
+      const [mx, mz] = F(-1.8, 0); K.put('mast', GEO.post, mMetal, mx, 1.4, mz, 0, 0.6, 2.2, 0.6); K.add(rbox(0.4, 0.02, 0.26, 0.01), M('fabric', '#d9443a'), mx + (alongX ? 0.2 : 0), 2.35, mz + (alongX ? 0 : 0.2), 0, ry);
+      smokeSources.push([fx, 2.6, fz]);
       for (const [u, v, y] of [[-1.4, 0, 1.65], [-0.4, 0.3, 1.65], [1.6, -0.5, 0.75]]) { const [px, pz] = F(u, v); life.perches.push([px, y, pz]); }
     } else if (lm.type === 'pavilion') { // an octagonal park pavilion under a heavy snow roof
       const [x, z] = centre(lm);

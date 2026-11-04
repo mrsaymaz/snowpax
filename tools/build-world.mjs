@@ -160,10 +160,16 @@ for (const op of outposts) {
       for (const [ti, tj] of [t1, t2]) { clearAround(ti, tj, 1, 1); set(ti, tj, 'L'); }
       landmarks.push({ type: 'footbridge', a: t1, b: t2, outpost: op.id });
     }
-  } else if (op.landmark === 'archers-lodge') { clearAround(i + 6, j - 3, 3, 3); place('archers-lodge', i + 6, j - 3, 3, 3, { outpost: op.id }); for (const [dx, dz] of [[-6, -6], [-7, 4], [6, 5]]) { clearAround(i + dx, j + dz, 1, 1); place('target', i + dx, j + dz, 1, 1, { outpost: op.id }); } for (const [dx, dz] of [[-6, 0], [5, -6]]) { clearAround(i + dx, j + dz, 1, 1); place('marker-stone', i + dx, j + dz, 1, 1, { outpost: op.id }); } }
+  } else if (op.landmark === 'archers-lodge') {
+    // the Archers' Lodge, straw targets, and the tall marble record stones (menzil taşları) that
+    // mark famous long shots across the archery ground
+    clearAround(i + 6, j - 4, 4, 3); place('archers-lodge', i + 6, j - 4, 4, 3, { outpost: op.id });
+    for (const [dx, dz] of [[-6, -6], [-7, 4], [-3, 7]]) { if (!land(i + dx, j + dz)) continue; clearAround(i + dx, j + dz, 1, 1); place('target', i + dx, j + dz, 1, 1, { outpost: op.id }); }
+    [[-6, 0], [5, -8], [-3, -8], [-9, -3], [0, -9], [-9, 3], [9, -1]].forEach(([dx, dz], k) => { if (!land(i + dx, j + dz)) return; clearAround(i + dx, j + dz, 1, 1, 0); place('marker-stone', i + dx, j + dz, 1, 1, { outpost: op.id, n: k }); });
+  }
   else if (op.landmark === 'fountain') { clearAround(i - 1, j - 8, 2, 2); place('fountain', i - 1, j - 8, 2, 2, { outpost: op.id }); clearAround(i + 6, j - 2, 2, 2); place('plane-tree', i + 6, j - 2, 2, 2, { outpost: op.id }); place('simit-cart', i + 3, j + 3, 1, 1, { outpost: op.id }); }
   else if (op.landmark === 'admiral') {
-    clearAround(i - 1, j - 7, 2, 2); place('admiral', i - 1, j - 7, 2, 2, { outpost: op.id });
+    clearAround(i - 2, j - 9, 3, 3); place('admiral', i - 2, j - 9, 3, 3, { outpost: op.id }); // the admiral with his lion, a big statue on the waterfront
     // the ferry pier: from the plaza into the frozen Golden Horn (walkable), a ferry stuck in the ice at the end
     // which way is the water closest? (the Golden Horn bends round Kasımpaşa)
     const dirs = [[0, 1], [-1, 0], [1, 0], [0, -1]].map(([di, dj]) => { let k = 5; while (k < 30 && land(i + di * k, j + dj * k)) k++; return { di, dj, k }; }).sort((a, b) => a.k - b.k);
@@ -172,11 +178,14 @@ for (const op of outposts) {
     while (land(ci, cj) && k < 30) { for (const s2 of [0, -1]) { const a = ci + wide[0] * s2, b = cj + wide[1] * s2; if (land(a, b) && !'OfdG#'.includes(get(a, b))) set(a, b, 'P'); } k++; ci = i + di * k; cj = j + dj * k; }
     const cells = []; for (let m = 0; m < 6 && inB(ci, cj); m++, k++, ci = i + di * k, cj = j + dj * k) for (const s2 of [0, -1]) { set(ci + wide[0] * s2, cj + wide[1] * s2, 'j'); cells.push([ci + wide[0] * s2, cj + wide[1] * s2]); }
     const is = cells.map(c => c[0]), js = cells.map(c => c[1]);
+    // a ferry pier building (iskele) at the far end of the pier
+    const endCells = cells.slice(-4); for (const [a, b] of endCells) set(a, b, 'G');
+    landmarks.push({ type: 'iskele', i: Math.min(...endCells.map(c => c[0])), j: Math.min(...endCells.map(c => c[1])), w: 2, h: 2, along: dj ? 'z' : 'x', dir: dj ? Math.sign(dj) : Math.sign(di), outpost: op.id });
     const pier = { type: 'pier', i: Math.min(...is), j: Math.min(...js), w: Math.max(...is) - Math.min(...is) + 1, h: Math.max(...js) - Math.min(...js) + 1, along: dj ? 'z' : 'x', outpost: op.id };
     landmarks.push(pier);
     // the ferry lies alongside the end of the pier, in the ice
-    const end = cells.slice(-4), ei = Math.min(...end.map(c => c[0])), ej = Math.min(...end.map(c => c[1]));
-    const ferry = dj ? { i: Math.max(...is) + 1, j: dj > 0 ? ej - 1 : ej - 1, w: 2, h: 4 } : { i: di > 0 ? ei - 1 : ei - 1, j: Math.max(...js) + 1, w: 4, h: 2 };
+    // docked head-on beyond the end of the pier, one tile of ice between
+    const ferry = dj ? { i: Math.min(...is), j: dj > 0 ? Math.max(...js) + 2 : Math.min(...js) - 6, w: 2, h: 4 } : { i: di > 0 ? Math.max(...is) + 2 : Math.min(...is) - 6, j: Math.min(...js), w: 4, h: 2 };
     landmarks.push({ type: 'ferry', ...ferry, along: dj ? 'z' : 'x', outpost: op.id });
   } else if (op.landmark === 'pavilion') { clearAround(i + 6, j - 2, 2, 2); place('pavilion', i + 6, j - 2, 2, 2, { outpost: op.id }); for (const [dx, dz] of [[-7, -2], [-7, 1]]) { clearAround(i + dx, j + dz, 1, 1); place(dz < 0 ? 'slide' : 'swings', i + dx, j + dz, 1, 1, { outpost: op.id }); } clearAround(i - 6, j - 8, 2, 2); place('giant-snowman', i - 6, j - 8, 2, 2, { outpost: op.id }); /* behind the lodge, so it never hides the play */ }
 }
