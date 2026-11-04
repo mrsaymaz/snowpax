@@ -10,12 +10,12 @@ export const LIVES = 3;
 // ride: the themed sled track; spell: the run has letters to spell a word (practice only).
 // newRival: the rival type this stage introduces ("New rivals!" card).
 export const STAGES = [
-  { id: 'boulevard', outpost: 'boulevard', family: 'answer', title: 'Boulevard Park', ride: { theme: 'boulevard', seconds: 28, spell: false }, newRival: 'waddler' },
-  { id: 'archery', outpost: 'archery', family: 'sort', title: 'Archery Ground', ride: { theme: 'archery', seconds: 28, spell: true }, newRival: 'shield' },
-  { id: 'kizilay', outpost: 'kizilay', family: 'match', title: 'Kızılay Square', ride: { theme: 'kizilay', seconds: 30, spell: false }, newRival: 'sledder' },
-  { id: 'sururi', outpost: 'sururi', family: 'build', title: 'Sururi Park', ride: { theme: 'sururi', seconds: 30, spell: true }, newRival: 'lobber' },
-  { id: 'waterfront', outpost: 'waterfront', family: 'listen', title: 'Waterfront Park', ride: { theme: 'waterfront', seconds: 32, spell: false }, newRival: null },
-  { id: 'showdown', outpost: null, family: null, title: 'Schoolyard Showdown', ride: { theme: 'home', seconds: 24, spell: true }, newRival: 'captain', final: true },
+  { id: 'boulevard', outpost: 'boulevard', family: 'answer', title: 'Boulevard Park', ride: { theme: 'boulevard', seconds: 45, spell: false }, newRival: 'waddler' },
+  { id: 'archery', outpost: 'archery', family: 'sort', title: 'Archery Ground', ride: { theme: 'archery', seconds: 45, spell: true }, newRival: 'shield' },
+  { id: 'kizilay', outpost: 'kizilay', family: 'match', title: 'Kızılay Square', ride: { theme: 'kizilay', seconds: 45, spell: false }, newRival: 'sledder' },
+  { id: 'sururi', outpost: 'sururi', family: 'build', title: 'Sururi Park', ride: { theme: 'sururi', seconds: 45, spell: true }, newRival: 'lobber' },
+  { id: 'waterfront', outpost: 'waterfront', family: 'listen', title: 'Waterfront Park', ride: { theme: 'waterfront', seconds: 45, spell: false }, newRival: null },
+  { id: 'showdown', outpost: null, family: null, title: 'Schoolyard Showdown', ride: { theme: 'home', seconds: 45, spell: true }, newRival: 'captain', final: true },
 ];
 export const stageById = id => STAGES.find(s => s.id === id);
 

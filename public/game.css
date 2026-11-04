@@ -474,3 +474,8 @@ body.station #banner { display: none; } /* the fight's banners wait; the station
   .wt-card { min-height: 36px; padding: 4px 8px; } .wt-brick { min-height: 36px; padding: 4px 8px; } .wt-brick.ice { font-size: 18px; min-width: 36px; }
   .wt-bell { font-size: 14px; padding: 5px 12px; } .wt-placed { font-size: 11.5px; }
 }
+#seizebtn { position: fixed; left: 50%; bottom: calc(150px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 31; font: 900 22px system-ui, sans-serif; padding: 10px 26px; border-radius: 999px; border: 3px solid var(--ink); background: linear-gradient(#ffe066, #ffb703); color: var(--ink); box-shadow: 0 4px 0 var(--ink); cursor: pointer; animation: seize-pulse 0.9s ease-in-out infinite alternate; }
+#seizebtn[hidden] { display: none; }
+@keyframes seize-pulse { to { box-shadow: 0 4px 0 var(--ink), 0 0 0 10px rgba(255, 209, 102, 0.35); } }
+@media (prefers-reduced-motion: reduce) { #seizebtn { animation: none; } }
+body.reading #seizebtn, body.sledding #seizebtn { display: none; }

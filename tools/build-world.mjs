@@ -467,6 +467,22 @@ for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (WALK.has(g[j][i]) &&
 // a few trees in the parks
 for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (get(i, j) === 'p' && rand() < 0.12) g[j][i] = 't';
 
+// 9. a fight yard in front of every outpost: the most open wedge of the stage (no water, no
+//    landmarks) is cleared to open snow, with two low snow walls for cover. The team arrives at
+//    its far end and fights the first wave there before walking into the circle to seize it.
+const KEEP = 'WGOQCMSKkjX', CLEAR = 'HRDlTvyxtb#nFBcfL';
+for (const op of outposts) {
+  const cells = (deg, f) => { for (let r = 4.5; r <= 12.5; r += 0.5) for (let da = -34; da <= 34; da += 4) { const a = (deg + da) * Math.PI / 180, i = Math.round(op.i + Math.cos(a) * r), j = Math.round(op.j + Math.sin(a) * r); f(i, j, get(i, j)); } };
+  let best = null;
+  for (let deg = 0; deg < 360; deg += 10) {
+    let score = 0; cells(deg, (i, j, c) => { score += c === 'W' ? -6 : KEEP.includes(c) ? -4 : CLEAR.includes(c) ? -0.4 : 1; });
+    if (!best || score > best.score) best = { deg, score };
+  }
+  let cleared = 0; cells(best.deg, (i, j, c) => { if (CLEAR.includes(c)) { g[j][i] = '.'; cleared++; } });
+  for (const da of [-15, 15]) { const a = (best.deg + da) * Math.PI / 180, ti = -Math.sin(a), tj = Math.cos(a); for (const k of [-0.5, 0.5]) { const i = Math.round(op.i + Math.cos(a) * 8 + ti * k), j = Math.round(op.j + Math.sin(a) * 8 + tj * k); if (get(i, j) === '.' || get(i, j) === '_') g[j][i] = '#'; } }
+  op.yard = best.deg; console.log(`fight yard: ${op.id} at ${best.deg}°, ${cleared} cells cleared`);
+}
+
 const rows = g.map(r => r.join(''));
 const out = {
   v: 3, id: 'arena1', name: 'Home Turf', kind: 'tiles', world: true, tile: TILE, w: W, h: H,

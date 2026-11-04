@@ -5,12 +5,12 @@ stages played in order, nearest outpost first:
 
 | # | Stage | Sled ride | Task family | New rival |
 |---|---|---|---|---|
-| 1 | Boulevard Park | 28 s, plane-tree avenue | Answer | snowmen (waddlers) |
-| 2 | Archery Ground | 28 s, record stones and targets, spelling letters | Sorting | shield snowmen |
-| 3 | Kızılay Square | 30 s, tiled kiosks and simit carts | Matching | sledder snowmen |
-| 4 | Sururi Park | 30 s, snow castles and slides, spelling letters | Builder | lobber snowmen |
-| 5 | Waterfront Park | 32 s, along the frozen Golden Horn | Listening | — (everything mixed) |
-| 6 | Schoolyard Showdown | 24 s, home to Our School | all five | the rival captain |
+| 1 | Boulevard Park | 45 s, plane-tree avenue | Answer | snowmen (waddlers) |
+| 2 | Archery Ground | 45 s, record stones and targets, spelling letters | Sorting | shield snowmen |
+| 3 | Kızılay Square | 45 s, tiled kiosks and simit carts | Matching | sledder snowmen |
+| 4 | Sururi Park | 45 s, snow castles and slides, spelling letters | Builder | lobber snowmen |
+| 5 | Waterfront Park | 45 s, along the frozen Golden Horn | Listening | — (everything mixed) |
+| 6 | Schoolyard Showdown | 45 s, home to Our School | all five | the rival captain |
 
 ## Look, time of day and dressing
 
@@ -49,8 +49,11 @@ Each stage has its own time of day (`STAGE_LIGHT` in `brawl.js`, presets in `DAY
    - **Crashes:** a crash costs a life and drops 3 snowflakes.
    - **First ride:** the first ride says "JUMP!" or "DUCK!" before each new kind of obstacle.
 3. **Stand at the outpost** (since the play-test: a fight comes first)
-   - **The opening fight:** the first wave walks in and the team fights it. When it is (nearly)
-     cleared, after at least 6 s, or after 14 s at most, "SEIZE IT!" and the station opens.
+   - **The fight yard:** every outpost has an open wedge of snow on its most open side, with two
+     low snow walls for cover (`tools/build-world.mjs`, step 9). The team arrives at its far end.
+   - **The opening fight:** the first wave walks into the yard and the team fights it there. When it is (nearly)
+     cleared, after at least 6 s, or after 14 s at most, "SEIZE IT!": walk into the glowing circle (or tap ▶ Seize; after 8 s the kid walks in) and the
+     station opens.
    - **Controls:** move with the stick on the left; tap a rival to throw at it, tap your own kid
      to throw at the nearest rival, or use the throw button (tap = nearest, drag = aim). (`stagerun.js`, `waves.mjs`).
    - **Arrival:** the team skids into the circle and the task card opens. A ring of snowbanks
@@ -117,8 +120,10 @@ celebration, results). Arena 1 comes to about **11.9 minutes** for every Grade 5
 | Waterfront | 32 s | 63 s (6) | 29 s | 2:04 |
 | Showdown | 24 s | 98 s (12) | 31 s | 2:33 |
 
-After the first play-test an opening fight was added at every stand (about 10 s), so the rides
-were shortened again (now 24–32 s) and the final wave lasts at most 8 s. The test checks 10
+After the first play-test the rides became 45 s and wind (curves, banked turns, gentle hills), and
+every stand opens with a fight in the outpost's fight yard (about 10 s, plus about 3 s to walk
+into the circle). That brings Arena 1 to about **13.9 minutes**, over the brief's 10–12; the
+class play-test should decide what to trim. The table above is from before these changes. The test checks 10
 seeds. Real play with students should confirm the per-item seconds.
 
 **Test links:**

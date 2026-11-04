@@ -45,7 +45,7 @@ export function buildTileArena(def) {
       { id: 'base', kind: 'base', label: 'Our School', x: home[0], z: home[1] },
       { id: 'rival-base', kind: 'rivalBase', label: 'Snow Camp', x: rival[0], z: rival[1] },
       ...(def.outposts
-        ? def.outposts.map(o => ({ id: o.id, kind: 'zone', family: o.family, label: o.label, landmark: o.landmark, x: x0 + o.i, z: z0 + o.j, r: o.r || 3.4 }))
+        ? def.outposts.map(o => ({ id: o.id, kind: 'zone', family: o.family, label: o.label, landmark: o.landmark, yard: o.yard ?? null, x: x0 + o.i, z: z0 + o.j, r: o.r || 3.4 }))
         : [{ id: 'zone', kind: 'zone', label: 'Street Outpost', x: zc[0], z: zc[1], r: def.zoneRadius || 2.3 }]),
     ],
     world: !!def.world, landmarks: def.landmarks || [], scenery: def.scenery || [],

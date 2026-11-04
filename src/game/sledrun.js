@@ -4,11 +4,12 @@
 // awnings and swooping gulls; steer round sleeping cats. Collect snowflakes, golden word
 // snowflakes (English word + Turkish meaning) and, on some runs, the letters of a word to spell
 // (practice: never counted toward the 80%). A crash costs a life. Each run has its own themed
-// scenery and ends at the next outpost.
+// scenery and ends at the next outpost. The track winds: it turns left and right, banks into the
+// curves and rolls over gentle hills (the lane rules stay the same, in the track's own frame).
 import {
   Scene, PerspectiveCamera, HemisphereLight, DirectionalLight, Fog, Color, Group, Mesh, MeshLambertMaterial, MeshBasicMaterial, Object3D,
   BoxGeometry, SphereGeometry, CylinderGeometry, ConeGeometry, PlaneGeometry, TorusGeometry, CapsuleGeometry, BufferAttribute, CanvasTexture,
-  SRGBColorSpace, RepeatWrapping, Sprite, SpriteMaterial, InstancedMesh, AdditiveBlending,
+  SRGBColorSpace, RepeatWrapping, Sprite, SpriteMaterial, InstancedMesh, AdditiveBlending, Vector3, Float32BufferAttribute, BufferGeometry,
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Kid } from './render/kids.js';
@@ -98,13 +99,9 @@ export class SledRun {
     this.mats = { vc: new MeshLambertMaterial({ vertexColors: true }) };
     // the track: snow ground with three trodden lanes, banks either side
     const groundTex = (() => { const c = document.createElement('canvas'); c.width = 128; c.height = 256; const g = c.getContext('2d'); g.fillStyle = '#eef2fc'; g.fillRect(0, 0, 128, 256); for (const x of [22, 64, 106]) { g.fillStyle = 'rgba(160,165,215,0.35)'; g.fillRect(x - 15, 0, 30, 256); g.fillStyle = 'rgba(120,130,200,0.35)'; g.fillRect(x - 9, 0, 3, 256); g.fillRect(x + 6, 0, 3, 256); } for (let k = 0; k < 40; k++) { g.fillStyle = 'rgba(255,255,255,0.8)'; g.fillRect(rnd(k, 1) * 128, rnd(k, 2) * 256, 2, 3); } const t = new CanvasTexture(c); t.wrapS = t.wrapT = RepeatWrapping; t.colorSpace = SRGBColorSpace; return t; })();
-    groundTex.repeat.set(1, 12); this.groundTex = groundTex;
-    const ground = new Mesh(new PlaneGeometry(LANE * 3 + 0.8, 120), new MeshLambertMaterial({ map: groundTex })); ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0, -50); scene.add(ground);
-    const field = new Mesh(new PlaneGeometry(80, 120), new MeshLambertMaterial({ color: T.sea ? '#79acd8' : '#f2f5fd' })); field.rotation.x = -Math.PI / 2; field.position.set(T.sea ? -44 : 0, -0.02, -50); scene.add(field);
-    if (T.sea) { const snowR = new Mesh(new PlaneGeometry(40, 120), new MeshLambertMaterial({ color: '#f2f5fd' })); snowR.rotation.x = -Math.PI / 2; snowR.position.set(22, -0.01, -50); scene.add(snowR); }
-    const bankGeo = bake([[Sp(1, 10, 5), SNOW, 0, 0, 0, 0, 0, 0, 0.7, 0.45, 3.2]]);
-    this.banks = []; for (let k = 0; k < 24; k++) for (const s of [-1, 1]) { const m = new Mesh(bankGeo, this.mats.vc); m.position.set(s * (LANE * 1.5 + 0.9), 0, -k * 5); scene.add(m); this.banks.push(m); }
-
+    groundTex.repeat.set(1, 1); this.groundTex = groundTex;
+    this.buildPath(theme);
+    this.buildGround(groundTex, T);
     this.geo = {}; this.pool = new Map(); this.items = []; this.props = [];
     // the student on a sled
     this.fakeC = { id: 1, team, kit, look, x: 0, z: 0, face: Math.PI, moving: 6, sled: true, frozen: 0, thaw: 0, flash: 0, hidden: false, revealT: 0, shield: 0, warmth: 100, maxWarmth: 100, ammo: 3, super: 0, captain: false, side: 'home', role: 'player' };
@@ -118,6 +115,59 @@ export class SledRun {
     this.plan();
     this.scenery();
   }
+
+  // ---------- the winding path: centre, heading, height and bank for every metre ----------
+  buildPath(theme) {
+    const N = Math.ceil(this.length + 160), seed = [...theme].reduce((a, c) => a + c.charCodeAt(0), 0), r = k => rnd(seed, k) * 6.28;
+    const P = this.path = { N, x: new Float32Array(N + 1), z: new Float32Array(N + 1), h: new Float32Array(N + 1), th: new Float32Array(N + 1), bank: new Float32Array(N + 1) };
+    const flat = this.T.sea ? 0 : 1, end = this.length + 12;
+    let x = 0, z = 0;
+    for (let i = 0; i <= N; i++) {
+      const ramp = Math.max(0, Math.min(1, (i - 18) / 45, (end - i) / 45)), e = ramp * ramp * (3 - 2 * ramp); // straight at the start and the finish
+      P.th[i] = e * (0.85 * Math.sin(i / 37 + r(1)) + 0.5 * Math.sin(i / 16 + r(2)) + 0.18 * Math.sin(i / 7.5 + r(3)));
+      P.h[i] = e * flat * (1.5 * Math.sin(i / 43 + r(4)) + 0.7 * Math.sin(i / 17 + r(5)));
+      P.x[i] = x; P.z[i] = z; x += Math.sin(P.th[i]); z -= Math.cos(P.th[i]);
+    }
+    for (let i = 0; i <= N; i++) { const a = P.th[Math.min(N, i + 2)] - P.th[Math.max(0, i - 2)]; P.bank[i] = Math.max(-0.24, Math.min(0.24, a / 4 * 11)); } // outer edge higher in a turn
+  }
+  // where a point of the track is: distance s along it, lat metres to the right, y up from the snow
+  at(s, lat = 0, y = 0, out = new Vector3()) {
+    const P = this.path, i0 = Math.max(0, Math.min(P.N - 1, Math.floor(s))), t = Math.max(-40, Math.min(40, s - i0));
+    const lerp = a => a[i0] + (a[i0 + 1] - a[i0]) * Math.max(0, Math.min(1, t)), th = lerp(P.th), bank = lerp(P.bank);
+    const ex = t < 0 || t > 1 ? (t < 0 ? t : t - 1) : 0, base = t > 1 ? i0 + 1 : i0; // beyond the ends: straight on
+    const cx = (t >= 0 && t <= 1 ? lerp(P.x) : P.x[base] + Math.sin(th) * ex), cz = (t >= 0 && t <= 1 ? lerp(P.z) : P.z[base] - Math.cos(th) * ex);
+    return out.set(cx + Math.cos(th) * lat, lerp(P.h) + y - lat * bank, cz + Math.sin(th) * lat);
+  }
+  heading(s) { const P = this.path, i = Math.max(0, Math.min(P.N - 1, Math.floor(s))), t = Math.max(0, Math.min(1, s - i)); return P.th[i] + (P.th[i + 1] - P.th[i]) * t; }
+  bankAt(s) { const P = this.path, i = Math.max(0, Math.min(P.N, Math.round(s))); return P.bank[i]; }
+  slope(s) { const P = this.path, i = Math.max(1, Math.min(P.N - 1, Math.round(s))); return (P.h[i + 1] - P.h[i - 1]) / 2; }
+  // the track ribbon, the snowfield either side (banked near the track), the snowbanks along it
+  buildGround(groundTex, T) {
+    const P = this.path, N = P.N, v = new Vector3();
+    const ribbon = (lats, colorOf = null, bankK = () => 1, lift = 0) => {
+      const pos = [], uv = [], col = [], idx = [], W = lats.length, c = new Color();
+      for (let i = 0; i <= N; i++) for (let k = 0; k < W; k++) {
+        const lat = lats[k], bk = bankK(Math.abs(lat)); this.at(i, lat, lift, v); v.y += lat * P.bank[i] * (1 - bk); // less bank away from the track
+        pos.push(v.x, v.y, v.z); uv.push(k / (W - 1), i / 10);
+        if (colorOf) { c.set(colorOf(lat)); col.push(c.r, c.g, c.b); }
+        if (i < N && k < W - 1) { const a = i * W + k, b = a + W; idx.push(a, a + 1, b, b, a + 1, b + 1); /* facing up */ }
+      }
+      const g = new BufferGeometry(); g.setAttribute('position', new Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+      if (colorOf) g.setAttribute('color', new Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
+    };
+    const half = LANE * 1.5 + 0.4;
+    this.scene.add(new Mesh(ribbon([-half, half], null, () => 1, 0.03), new MeshLambertMaterial({ map: groundTex })));
+    const sea = T.sea ? '#79acd8' : '#f2f5fd';
+    const field = ribbon([-19, -11, -6, -half, half, 6, 11, 19], lat => (lat < -6.5 ? sea : '#f2f5fd'), a => (a <= 6 ? 1 : a >= 11 ? 0 : 1 - (a - 6) / 5));
+    this.scene.add(new Mesh(field, new MeshLambertMaterial({ vertexColors: true })));
+    let minH = 0, cx = 0, cz = 0; for (let i = 0; i <= N; i++) { minH = Math.min(minH, P.h[i]); cx += P.x[i] / (N + 1); cz += P.z[i] / (N + 1); }
+    const base = new Mesh(new PlaneGeometry(900, 900), new MeshLambertMaterial({ color: T.sea ? '#a9c7e6' : '#eef2fb' })); base.rotation.x = -Math.PI / 2; base.position.set(cx, minH - 0.4, cz); this.scene.add(base);
+    const bankGeo = bake([[Sp(1, 10, 5), SNOW, 0, 0, 0, 0, 0, 0, 0.7, 0.45, 3.2]]), n = Math.floor(N / 5), banks = new InstancedMesh(bankGeo, this.mats.vc, n * 2), o = new Object3D();
+    let k = 0; for (let j = 0; j < n; j++) for (const sd of [-1, 1]) { this.at(j * 5, sd * (LANE * 1.5 + 0.9), 0, o.position); o.rotation.set(0, -P.th[j * 5], 0); o.updateMatrix(); banks.setMatrixAt(k++, o.matrix); }
+    this.scene.add(banks);
+  }
+  // put a mesh at a point of the track, turned to face along it
+  put(m, s, lat, y = 0, ry = 0) { this.at(s, lat, y, m.position); m.rotation.set(0, -this.heading(s) + ry, 0); }
 
   mesh(kind) {
     const list = this.pool.get(kind) || []; this.pool.set(kind, list);
@@ -164,11 +214,11 @@ export class SledRun {
   // scenery on both sides, recycled as the sled goes by
   scenery() {
     const T = this.T;
-    for (let k = 0; k < 30; k++) for (const s of [-1, 1]) {
+    for (let k = 0; k * T.gap < this.length - 6; k++) for (const s of [-1, 1]) { // along the whole winding track
       if (T.sea && s < 0) continue;
       const kind = T.props[Math.floor(rnd(k, s + 3) * T.props.length)], m = this.mesh(kind === 'house' ? 'house' + (k % 4) : kind);
-      const off = kind === 'house' ? 7 + rnd(k, s) * 2 : 4.3 + rnd(s, k) * 1.4;
-      this.props.push({ m, d: k * T.gap * (kind === 'house' ? 1 : 1) + rnd(k, s * 7) * 1.5, x: s * off, ry: kind === 'house' ? (s > 0 ? -Math.PI / 2 : Math.PI / 2) : rnd(k, s) * 6 });
+      const off = kind === 'house' ? 7 + rnd(k, s) * 2 : 4.3 + rnd(s, k) * 1.4, d = k * T.gap + rnd(k, s * 7) * 1.5;
+      this.put(m, d, s * off, 0, kind === 'house' ? (s > 0 ? -Math.PI / 2 : Math.PI / 2) : rnd(k, s) * 6);
     }
     // the outpost at the end of the run: a big landmark and a banner over the track
     const end = this.mesh(T.end); end.scale.setScalar(T.end === 'ferry' || T.end === 'school' ? 1 : 2.2); this.endMesh = end;
@@ -181,7 +231,7 @@ export class SledRun {
   jump() { if (this.finished || this.y > 0.05 || this.duckT > 0.2) return; this.vy = 7.4; this.on.sound?.('dodge'); }
   duck() { if (this.finished) return; this.duckT = 0.65; if (this.y > 0.05) this.vy = -9; }
 
-  spark(x, y, z, n, col, power = 3) { const c = new Color(col); for (let k = 0; k < n; k++) { if (this.sparks.length > 110) this.sparks.shift(); const a = this.rng() * 6.28; this.sparks.push({ x, y, z, vx: Math.cos(a) * power * this.rng(), vy: 1 + this.rng() * power, vz: Math.sin(a) * power * this.rng(), t: 0.6, c }); } }
+  spark(x, y, z, n, col, power = 3) { const c = new Color(col), w = this.at(this.dist + z, x, y); x = w.x; y = w.y; z = w.z; for (let k = 0; k < n; k++) { if (this.sparks.length > 110) this.sparks.shift(); const a = this.rng() * 6.28; this.sparks.push({ x, y, z, vx: Math.cos(a) * power * this.rng(), vy: 1 + this.rng() * power, vz: Math.sin(a) * power * this.rng(), t: 0.6, c }); } }
 
   crash() {
     if (this.blinkT > 0 || this.finished) return;
@@ -238,12 +288,11 @@ export class SledRun {
 
   place(dt = 0) {
     const d = this.dist, o = new Object3D();
-    this.groundTex.offset.y = (d / 10) % 1;
-    for (const b of this.banks) { b.position.z += this.v * dt; if (b.position.z > 6) b.position.z -= 120; }
     // the student
     const k = this.kid; this.fakeC.moving = this.v; this.fakeC.flash = this.stumbleT > 0.7 ? 0.1 : 0;
     k.update(dt, { visible: !(this.blinkT > 0 && Math.floor(this.blinkT * 10) % 2), reduceMotion: this.reduceMotion });
-    k.bar.visible = false; k.root.position.set(this.x, this.y, 0); k.root.rotation.z = (LANES[this.lane] - this.x) * -0.12;
+    k.bar.visible = false; this.at(d, this.x, this.y, k.root.position); k.root.rotation.order = 'YXZ';
+    k.root.rotation.set(this.slope(d) * 0.9, -this.heading(d), (LANES[this.lane] - this.x) * -0.12 - this.bankAt(d) * 0.8); // leans into the curve
     k.kid.scale.y = k.kid.scale.x * (this.duckT > 0 ? 0.55 : 1);
     // the obstacles and pickups in view
     for (const it of this.items) {
@@ -255,26 +304,25 @@ export class SledRun {
         else if (it.kind === 'letter') it.m = this.letterMesh(it.ch);
         else it.m = this.mesh(it.kind);
       }
-      const x = it.full ? 0 : LANES[it.lane], z = -dz;
-      if (it.kind === 'flake' || it.kind === 'word') { it.m.position.set(x, (it.y || 0.6) + Math.sin(this.time * 3 + it.d) * 0.08, z); it.m.rotation.y = this.time * 2 + it.d; it.m.scale.setScalar(it.kind === 'word' ? 1.6 : 0.9); if (it.tag) { it.tag.visible = true; it.tag.position.set(x, 1.9, z); } }
-      else if (it.kind === 'letter') { it.m.position.set(x, 1.0 + Math.sin(this.time * 3 + it.lane) * 0.06, z); }
-      else if (it.kind === 'gull') { it.m.position.set(x + Math.sin(this.time * 2 + it.d) * 0.3, 1.25 + Math.sin(this.time * 6) * 0.05, z); it.m.rotation.z = Math.sin(this.time * 12) * 0.3; }
-      else if (it.kind === 'branch') { it.m.position.set(x + (it.lane === 2 ? 0 : 0), 0, z); it.m.rotation.y = it.lane === 0 ? Math.PI : 0; }
-      else it.m.position.set(x, 0, z);
+      const x = it.full ? 0 : LANES[it.lane];
+      if (it.kind === 'flake' || it.kind === 'word') { this.put(it.m, it.d, x, (it.y || 0.6) + Math.sin(this.time * 3 + it.d) * 0.08, this.time * 2 + it.d); it.m.scale.setScalar(it.kind === 'word' ? 1.6 : 0.9); if (it.tag) { it.tag.visible = true; this.at(it.d, x, 1.9, it.tag.position); } }
+      else if (it.kind === 'letter') { this.put(it.m, it.d, x, 1.0 + Math.sin(this.time * 3 + it.lane) * 0.06); }
+      else if (it.kind === 'gull') { this.put(it.m, it.d, x + Math.sin(this.time * 2 + it.d) * 0.3, 1.25 + Math.sin(this.time * 6) * 0.05); it.m.rotation.z = Math.sin(this.time * 12) * 0.3; }
+      else if (it.kind === 'branch') this.put(it.m, it.d, x, 0, it.lane === 0 ? Math.PI : 0);
+      else this.put(it.m, it.d, x, 0);
     }
-    for (const p of this.props) {
-      let dz = p.d - d; const span = 30 * this.T.gap; while (dz < -8) { p.d += span; dz += span; }
-      p.m.position.set(p.x, 0, -dz); p.m.rotation.y = p.ry; p.m.visible = dz < 70 && p.d < this.length - 6;
-    }
-    const endZ = -(this.length + 10 - d);
-    this.endMesh.position.set(0, 0, endZ - 6); this.endMesh.visible = endZ > -75;
-    this.banner.position.set(0, 3.3, endZ + 8); this.banner.visible = endZ > -75;
-    for (const a of this.archPosts) { a.m.position.set(a.s * 2.6, 1.7, endZ + 8); a.m.visible = endZ > -75; }
-    // camera behind and above the sled
-    this.camera.position.set(this.x * 0.5, 4.3 + this.y * 0.3, 7.2); this.camera.lookAt(this.x * 0.3, 0.9 + this.y * 0.4, -7);
+    const L = this.length;
+    this.put(this.endMesh, L + 16, 0); this.put(this.banner, L + 2, 0, 3.3);
+    for (const a of this.archPosts) this.put(a.m, L + 2, a.s * 2.6, 1.7);
+    // camera behind and above the sled, following the bends and leaning a little with the bank
+    const th = this.heading(d); this.camTh = this.camTh === undefined ? th : this.camTh + (th - this.camTh) * Math.min(1, dt * 4); // smoothed, so the bends sweep past
+    const sp = this.at(d, this.x * 0.5, 0), ct = this.camTh;
+    this.camera.position.set(sp.x - Math.sin(ct) * 7.2, sp.y + 4.3 + this.y * 0.3, sp.z + Math.cos(ct) * 7.2);
+    const look = this.at(d + 7, this.x * 0.3, 0.9 + this.y * 0.4); look.lerp(new Vector3(sp.x + Math.sin(ct) * 7, sp.y + 0.9 + this.y * 0.4, sp.z - Math.cos(ct) * 7), 0.5);
+    this.camera.lookAt(look); this.camera.rotateZ(this.bankAt(d + 4) * 0.5);
     // sparks
     let n = 0;
-    for (const s of this.sparks) { if (s.t <= 0) continue; s.t -= dt; s.vy -= 9 * dt; s.x += s.vx * dt; s.y += s.vy * dt; s.z += (s.vz + this.v) * dt; o.position.set(s.x, s.y, s.z); o.scale.setScalar(Math.max(0.1, s.t * 1.6)); o.updateMatrix(); this.sparkMesh.setMatrixAt(n, o.matrix); this.sparkMesh.setColorAt(n, s.c); n++; }
+    for (const s of this.sparks) { if (s.t <= 0) continue; s.t -= dt; s.vy -= 9 * dt; s.x += s.vx * dt; s.y += s.vy * dt; s.z += s.vz * dt; o.position.set(s.x, s.y, s.z); o.scale.setScalar(Math.max(0.1, s.t * 1.6)); o.updateMatrix(); this.sparkMesh.setMatrixAt(n, o.matrix); this.sparkMesh.setColorAt(n, s.c); n++; }
     this.sparkMesh.count = n; this.sparkMesh.instanceMatrix.needsUpdate = true; if (this.sparkMesh.instanceColor) this.sparkMesh.instanceColor.needsUpdate = true;
   }
   flakeMesh(big) {

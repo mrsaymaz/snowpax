@@ -126,10 +126,10 @@ function target(s) {
   return g;
 }
 function arrow() {
-  const g = new Group();
+  const g = new Group(); g.scale.setScalar(1.15);
   const shaft = new Mesh(new CylinderGeometry(0.025, 0.025, 1.0, 6), L('#a5714f')); shaft.rotation.x = Math.PI / 2; g.add(shaft);
   const tip = new Mesh(new ConeGeometry(0.06, 0.16, 6), L('#9aa3b5')); tip.rotation.x = -Math.PI / 2; tip.position.z = -0.56; g.add(tip);
-  for (const r of [0, Math.PI / 2]) { const f = new Mesh(new PlaneGeometry(0.16, 0.22), new MeshLambertMaterial({ color: '#d9534f', side: DoubleSide })); f.rotation.set(0, 0, r); f.position.z = 0.42; g.add(f); }
+  for (const r of [0, Math.PI / 2]) { const f = new Mesh(new PlaneGeometry(0.2, 0.3), new MeshLambertMaterial({ color: '#d9534f', side: DoubleSide })); f.rotation.set(Math.PI / 2, r, 0); f.rotateY(0); f.position.z = 0.4; g.add(f); }
   return g;
 }
 export function archerySort(ctx) {
@@ -141,7 +141,7 @@ export function archerySort(ctx) {
     const g = target(s); g.position.set(tx[i], 2.0, -1.2); if (T && n > 2) g.scale.setScalar(0.8); s.step.add(g);
     const title = s.label(`<b>${esc(c.title)}</b>${c.titleTr ? `<small>${esc(c.titleTr)}</small>` : ''}`, { cls: 'wt-target', obj: g, at: [0, 1.35, 0], onTap: () => shoot(i) });
     const tapRing = s.label('', { cls: 'wt-hit', obj: g, at: [0, 0, 0.1], onTap: () => shoot(i) });
-    return { g, title, tapRing, stuck: 0, list: [] };
+    return { g, title, tapRing, stuck: 0, spot: 0, list: [] };
   });
   let sel = null, left = st.cards.length; const missed = new Set();
   const cards = shuffle(st.cards, ctx.rng).map(c => {
@@ -160,22 +160,37 @@ export function archerySort(ctx) {
     T.list.push(s.label(esc(k.c.text), { cls: 'wt-placed' + (ok ? '' : ' fixed'), obj: T.g, at: [0, -1.35 - (T.list.length) * 0.36, 0.3] }));
     if (!left) ctx.finish(900);
   };
-  const fire = (k, i, then) => {
-    const a = arrow(); a.position.copy(A ? A.hand() : k.plank.position); A?.throw(); s.step.add(a);
-    const T = targets[i], hit = [T.g.position.x + (ctx.rng() - 0.5) * 0.7, T.g.position.y + (ctx.rng() - 0.5) * 0.7, T.g.position.z + 0.5];
-    a.lookAt(new Vector3(hit[0], hit[1], hit[2]).add(s.group.position)); a.rotateY(Math.PI);
-    s.fly(a, hit, { T: 0.35, lift: 0.5, done: () => then(a) });
+  // an arrow flies nose first along its arc and sticks straight into the target face, at its own
+  // spot (no two in the same place), then quivers; a bounce hits the rim and drops
+  const SPOTS = [[0, 0.03], [0.24, 0.15], [-0.25, -0.1], [0.1, -0.28], [-0.18, 0.27], [0.34, -0.08], [-0.36, 0.08]];
+  const fire = (k, i, then, stick = true) => {
+    const T = targets[i], sc = T.g.scale.x, face = T.g.position.z + 0.075 * sc, n = T.spot++ % SPOTS.length;
+    const [ox, oy] = stick ? SPOTS[n] : [0.85, 0.55 * (ctx.rng() < 0.5 ? 1 : -1)];
+    const a = arrow(), from = (A ? A.hand() : k.plank.position.clone()); a.position.copy(from); A?.throw(); s.step.add(a);
+    // stuck, the shaft points back toward the shooter a little (as real arrows sit), so it shows
+    const tipAt = new Vector3(T.g.position.x + ox * sc, T.g.position.y + oy * sc, face - 0.1), tail = from.clone().sub(tipAt).normalize().multiplyScalar(0.5).add(new Vector3(0, 0, 1)).normalize();
+    const to = tipAt.clone().addScaledVector(tail, 0.64 * 1.15); // the tip is 0.64 ahead of the middle (×1.15 scale)
+    const land = () => { a.position.copy(to); a.lookAt(to.clone().add(tail)); then(a); };
+    if (s.reduceMotion) { a.position.copy(to); land(); return; }
+    let t = 0, live = true; const Tf = 0.38, prev = new Vector3(), back = new Vector3();
+    s.onTick(dt => {
+      if (!live) return; t += dt; const q = Math.min(1, t / Tf);
+      prev.copy(a.position); a.position.lerpVectors(from, to, q); a.position.y += Math.sin(Math.PI * q) * 0.45;
+      if (q < 1 && a.position.distanceToSquared(prev) > 1e-8) a.lookAt(back.copy(prev).sub(a.position).normalize().add(a.position)); // +z (the tail) points back along the path
+      if (q >= 1) { live = false; land(); }
+    });
   };
+  const quiver = a => { const q0 = a.quaternion.clone(); let t = 0; s.onTick(dt => { if (t > 0.6) return; t += dt; a.quaternion.copy(q0); a.rotateX(Math.sin(t * 45) * 0.06 * Math.exp(-t * 7)); }); };
   const shoot = i => {
     if (ctx.busy) return;
     if (!sel) { ctx.coach('Pick an arrow card first, then its target!'); return; }
     const k = sel; sel = null; k.plank.position.y = k.y0;
     if (k.c.cat === i) {
       ctx.item(k.c.id, !missed.has(k.c.id)); ctx.sound('note', { freq: 659 + targets[i].stuck * 90 }); targets[i].stuck++;
-      fire(k, i, () => { ctx.sound('thunk'); K.burst(targets[i].g.position.clone().setZ(targets[i].g.position.z + 0.5), undefined, 14, 1.6); A?.cheer(); }); place(k, true);
+      fire(k, i, a => { ctx.sound('thunk'); quiver(a); K.burst(targets[i].g.position.clone().setZ(targets[i].g.position.z + 0.2), undefined, 14, 1.6); A?.cheer(); }); place(k, true);
     } else {
       k.el.classList.remove('wrong'); void k.el.offsetWidth; k.el.classList.add('wrong'); targets[i].title.classList.add('no'); ctx.later(() => targets[i].title.classList.remove('no'), 500);
-      fire(k, i, a => { ctx.sound('thunk'); s.fly(a, [a.position.x + 0.6, 0.05, a.position.z + 1.2], { T: 0.4, lift: 0.4, spin: 2 }); A?.oops(); }); // bounces off
+      fire(k, i, a => { ctx.sound('thunk'); s.fly(a, [a.position.x + 0.6, 0.05, a.position.z + 1.2], { T: 0.4, lift: 0.4, spin: 2 }); A?.oops(); }, false); // hits the rim and bounces off
       if (!missed.has(k.c.id)) { missed.add(k.c.id); k.locked = true; ctx.item(k.c.id, false); ctx.coach(`"${k.c.text}" goes in "${st.categories[k.c.cat].title}".`); targets[k.c.cat].title.classList.add('show'); ctx.later(() => { targets[k.c.cat].title.classList.remove('show'); if (!k.placed) { fire(k, k.c.cat, () => {}); place(k, false); } }, 1000); }
     }
   };

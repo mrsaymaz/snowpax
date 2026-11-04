@@ -104,6 +104,21 @@ export class StageRunner {
       if (!grid.freeCircle(x, zz, 0.36)) { x = z.x + Math.sin(ang) * (z.r - 0.6); zz = z.z + Math.cos(ang) * (z.r - 0.6); }
       Object.assign(c, { x, z: zz, vx: 0, vz: 0, frozen: 0, thaw: 0, warmth: c.maxWarmth, ammo: CONFIG.fight.ammoMax, travel: null, face: ang + Math.PI, sled: null });
     });
+    // the fight yard: the team arrives at its far end, the first wave comes to them there
+    const yd = z.yard != null ? [Math.cos(z.yard * Math.PI / 180), Math.sin(z.yard * Math.PI / 180)] : this.openDir(z);
+    this.yardGoal = null;
+    if (yd) {
+      const px = -yd[1], pz = yd[0], R = [10.5, 10, 9.5, 9, 8.5].find(r => grid.freeCircle(z.x + yd[0] * r, z.z + yd[1] * r, 0.45)) ?? 8;
+      const face = Math.atan2(-yd[0], -yd[1]); // facing the outpost
+      home.forEach((c, k) => {
+        const o = k === 0 ? 0 : k === 1 ? -1.4 : 1.4, rr = k === 0 ? R : R + 0.4; let x = z.x + yd[0] * rr + px * o, zz = z.z + yd[1] * rr + pz * o;
+        if (!grid.freeCircle(x, zz, 0.36)) { x = z.x + yd[0] * R; zz = z.z + yd[1] * R; }
+        Object.assign(c, { x, z: zz, face });
+      });
+      this.yardGoal = { id: z.id + '-yard', x: z.x + yd[0] * 6.8, z: z.z + yd[1] * 6.8, r: 2.6 };
+      // the first wave walks in from the far side, not from the yard itself
+      this.firstEntries = this.entries.filter(e => Math.sin(e.a) * yd[0] + Math.cos(e.a) * yd[1] < 0.5);
+    }
     sim.held.home = [{ x: home[0].x, z: home[0].z }]; sim.spawns.home = sim.held.home.slice();
     this.ui.snapCamera?.();
     this.flow.setStage(z); this.drawLives();
@@ -122,7 +137,8 @@ export class StageRunner {
   spawnWave(i) {
     const w = WAVES[this.cur.id][i], z = this.zone; if (!w) return;
     const members = [];
-    minionList(w).forEach((type, k) => { const e = this.entries[k % this.entries.length], j = Math.floor(k / this.entries.length); members.push(this.match.addMinion(type, e.x + Math.cos(e.a) * (j * 0.9 - 0.4), e.z - Math.sin(e.a) * (j * 0.9 - 0.4), z)); });
+    const first = i === 0 && this.yardGoal, ents = first && this.firstEntries?.length ? this.firstEntries : this.entries, goal = first ? this.yardGoal : z; // the first wave comes to the yard
+    minionList(w).forEach((type, k) => { const e = ents[k % ents.length], j = Math.floor(k / ents.length); members.push(this.match.addMinion(type, e.x + Math.cos(e.a) * (j * 0.9 - 0.4), e.z - Math.sin(e.a) * (j * 0.9 - 0.4), goal)); });
     const kids = this.sim.chars.filter(c => c.side === 'rival' && c.role !== 'minion');
     for (let k = 0; k < Math.min(w.kids, kids.length); k++) { const c = kids[k], e = this.entries[(k + 1) % this.entries.length]; Object.assign(c, { benched: false, x: e.x, z: e.z, frozen: 0, thaw: 0, warmth: c.maxWarmth, ammo: CONFIG.fight.ammoMax, shield: 0.5 }); members.push(c); }
     this.waves[i] = { members, t: 0, cleared: false, final: !!w.final };
@@ -157,7 +173,7 @@ export class StageRunner {
     $('#outoflives').onclick = e => { const b = e.target.closest('[data-go]'); if (!b) return; $('#outoflives').hidden = true; if (b.dataset.go === 'again') this.start(this.cur); else this.showMap(); };
   }
   cleanup(lost) {
-    this.phase = null; this.flow.stageHold = false;
+    this.phase = null; this.flow.stageHold = false; this.ui.seizeButton?.(false);
     const z = this.zone; this.flow.abort(); this.flow.setStage(null);
     setWall(this.match.grid, this.wall, false); this.ui.showWall?.(null); this.wall = [];
     this.match.clearMinions(); this.ui.onGone?.();
@@ -242,7 +258,11 @@ export class StageRunner {
     const gone = this.match.removeGone(); if (gone.length) this.ui.onGone?.(gone);
     const v = this.flow.visits.get(this.zone.id);
     if (this.phase === 'fight') this.updateFight(dt);
-    else if (this.phase === 'seize' && !this.flow.busy && !this.zone.owner && !this.begun) { const P = this.match.player; if (!P.frozen && !P.thaw) { this.begun = true; this.flow.begin(this.zone); } }
+    else if (this.phase === 'seize' && !this.flow.busy && !this.zone.owner && !this.begun) { // walk into the circle to start seizing (after 8 s the kid walks in by itself)
+      const P = this.match.player, inside = Math.hypot(P.x - this.zone.x, P.z - this.zone.z) <= this.zone.r;
+      this.tSeize += dt; if (this.tSeize > 8 && !P.travel && !inside) this.walkIn();
+      if (inside && !P.frozen && !P.thaw) { this.begun = true; this.ui.seizeButton?.(false); this.flow.begin(this.zone); }
+    }
     if (this.cur.final) { this.updateShowdown(dt, v); return; }
     if (this.waveIdx === 0 && this.tStand > 2) this.spawnWave(0);
     if (this.waveIdx === 1 && ((v && v.done >= 3 && this.alive(this.waves[0]) <= 1) || this.waves[0].t > 30) && !this.zone.owner) this.spawnWave(1);
@@ -250,13 +270,22 @@ export class StageRunner {
     // the final wave decides: beaten (or 8 s of it held off) and the outpost is yours
     if (this.finalT !== null) { this.finalT += dt; const fw = this.waves[2]; if ((fw && fw.cleared) || this.finalT > 8) { this.finalT = null; if (fw && !fw.cleared) this.ui.banner('THEY GIVE UP!', 'win', 1.2); setTimeout(() => { if (this.mode === 'outpost') this.flow.held(this.zone); }, fw?.cleared ? 600 : 1200); } }
   }
+  walkIn() { const z = this.zone, P = this.match.player; if (z && !P.frozen) this.sim.travelTo(P, z.x, z.z); }
+  // the most open direction round a circle (the schoolyard has no fight yard in the map)
+  openDir(z) {
+    const g = this.match.grid; let best = null;
+    for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2, d = [Math.cos(a), Math.sin(a)]; let n = 0; for (let r = 4; r <= 10; r += 1) for (const o of [-1.5, 0, 1.5]) if (g.freeCircle(z.x + d[0] * r - d[1] * o, z.z + d[1] * r + d[0] * o, 0.45)) n++; if (!best || n > best.n) best = { d, n }; }
+    return best?.n > 12 ? best.d : null;
+  }
   // The opening fight: when the first wave is (nearly) cleared, or after FIGHT_MAX seconds, the
   // landmark opens for seizing.
   updateFight(dt) {
     this.tFight += dt; const w0 = this.waves[0];
     if (!w0 || !((this.alive(w0) <= 1 && this.tFight > 6) || this.tFight > FIGHT_MAX)) return;
-    this.phase = 'seize'; this.begun = false; this.flow.stageHold = false;
+    this.phase = 'seize'; this.begun = false; this.flow.stageHold = false; this.tSeize = 0;
     this.ui.banner(this.cur.final ? 'RAISE THE BANNERS!' : 'SEIZE IT!', 'go', 1.3); this.ui.play('superReady');
+    this.ui.coach('The yard is clear! Walk into the glowing circle to seize it (or tap ▶ Seize).', 4);
+    this.ui.seizeButton?.(true);
   }
   // Showdown waves come with the banners: the captain after two, everyone after four.
   updateShowdown(dt, v) {
