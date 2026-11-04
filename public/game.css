@@ -364,3 +364,9 @@ body.worldtask.reading #banner { left: 50%; width: auto; font-size: 34px; top: 3
   .taskcard.world .tc-icon { display: none; } .taskcard.world .tc-foot { padding: 4px 6px; }
 }
 @media (prefers-reduced-motion: reduce) { .wt-caption.show { animation: none; } }
+/* a station opens: a snow flurry covers the cut */
+.wt-wipe { position: fixed; inset: 0; z-index: 37; pointer-events: none; opacity: 0; background: radial-gradient(circle at 50% 55%, #ffffff 0 35%, rgba(235, 245, 255, 0.96) 60%, rgba(214, 232, 252, 0.9)); }
+.wt-wipe.on { animation: wt-flurry 0.55s ease-out; }
+@keyframes wt-flurry { 0% { opacity: 0; transform: scale(1.15); } 30% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1); } }
+body.station #feed { opacity: 0.6; }
+body.station #fx-layer, body.station #feed { display: none; }

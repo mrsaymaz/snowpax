@@ -1,11 +1,13 @@
-// The Snow Castle as a 3D action (Sururi Park · Builder), on the real castle in the arena.
-// The camera swoops to the castle's front. A wooden scaffold beam spans it with ghost bricks
-// showing where the new course goes. Snow bricks carrying the sentence blocks lie on the snow in
-// front: tap them in sentence order and each flies up onto the beam with a rising bell note.
-// A wrong brick hops and wobbles back, and the right one glows. The finished sentence raises the
-// castle's flag, then the course is lifted onto the castle wall, so the castle grows with every
-// sentence of the visit. Spelling lays ice letters the same way.
-import { Mesh, MeshLambertMaterial, MeshStandardMaterial, MeshBasicMaterial, BoxGeometry, CylinderGeometry, Shape, ShapeGeometry, LineSegments, EdgesGeometry, LineBasicMaterial, Color, DoubleSide } from 'three';
+// The Snow Castle as a 3D action (Sururi Park · Builder). Snow bricks carrying the sentence blocks
+// lie on the snow: tap them in sentence order and each flies up into the new course with a rising
+// bell note. A wrong brick hops and wobbles, and the right one glows. The finished sentence raises
+// the castle's flag. Spelling lays ice letters the same way. Two layouts:
+//   STATION (default) – the Snow Castle workshop, a staged set of its own: the castle wall up close
+//                       between two towers; each sentence becomes a new course on top of the wall,
+//                       so the castle grows taller with every sentence of the visit
+//   ARENA (?tasks=arena) – on the real castle: a scaffold beam across its front, and finished
+//                       courses drop into a snow wall in front of it
+import { Mesh, MeshLambertMaterial, MeshStandardMaterial, MeshBasicMaterial, BoxGeometry, CylinderGeometry, ConeGeometry, PlaneGeometry, SphereGeometry, TorusGeometry, Shape, ShapeGeometry, LineSegments, EdgesGeometry, LineBasicMaterial, Color, DoubleSide, HemisphereLight, DirectionalLight, CanvasTexture, SRGBColorSpace, RepeatWrapping, Fog, Points, PointsMaterial, BufferGeometry, Float32BufferAttribute, Group } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { esc, shuffle, blockOrder } from './util.js';
 
@@ -26,15 +28,37 @@ function scaffold(s, color) {
   return s.persist.userData.scaffold;
 }
 
+// the arena layout: the scaffold beam on the real castle
+const ARENA = {
+  prepare(s, ctx) {
+    const { flag } = scaffold(s, ctx.worldColor || '#f3a6c8');
+    const cam = innerHeight < 430 ? CAM_SHORT : CAM; s.frame(cam.eye, cam.look);
+    flag.position.y = BEAM.y + 0.5;
+    return { flag, flagUp: BEAM.y + 1.15, slotY: BEAM.y + 0.06, slotZ: BEAM.z, pileZ: PILE_Z, rowMax: 5.6 };
+  },
+};
+// the station layout: courses on top of the castle wall, which grows; the camera rises with it
+const STATION = {
+  prepare(s, ctx, H) {
+    const set = s.set, k = set.courses, up = set.top - set.base;
+    const a = innerWidth / innerHeight, d = a < 1.6 ? 1.12 : 1, cam = innerHeight < 430 ? { eye: [0, 5.0 + up * 0.7, 12.6 * d], look: [0, 1.45 + up * 0.7, 0.9] } : { eye: [0, 4.6 + up * 0.7, 12.2 * d], look: [0, 1.6 + up * 0.7, 0.9] };
+    s.frame(cam.eye, cam.look);
+    set.flag.position.y = set.flagLow + up;
+    return { flag: set.flag, flagUp: set.flagTop + up, slotY: set.top, slotZ: -0.42, pileZ: [1.55, 2.75], rowMax: 9.2,
+      keep(used, mat) { // the finished course stays: the wall is one course taller
+        for (const it of used) { s.unlabel(it.el); it.mesh.material = mat; s.step.remove(it.mesh); s.persist.add(it.mesh); }
+        set.courses = k + 1; set.top += H; set.raise(set.top);
+      } };
+  },
+};
+
 // one builder step in 3D: pieces (shuffled on the snow) go onto the beam in the expected order
 function build3d(ctx, { kind, pieces, expected, sayAtEnd, revealText, revealTr, wrongCoach, caption }) {
-  const s = ctx.world, ice = kind === 'spell';
-  const { flag } = scaffold(s, ctx.worldColor || '#f3a6c8');
-  const cam = innerHeight < 430 ? CAM_SHORT : CAM; s.frame(cam.eye, cam.look);
-  flag.position.y = BEAM.y + 0.5; flag.rotation.y = 0;
+  const s = ctx.world, ice = kind === 'spell', H = ice ? 0.44 : 0.42, D = ice ? 0.44 : 0.36;
+  const L = (s.station ? STATION : ARENA).prepare(s, ctx, H), { flag } = L;
   s.say(caption);
   // labels first, to size the bricks to their words
-  const ppm = s.pxPerMeter(), H = ice ? 0.44 : 0.42, D = ice ? 0.44 : 0.36;
+  const ppm = s.pxPerMeter();
   const mat = ice ? new MeshStandardMaterial({ color: '#c4ecff', roughness: 0.15, metalness: 0, transparent: true, opacity: 0.9, emissive: new Color('#2a6c9a'), emissiveIntensity: 0.12 })
     : new MeshLambertMaterial({ color: '#f7fbff', emissive: new Color('#000000') });
   const glowM = mat.clone(); glowM.emissive = new Color('#ffcf3c'); glowM.emissiveIntensity = 0.55;
@@ -48,7 +72,7 @@ function build3d(ctx, { kind, pieces, expected, sayAtEnd, revealText, revealTr, 
   // the course on the beam: ghost bricks, widths of the expected pieces
   const widthOf = e => (ice ? 0.44 : Math.max(0.55, items.find(it => it.p.key === e.key)?.w || 0.6));
   const ws = expected.map(widthOf), gap = 0.06, total = ws.reduce((a, b) => a + b, 0) + gap * (ws.length - 1);
-  let x = -total / 2; const slots = expected.map((e, i) => { const cx = x + ws[i] / 2; x += ws[i] + gap; return { x: cx, y: BEAM.y + 0.06 + H / 2, z: BEAM.z, w: ws[i] }; });
+  let x = -total / 2; const slots = expected.map((e, i) => { const cx = x + ws[i] / 2; x += ws[i] + gap; return { x: cx, y: L.slotY + H / 2, z: L.slotZ, w: ws[i] }; });
   const ghostMat = new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.22, depthWrite: false }), edgeMat = new LineBasicMaterial({ color: '#7fb2db' });
   const ghosts = slots.map((sl, i) => {
     const g = new Mesh(new BoxGeometry(sl.w, H, D), ghostMat); g.position.set(sl.x, sl.y, sl.z); g.add(new LineSegments(new EdgesGeometry(g.geometry), edgeMat)); s.step.add(g);
@@ -58,8 +82,8 @@ function build3d(ctx, { kind, pieces, expected, sayAtEnd, revealText, revealTr, 
   // the pile on the snow, in up to two rows
   const rows = [[], []]; let rw = 0;
   const pg = ice ? 0.16 : 0.3;
-  for (const it of items) { const r = rw + it.w > 5.6 && rows[0].length ? 1 : 0; rows[r].push(it); if (!r) rw += it.w + pg; }
-  rows.forEach((row, r) => { const tw = row.reduce((a, it) => a + it.w + pg, -pg); let px = -tw / 2; for (const it of row) { it.mesh.position.set(px + it.w / 2, H / 2 + 0.02, PILE_Z[r]); it.mesh.rotation.y = (ctx.rng() - 0.5) * 0.12; px += it.w + pg; } });
+  for (const it of items) { const r = rw + it.w > L.rowMax && rows[0].length ? 1 : 0; rows[r].push(it); if (!r) rw += it.w + pg; }
+  rows.forEach((row, r) => { const tw = row.reduce((a, it) => a + it.w + pg, -pg); let px = -tw / 2; for (const it of row) { it.mesh.position.set(px + it.w / 2, H / 2 + 0.02, L.pileZ[r]); it.mesh.rotation.y = (ctx.rng() - 0.5) * 0.12; px += it.w + pg; } });
 
   let next = expected.findIndex(e => !e.given), tried = false, done = false;
   if (next < 0) next = expected.length;
@@ -73,9 +97,10 @@ function build3d(ctx, { kind, pieces, expected, sayAtEnd, revealText, revealTr, 
     done = true; ctx.sound('capture');
     ctx.item(ctx.step.sourceIds?.[0], right);
     ctx.reveal(revealText, revealTr); if (sayAtEnd) ctx.speech.say(sayAtEnd);
-    s.fly(flag, [flag.position.x, BEAM.y + 1.15, flag.position.z], { T: 0.7, lift: 0 });
+    s.fly(flag, [flag.position.x, L.flagUp, flag.position.z], { T: 0.7, lift: 0 });
     for (const it of items) if (it.used) { it.mesh.material = glowM; s.puff(it.mesh, 6, '#ffe7a0'); }
-    // then the course goes down into a snow wall in front of the castle: it grows with every sentence
+    if (L.keep) { ctx.later(() => L.keep(items.filter(it => it.used), mat), right ? 900 : 1300); ctx.finish(right ? 1800 : 2300); return; } // the station: the course stays on the wall
+    // the arena: the course goes down into a snow wall in front of the castle; it grows with every sentence
     ctx.later(() => {
       const k = s.persist.userData.courses++, sc = Math.min(WALL.scale, WALL.span / total);
       for (const it of items) { if (!it.used) continue; s.unlabel(it.el); it.mesh.material = mat; s.step.remove(it.mesh); s.persist.add(it.mesh); }
@@ -123,4 +148,70 @@ export function castleWorldSpell(ctx) {
     sayAtEnd: ans, revealText: ans, revealTr: null,
     wrongCoach: 'Not that letter yet. The glowing ice block is next!',
   });
+}
+
+// ---------- the Snow Castle workshop: the staged set of the station ----------
+function canvasTex(w, h, draw, repeat = null) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; if (repeat) { t.wrapS = t.wrapT = RepeatWrapping; t.repeat.set(...repeat); } return t; }
+
+export function castleStation(s, { color = '#f5b616' } = {}) {
+  const P = s.persist, scene = s.scene, base = 2.0;
+  scene.background = canvasTex(4, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#7fb6ea'); gr.addColorStop(0.55, '#cfe6fb'); gr.addColorStop(1, '#f4f9ff'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+  scene.fog = new Fog('#e6f1fc', 18, 46);
+  const hemi = new HemisphereLight('#eef5ff', '#8fa0cc', 1.15); P.add(hemi);
+  const sun = new DirectionalLight('#fff3df', 2.1); sun.position.set(5, 9, 7); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -8, right: 8, top: 8, bottom: -4, near: 1, far: 30 }); sun.shadow.bias = -0.0005; P.add(sun);
+  const snowM = new MeshLambertMaterial({ color: '#f6f9ff' }), shade = new MeshLambertMaterial({ color: '#dfe8f6' });
+  const ground = new Mesh(new PlaneGeometry(80, 50), new MeshLambertMaterial({ color: '#e4ecf8' })); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; P.add(ground);
+  // the wall up close: snow bricks with soft blue mortar
+  const brick = canvasTex(256, 128, (g, w, h) => { g.fillStyle = '#f4f8fe'; g.fillRect(0, 0, w, h); g.strokeStyle = '#c9d9ee'; g.lineWidth = 4; for (let r = 0; r < 4; r++) { const y = r * h / 4; g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); for (let c = 0; c < 4; c++) { const x = c * w / 4 + (r % 2 ? w / 8 : 0); g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + h / 4); g.stroke(); } } }, [3.5, 2]);
+  const wallM = new MeshLambertMaterial({ map: brick });
+  const wall = new Mesh(new BoxGeometry(7.6, base, 1.2), [snowM, snowM, snowM, snowM, wallM, wallM]); wall.position.set(0, base / 2, -0.6); wall.castShadow = wall.receiveShadow = true; P.add(wall);
+  const gs = new Shape(); gs.moveTo(-0.62, 0); gs.lineTo(-0.62, 0.95); gs.absarc(0, 0.95, 0.62, Math.PI, 0, true); gs.lineTo(0.62, 0); gs.closePath();
+  const door = new Mesh(new ShapeGeometry(gs, 16), new MeshLambertMaterial({ color: '#34507a' })); door.position.set(0, 0, 0.02); P.add(door); // the gate
+  const arch = new Mesh(new TorusGeometry(0.66, 0.1, 8, 20, Math.PI), new MeshStandardMaterial({ color: '#bfeeff', roughness: 0.2, emissive: new Color('#6fbfe8'), emissiveIntensity: 0.35 })); arch.position.set(0, 0.95, 0.06); P.add(arch);
+  // two towers with bright roofs and glowing ice windows
+  const ROOF = ['#7cc4f0', '#f3a6c8'];
+  [-4.5, 4.5].forEach((x, k) => {
+    const t = new Mesh(new CylinderGeometry(1.0, 1.08, 4.6, 20), wallM); t.position.set(x, 2.3, -0.5); t.castShadow = t.receiveShadow = true; P.add(t);
+    const rim = new Mesh(new CylinderGeometry(1.16, 1.16, 0.28, 20), snowM); rim.position.set(x, 4.66, -0.5); P.add(rim);
+    for (let m = 0; m < 10; m++) { const a = m / 10 * Math.PI * 2, mer = new Mesh(new BoxGeometry(0.3, 0.32, 0.3), snowM); mer.position.set(x + Math.sin(a) * 1.04, 4.95, -0.5 + Math.cos(a) * 1.04); mer.rotation.y = a; P.add(mer); }
+    const roof = new Mesh(new ConeGeometry(1.25, 1.7, 20), new MeshLambertMaterial({ color: ROOF[k] })); roof.position.set(x, 5.95, -0.5); roof.castShadow = true; P.add(roof);
+    const cap = new Mesh(new ConeGeometry(0.6, 0.6, 16), snowM); cap.position.set(x, 6.55, -0.5); P.add(cap);
+    for (const y of [1.4, 3.2]) { const w = new Mesh(new PlaneGeometry(0.34, 0.5), new MeshBasicMaterial({ color: '#ffe3a0' })); w.position.set(x + (k ? -0.5 : 0.5), y, 0.36); w.rotation.y = k ? -0.5 : 0.5; P.add(w); }
+  });
+  // the flag on the right tower, in the team's colour
+  const pole = new Mesh(new CylinderGeometry(0.04, 0.04, 2.2, 6), new MeshLambertMaterial({ color: '#6b4a32' })); pole.position.set(4.5, 7.6, -0.5); P.add(pole);
+  const sh = new Shape(); sh.moveTo(0, 0); sh.lineTo(0.95, -0.28); sh.lineTo(0, -0.56); sh.closePath();
+  const flag = new Mesh(new ShapeGeometry(sh), new MeshLambertMaterial({ color, side: DoubleSide })); flag.position.set(4.53, 7.4, -0.5); P.add(flag);
+  // bunting between the towers
+  const flagsG = new Group(); P.add(flagsG); const COLS = [color, '#ffffff', '#7cc4f0', '#f3a6c8'];
+  for (let i = 0; i < 15; i++) { const u = i / 14, x = -3.6 + u * 7.2, y = 4.6 - Math.sin(u * Math.PI) * 0.55; const tri = new Shape(); tri.moveTo(-0.14, 0); tri.lineTo(0.14, 0); tri.lineTo(0, -0.3); tri.closePath(); const f = new Mesh(new ShapeGeometry(tri), new MeshLambertMaterial({ color: COLS[i % 4], side: DoubleSide })); f.position.set(x, y, 0.2); flagsG.add(f); }
+  // snowy pines, mounds and a sled to frame it
+  const pineM = new MeshLambertMaterial({ color: '#2f6f6a' });
+  for (const [x, z, sc] of [[-7.2, -2.2, 1.3], [7.4, -2.6, 1.4], [-8.6, 0.8, 1.0], [8.8, 0.4, 1.1], [-5.8, -4.5, 1.2], [6.2, -5, 1.3], [0, -6, 1.5], [-2.8, -5.4, 1.1], [3.2, -5.8, 1.2]]) {
+    for (let l = 0; l < 3; l++) { const c = new Mesh(new ConeGeometry((1.0 - l * 0.25) * sc, 1.3 * sc, 9), l === 2 ? snowM : pineM); c.position.set(x, (0.9 + l * 0.75) * sc, z); c.castShadow = true; P.add(c); }
+  }
+  for (const [x, z, r] of [[-5.6, 2.6, 1.0], [5.9, 2.9, 1.2], [-3.9, 4.4, 0.7], [4.4, 4.6, 0.8]]) { const m = new Mesh(new SphereGeometry(r, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), snowM); m.position.set(x, 0, z); m.scale.y = 0.55; m.receiveShadow = true; P.add(m); }
+  const sledW = new MeshLambertMaterial({ color: '#b9784a' }), sledR = new MeshLambertMaterial({ color: '#c8443c' });
+  const sled = new Group(); sled.position.set(-5.3, 0, 1.4); sled.rotation.y = 0.5; P.add(sled);
+  const plank = new Mesh(new BoxGeometry(0.9, 0.08, 1.6), sledW); plank.position.y = 0.26; plank.castShadow = true; sled.add(plank);
+  for (const x of [-0.38, 0.38]) { const r = new Mesh(new BoxGeometry(0.06, 0.08, 1.8), sledR); r.position.set(x, 0.1, 0); sled.add(r); }
+  for (const [x, z] of [[-0.2, -0.4], [0.2, -0.35], [0, 0.25]]) { const b = new Mesh(new RoundedBoxGeometry(0.42, 0.28, 0.3, 2, 0.05), snowM); b.position.set(x, 0.45, z); b.castShadow = true; sled.add(b); }
+  const shovel = new Mesh(new BoxGeometry(0.34, 0.04, 0.42), new MeshLambertMaterial({ color: '#d9534f' })); shovel.position.set(5.2, 0.6, 1.6); shovel.rotation.set(-1.2, 0.4, 0); P.add(shovel);
+  // falling snow
+  const N = 260, pos = new Float32Array(N * 3); for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - 0.5) * 22; pos[i * 3 + 1] = Math.random() * 9; pos[i * 3 + 2] = (Math.random() - 0.5) * 14 - 1; }
+  const pg = new BufferGeometry(); pg.setAttribute('position', new Float32BufferAttribute(pos, 3));
+  const snow = new Points(pg, new PointsMaterial({ color: '#ffffff', size: 0.07, transparent: true, opacity: 0.9, depthWrite: false })); P.add(snow);
+  let t = 0;
+  const set = {
+    base, top: base, courses: 0, flag, flagLow: 7.4, flagTop: 8.45,
+    // the wall is taller: the towers stay, the wall's top course shows a fresh snow line
+    raise() {},
+    tick(dt) {
+      t += dt; if (s.reduceMotion) return;
+      const a = pg.attributes.position; for (let i = 0; i < N; i++) { let y = a.array[i * 3 + 1] - dt * (0.5 + (i % 5) * 0.08); if (y < 0) y += 9; a.array[i * 3 + 1] = y; a.array[i * 3] += Math.sin(t + i) * dt * 0.08; } a.needsUpdate = true;
+      flagsG.children.forEach((f, i) => { f.rotation.x = Math.sin(t * 2.2 + i) * 0.25; });
+      flag.rotation.y = Math.sin(t * 3) * 0.12;
+    },
+  };
+  return set;
 }

@@ -28,6 +28,7 @@ import { SnowmanView } from './render/snowmen.js';
 import { ShowdownView } from './render/showdown.js';
 import { useBasicScenes } from './cards/scenes.js';
 import { WorldTasks } from './render/worldtask.js';
+import { castleStation } from './cards/castle3d.js';
 import { InstancedMesh, MeshLambertMaterial, SphereGeometry, Object3D } from 'three';
 
 const $ = s => document.querySelector(s);
@@ -184,7 +185,9 @@ async function startGame(myTeam, kit, pace) {
   $('#flakes b').textContent = save.snowflakes || 0; $('#flakes').hidden = !arena.world;
   const banner = (text, cls = '', sec = 1.6) => { const b = $('#banner'); b.textContent = text; b.className = 'show ' + cls; clearTimeout(banner.t); banner.t = setTimeout(() => { b.className = ''; }, sec * 1000); };
   // English tasks as 3D actions on the real landmarks (where a landmark has one; ?scenes=basic for the plain cards)
-  const worldTasks = arena.world ? new WorldTasks({ scene, layer: $('#wt-layer'), groundH: (x, z) => groundH(x, z), fx, zones: () => sim.zones, player, reduceMotion }) : null;
+  // stations by default (a staged set opens, like Languini's stations); ?tasks=arena plays them on the real landmark
+  const worldTasks = arena.world ? new WorldTasks({ scene, layer: $('#wt-layer'), groundH: (x, z) => groundH(x, z), fx, zones: () => sim.zones, player, reduceMotion,
+    mode: params.get('tasks') === 'arena' ? 'arena' : 'station', stations: { sururi: s => castleStation(s, { color: myCol }) } }) : null;
   const flow = unit ? new OutpostFlow({
     sim, player, unit, unitProgress, save, writeSave, pace, rng, root: $('#taskcard'), familyOverride: params.get('family'), world: worldTasks, worldColor: myCol,
     ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play, fx, fireworks: z => { if (reduceMotion) return; for (const col of [myCol, '#ffffff', '#ffd166', '#7cc4f0']) fx.emit(z.x, 3.5, z.z, 40, col, 6, 1.4, 1.2); } },
@@ -464,7 +467,7 @@ async function startGame(myTeam, kit, pace) {
     $('#attack').classList.toggle('empty', player.ammo < 1);
     $('#attack').classList.toggle('quiet', sim.grid.has(player.x, player.z, GRID.ZONE));
     if (params.has('debug')) $('#debug').textContent = `${quality.fps.toFixed(0)} fps · ${LEVELS[quality.level].name}`;
-    draw(scene, camera);
+    const wts = worldTasks?.session, inStation = wts?.station && now >= wts.showAt; draw(inStation ? wts.scene : scene, inStation ? wts.camera : camera); // a station shows its own set
   }
   requestAnimationFrame(frame);
   globalThis.__snowpax = { match, sim, player, quality, renderer, world, life, flow, stages, scene, snowmen };

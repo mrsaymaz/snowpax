@@ -1,9 +1,19 @@
 # Task scenes
 
-## 3D actions on the landmarks (inspired by Languini)
+## 3D actions (inspired by Languini)
 
-Where a landmark has a world scene, the English task is played as a 3D action on the real landmark
-in the arena, not on a card:
+Where a landmark has a world scene, the English task is played as a 3D action, not on a card.
+There are two ways to play it:
+
+- **A station opens (default).** A staged 3D set of its own fills the screen, like Languini's
+  stations, and a snow flurry covers the cut in and out. The Snow Castle workshop is the castle
+  wall up close between two towers, with bunting, pines, a sled of bricks and falling snow. Each
+  sentence becomes a new course on top of the wall, so the castle grows taller through the visit,
+  and the camera rises with it. A station works anywhere, including the Showdown's banners.
+- **On the real landmark (`?tasks=arena`).** The camera swoops to the real castle in the arena,
+  as described below.
+
+On the real landmark:
 
 - **Camera:** it swoops in to the landmark and back when the task ends.
 - **The fight goes on in slow motion around it,** at a quarter speed. While the task is on, rival
