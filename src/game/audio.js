@@ -26,7 +26,7 @@ function tone(freq, dur, gain, type = 'sine', slide = 1) {
   o.connect(g); g.connect(master); o.start(t); o.stop(t + dur);
 }
 
-export function play(type, { near = 1 } = {}) {
+export function play(type, { near = 1, freq = 660 } = {}) {
   if (!ctx || !enabled || near <= 0.05) return;
   const v = Math.min(1, near);
   switch (type) {
@@ -39,6 +39,7 @@ export function play(type, { near = 1 } = {}) {
     case 'dodge': noise(0.2, 3000, 800, 0.18 * v, 'highpass'); break;
     case 'poof': noise(0.25, 2400, 3600, 0.12 * v, 'highpass'); break;
     case 'tap': tone(660, 0.06, 0.1, 'sine'); break;
+    case 'note': tone(freq, 0.5, 0.13, 'triangle', 1); tone(freq * 2, 0.35, 0.04, 'sine', 1); break; // a bell note (task scenes)
     case 'super': noise(0.5, 300, 1200, 0.5 * v, 'lowpass'); tone(110, 0.45, 0.3 * v, 'sawtooth', 0.5); break;
     case 'superReady': [523, 659, 784].forEach((f, i) => setTimeout(() => tone(f, 0.16, 0.14, 'triangle'), i * 70)); break;
     case 'sparkle': [1319, 1568, 2093].forEach((f, i) => setTimeout(() => tone(f, 0.12, 0.08 * v, 'sine'), i * 45)); break;

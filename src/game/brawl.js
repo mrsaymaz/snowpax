@@ -26,6 +26,7 @@ import { StageRunner } from './stagerun.js';
 import { stageState, STAGES } from './stages.mjs';
 import { SnowmanView } from './render/snowmen.js';
 import { ShowdownView } from './render/showdown.js';
+import { useBasicScenes } from './cards/scenes.js';
 import { InstancedMesh, MeshLambertMaterial, SphereGeometry, Object3D } from 'three';
 
 const $ = s => document.querySelector(s);
@@ -63,6 +64,7 @@ function startScreen() {
 
 // ---------- the game ----------
 async function startGame(myTeam, kit, pace) {
+  useBasicScenes(params.get('scenes') === 'basic'); // ?scenes=basic: the plain cards, to compare
   // Arena 1 world (five outposts) by default; the small schoolyard feel test with ?arena=schoolyard
   const worldDef = params.get('arena') === 'schoolyard' ? null : await (await fetch('arenas/arena1.json')).json();
   const arena = buildTileArena(worldDef || SCHOOLYARD);

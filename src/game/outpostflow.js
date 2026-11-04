@@ -41,6 +41,7 @@ export class OutpostFlow {
       rng, coach: text => this.card.setCoach(text),
       timerFor: pace === 'challenge' ? st => stepSeconds(st, pace) : null,
       onItem: r => this.onItem(r), onStepDone: () => this.onStepDone(),
+      sound: (name, opt) => this.ui.play?.(name, opt),
     });
     this.card.onLeave = () => this.leave();
   }
@@ -68,7 +69,7 @@ export class OutpostFlow {
     const step = v.next();
     if (!step) { this.onStepDone(true); return; }
     const b = v.families && BANNERS[v.famIdx];
-    this.card.setCoach(b ? `🚩 ${b.name} banner (${v.famIdx + 1} of ${BANNERS.length}) · ${FAMILY_NAME[v.family]}${v.coach ? ': ' + v.coach : ''}` : v.coach || ''); this.card.show(step);
+    this.card.setCoach(b ? `🚩 ${b.name} banner (${v.famIdx + 1} of ${BANNERS.length}) · ${FAMILY_NAME[v.family]}${v.coach ? ': ' + v.coach : ''}` : v.coach || ''); this.card.show(step, b ? { theme: b.outpost } : undefined); // Showdown: each banner in its own outpost's scene
   }
   leave() {
     if (this.mode !== 'seize') return;

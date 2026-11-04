@@ -19,7 +19,7 @@ cpSync('public', dist, { recursive: true });
 for (const f of readdirSync('content')) if (/^grade\d\.json$/.test(f)) cpSync(join('content', f), join(dist, 'content', f));
 
 await build({
-  entryPoints: { game: 'src/game/brawl.js', preview: 'src/preview.js', charlab: 'src/charlab.js' }, bundle: true, format: 'esm', minify: true, splitting: true, outdir: dist,
+  entryPoints: { game: 'src/game/brawl.js', preview: 'src/preview.js', charlab: 'src/charlab.js', cardlab: 'src/cardlab.js' }, bundle: true, format: 'esm', minify: true, splitting: true, outdir: dist,
   entryNames: '[name]', chunkNames: 'chunks/[name]-[hash]', target: ['es2020', 'safari15'], legalComments: 'none', charset: 'utf8',
   banner: { js: `/* SnowPax by Mr. Saymaz v${version}. three.js (MIT) by the three.js authors. */` },
 });

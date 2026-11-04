@@ -285,3 +285,48 @@ body.sledding #coach { z-index: 45; }
 body.reading #banner { left: 24%; font-size: 30px; white-space: normal; text-align: center; width: 44vw; }
 body.reading #banner.go { font-size: 46px; }
 #newrival[hidden] { display: none; }
+
+/* ---------- task scenes: the Snow Castle (Sururi · Builder) ---------- */
+.k-castle .tc-prompt small { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-top: 2px; }
+.cs-stage { position: relative; flex: none; height: 158px; margin: 6px 0 10px; border-radius: 16px; overflow: hidden; border: 2px solid #9fd0f0; background: linear-gradient(#a9d8fb, #e4f4ff 70%); }
+.cs-sky i { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #fff; opacity: 0.9; animation: cs-snow 4s linear infinite; }
+.cs-sky .f1 { left: 12%; animation-delay: -1s; } .cs-sky .f2 { left: 58%; animation-delay: -2.6s; } .cs-sky .f3 { left: 86%; animation-delay: -0.4s; }
+@keyframes cs-snow { from { transform: translateY(-10px); } to { transform: translateY(170px); } }
+.cs-ground { position: absolute; left: -4%; right: -4%; bottom: -6px; height: 26px; background: #fff; border-top: 2px solid #d4e6f6; border-radius: 50% 50% 0 0 / 16px 16px 0 0; }
+.cs-castle { position: absolute; left: 3%; right: 3%; bottom: 14px; top: 40px; display: flex; align-items: flex-end; }
+.cs-tower { position: relative; width: 14%; min-width: 34px; height: 100%; background: linear-gradient(90deg, #f4faff, #d3e7f8); border: 2px solid #8fbfe0; border-bottom: 0; border-radius: 6px 6px 0 0; z-index: 1; }
+.cs-tower .cren { position: absolute; left: -2px; right: -2px; top: -11px; height: 10px; background: repeating-linear-gradient(90deg, #e9f5ff 0 9px, transparent 9px 15px); border-bottom: 2px solid #8fbfe0; }
+.cs-tower .win { position: absolute; left: 50%; top: 22%; width: 12px; height: 18px; margin-left: -6px; border-radius: 6px 6px 0 0; background: #4d6f99; box-shadow: inset 0 -4px 0 #ffd27a; }
+.cs-mid { position: relative; flex: 1; height: 58%; background: #e8f4ff; background-image: linear-gradient(#cfe3f5 2px, transparent 2px), linear-gradient(90deg, #cfe3f5 2px, transparent 2px); background-size: 100% 16px, 30px 16px; border-top: 2px solid #8fbfe0; }
+.cs-gate { position: absolute; left: 50%; bottom: 0; width: 36px; height: 62%; margin-left: -18px; border-radius: 18px 18px 0 0; background: linear-gradient(#5d82ad, #3f5f86); border: 2px solid #34507a; border-bottom: 0; }
+.cs-course { position: absolute; left: 2px; right: 2px; bottom: calc(100% + 2px); display: flex; flex-wrap: wrap-reverse; justify-content: center; gap: 3px; }
+.cs-slot { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; height: 30px; padding: 0 9px; border: 2px dashed #7fb2db; border-radius: 6px; background: rgba(255,255,255,0.45); color: #1d2733; font-weight: 800; font-size: 14px; white-space: nowrap; }
+.cs-slot.set { border-style: solid; border-color: #6fa8d6; background: linear-gradient(#ffffff, #e2f0fc); box-shadow: inset 0 -3px 0 #c3dcf1; }
+.cs-slot.given { color: #5b6c86; }
+.cs-slot.drop { animation: cs-drop 0.34s ease-out; }
+@keyframes cs-drop { 0% { transform: translateY(-12px) scale(1.08); } 60% { transform: translateY(2px) scale(0.97); } 100% { transform: none; } }
+.spell .cs-slot { min-width: 30px; width: 30px; padding: 0; font-size: 17px; background: rgba(220,244,255,0.55); }
+.spell .cs-slot.set { background: linear-gradient(#f4fcff, #bfe8ff); border-color: #6cb8e8; }
+.cs-pole { position: absolute; left: 50%; bottom: calc(100% + 10px); width: 3px; height: 34px; background: #6b4a32; border-radius: 2px; }
+.cs-flag { position: absolute; left: 3px; bottom: 1px; width: 26px; height: 16px; background: var(--accent, #f3a6c8); clip-path: polygon(0 0, 100% 50%, 0 100%); transition: bottom 0.8s cubic-bezier(.3,1.5,.5,1); }
+.cs-stage.done .cs-flag { bottom: 18px; animation: cs-wave 0.6s ease-in-out infinite alternate 0.8s; }
+@keyframes cs-wave { from { transform: skewY(-6deg); } to { transform: skewY(6deg); } }
+.cs-stage.done { box-shadow: inset 0 0 0 3px #ffd166, 0 0 18px rgba(255, 209, 102, 0.6); }
+.cs-stage.done .cs-slot.set { box-shadow: inset 0 -3px 0 #c3dcf1, 0 0 8px rgba(255, 209, 102, 0.9); }
+.cs-pile { flex: none; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.cs-brick { font: inherit; font-weight: 800; font-size: 16px; min-height: 44px; padding: 0 14px; border-radius: 10px; border: 2px solid #8fbfe0; background: linear-gradient(#ffffff, #e4f2fd); box-shadow: 0 4px 0 #9cc6e6; color: #1d2733; cursor: pointer; touch-action: manipulation; }
+.cs-brick.spell { min-width: 46px; padding: 0 8px; font-size: 20px; background: linear-gradient(#f4fcff, #c4eaff); border-color: #78c0ec; box-shadow: 0 4px 0 #7fb8dc; }
+.cs-brick:active { transform: translateY(2px); box-shadow: 0 2px 0 #9cc6e6; }
+.cs-brick.used { display: none; }
+.cs-brick.wrong { animation: cs-wobble 0.45s; border-color: #e0707a; }
+@keyframes cs-wobble { 0%, 100% { transform: none; } 20% { transform: translate(-6px, -4px) rotate(-6deg); } 45% { transform: translate(6px, 0) rotate(5deg); } 70% { transform: translate(-3px, 0) rotate(-2deg); } }
+.cs-brick.show { border-color: #f2b705; box-shadow: 0 0 0 3px #ffd166, 0 4px 0 #9cc6e6; animation: cs-glow 0.8s ease-in-out infinite alternate; }
+@keyframes cs-glow { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+.cs-ghost { position: fixed !important; z-index: 1000; margin: 0; pointer-events: none; visibility: visible !important; }
+@media (max-height: 430px) {
+  .k-castle .tc-prompt small { display: none; } .k-castle .tc-prompt { font-size: 15px; }
+  .cs-stage { height: 92px; margin: 0; } .cs-castle { top: 26px !important; } .cs-castle { top: 30px; bottom: 10px; }
+  .cs-slot { height: 24px; min-width: 40px; font-size: 12px; padding: 0 6px; } .spell .cs-slot { width: 24px; min-width: 24px; font-size: 14px; }
+  .cs-pole { height: 24px; } .cs-stage.done .cs-flag { bottom: 9px; } .cs-brick { min-height: 38px; font-size: 14px; padding: 0 10px; } .cs-pile { gap: 6px; }
+}
+@media (prefers-reduced-motion: reduce) { .cs-sky i, .cs-slot.drop, .cs-brick.wrong, .cs-brick.show, .cs-stage.done .cs-flag { animation: none; } .cs-flag { transition: none; } }

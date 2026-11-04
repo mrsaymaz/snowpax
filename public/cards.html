@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en" translate="no">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>SnowPax · card lab</title>
+<link rel="stylesheet" href="game.css">
+<style>
+  body { margin: 0; min-height: 100vh; background: linear-gradient(#c9dcf2, #eef4fb); font-family: system-ui, sans-serif; overflow: hidden; }
+  #lab { position: fixed; left: 12px; top: 12px; width: calc(50vw - 36px); max-width: 520px; background: #fff; border: 3px solid #1c2340; border-radius: 16px; padding: 12px 14px; box-shadow: 0 5px 0 #1c3f8f; font-size: 14px; }
+  #lab h1 { margin: 0 0 6px; font-size: 20px; color: #2f74d0; } #lab label { display: inline-block; margin: 4px 10px 4px 0; font-weight: 700; }
+  #lab select, #lab button { font: inherit; padding: 4px 8px; border-radius: 8px; border: 2px solid #1c2340; background: #fff; }
+  #log { margin-top: 8px; max-height: 50vh; overflow: auto; font: 12px ui-monospace, monospace; color: #34405e; white-space: pre-wrap; }
+  #taskcard { pointer-events: auto; }
+</style></head>
+<body>
+<div id="lab"><h1>Card lab</h1>
+  <label>Unit <select id="unit"></select></label>
+  <label>Task family <select id="family"><option value="answer">Answer</option><option value="sort">Sorting</option><option value="match">Matching</option><option value="build" selected>Builder</option><option value="listen">Listening</option></select></label>
+  <label>Landmark <select id="theme"><option value="boulevard">Treehouse (Boulevard)</option><option value="archery">Archers' Lodge</option><option value="kizilay">Kızılay Fountain</option><option value="sururi" selected>Snow Castle (Sururi)</option><option value="waterfront">Admiral's Bell</option><option value="schoolyard">Schoolyard</option><option value="cocoa">Hot cocoa</option></select></label>
+  <label><input type="checkbox" id="basic"> plain cards only</label>
+  <label><input type="checkbox" id="timer"> Challenge timer</label>
+  <button id="go" type="button">New round</button>
+  <div id="log"></div></div>
+<section id="taskcard" class="taskcard" hidden aria-live="polite"></section>
+<script type="module" src="cardlab.js"></script>
+</body></html>
