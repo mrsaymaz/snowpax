@@ -22,7 +22,8 @@ export class Bot {
     if (Math.hypot(x - c.x, z - c.z) < near) return { mx: 0, mz: 0 };
     this.pathT -= dt;
     const moved = !this.goal || Math.hypot(this.goal[0] - x, this.goal[1] - z) > 1.5;
-    if (g.clearPath(c.x, c.z, x, z, 0.3)) { this.path = null; this.goal = [x, z]; }
+    const far = this.sim.nav?.links?.size && Math.hypot(x - c.x, z - c.z) >= 14; // far away: maybe a sled run is quicker
+    if (g.clearPath(c.x, c.z, x, z, 0.3) && !far) { this.path = null; this.goal = [x, z]; }
     else if (!this.path || this.pathT <= 0 || moved) { this.path = this.sim.nav ? this.sim.nav.path(c.x, c.z, x, z) : null; this.pathT = 0.8 + this.rng() * 0.5; this.goal = [x, z]; }
     this.stuck = c.moving < 0.25 ? this.stuck + dt : 0;
     if (this.stuck > 0.5) { this.stuck = 0; this.path = this.sim.nav ? this.sim.nav.path(c.x, c.z, x, z) : null; }

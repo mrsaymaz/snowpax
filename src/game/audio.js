@@ -41,6 +41,11 @@ export function play(type, { near = 1 } = {}) {
     case 'tap': tone(660, 0.06, 0.1, 'sine'); break;
     case 'super': noise(0.5, 300, 1200, 0.5 * v, 'lowpass'); tone(110, 0.45, 0.3 * v, 'sawtooth', 0.5); break;
     case 'superReady': [523, 659, 784].forEach((f, i) => setTimeout(() => tone(f, 0.16, 0.14, 'triangle'), i * 70)); break;
+    case 'sparkle': [1319, 1568, 2093].forEach((f, i) => setTimeout(() => tone(f, 0.12, 0.08 * v, 'sine'), i * 45)); break;
+    case 'slurp': tone(392, 0.12, 0.12 * v, 'sine', 1.4); setTimeout(() => tone(523, 0.16, 0.1 * v, 'sine', 1.2), 110); break;
+    case 'sled': noise(0.9, 500, 2200, 0.22 * v, 'bandpass'); break;
+    case 'whoosh': noise(1.6, 300, 900, 0.18, 'bandpass'); break;
+    case 'flump': noise(0.4, 1200, 200, 0.4 * v, 'lowpass'); break;
     case 'capture': [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.22, 0.16, 'triangle'), i * 110)); break;
   }
 }

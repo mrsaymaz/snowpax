@@ -11,6 +11,7 @@ import { SCHOOLYARD } from './arenas/schoolyard.mjs';
 import { GRID } from './grid.mjs';
 import { buildVillage, LIGHTING, DAYLIGHT } from './render/village.js';
 import { WorldLife } from './render/worldlife.js';
+import { makeGround } from './terrain.mjs';
 import { Kid } from './render/kids.js';
 import { BrawlFx } from './render/brawlfx.js';
 import { CUT } from './render/cutout.js';
@@ -63,6 +64,11 @@ async function startGame(myTeam, kit, pace) {
   // test helper: ?at=<outpost id> starts the student and teammates beside that outpost
   const atZone = sim.zones.find(zz => zz.id === params.get('at'));
   if (atZone) { sim.zone = atZone; sim.chars.filter(c => c.side === 'home').forEach((c, k) => { c.x = atZone.x - 1.2 + k * 1.2; c.z = atZone.z + atZone.r + 0.6; }); }
+  // ?at=<sled run id> starts beside that run's hilltop; ?weather=blizzard|sun|gust forces the weather soon after the start
+  const atRun = sim.runs.find(r => r.id === params.get('at'));
+  if (atRun) sim.chars.filter(c => c.side === 'home').forEach((c, k) => { c.x = atRun.pts[0][0] - 1.6 + k * 1.6; c.z = atRun.pts[0][1] + 2.2; });
+  if (params.get('weather') === 'gust') sim.weather.gustNext = 1; else if (['blizzard', 'sun'].includes(params.get('weather'))) { sim.weather.next = 1; sim.weather.force = params.get('weather'); }
+  const groundH = makeGround(arena.hills || []);
 
   // renderer, scene, lights
   const canvas = $('#scene');
@@ -75,7 +81,7 @@ async function startGame(myTeam, kit, pace) {
   Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 60 }); sun.shadow.bias = -0.0006; scene.add(sun, sun.target);
 
   const world = buildVillage(arena, { rivalTeam, homeTeam: myTeam, quality: LEVELS[level].name }); scene.add(world.group);
-  const life = arena.world ? new WorldLife(scene, world.life, { low: LEVELS[level].name === 'low' }) : null;
+  const life = arena.world ? new WorldLife(scene, world.life, { low: LEVELS[level].name === 'low', ground: groundH, pickups: sim.pickups }) : null;
   // the light slides from late afternoon to dusk over the first five minutes (?dusk=0..1 to preview)
   const hemi = scene.children.find(o => o.isHemisphereLight), sunDir = [...LIGHTING.sunDir];
   const lerpC = (a, b, k) => new Color(a).lerp(new Color(b), k);
@@ -86,7 +92,10 @@ async function startGame(myTeam, kit, pace) {
     sun.color.copy(lerpC(A.sun[0], B.sun[0], k)); sun.intensity = A.sun[1] + (B.sun[1] - A.sun[1]) * k;
     for (let i = 0; i < 3; i++) sunDir[i] = A.sunDir[i] + (B.sunDir[i] - A.sunDir[i]) * k;
     world.setDusk(k);
+    base.sun = sun.intensity; base.hemi = hemi.intensity; base.fog.copy(scene.fog.color);
   };
+  const base = { sun: 1, hemi: 1, fog: new Color(), fogNear: 30, fogFar: 62 }, WHITEOUT = new Color('#eef1fa');
+  const wx = { blizzard: 0, sun: 0 }; // weather blends, 0..1
   const forcedDusk = params.has('dusk') ? Math.max(0, Math.min(1, +params.get('dusk') || 0)) : null;
   let dayK = -1;
   const kids = new Map(sim.chars.map(c => [c.id, new Kid(c, { isPlayer: c === player })]));
@@ -102,7 +111,7 @@ async function startGame(myTeam, kit, pace) {
     const w = innerWidth, h = innerHeight; camera.aspect = w / h;
     zoom = Math.min(1.35, Math.max(1, Math.min(w, h) / 390)) * (w / h < 1.5 ? 1.12 : 1) * (Number(params.get('zoom')) || 1);
     camera.updateProjectionMatrix(); renderer.setSize(w, h, false);
-    const dist = off.length() * zoom; scene.fog.near = dist * 1.25; scene.fog.far = dist * 2.9; // haze only beyond the arena
+    const dist = off.length() * zoom; scene.fog.near = base.fogNear = dist * 1.25; scene.fog.far = base.fogFar = dist * 2.9; // haze only beyond the arena
   }
   const quality = new AutoQuality(level, L => { renderer.setPixelRatio(Math.min(devicePixelRatio || 1, L.maxDpr)); renderer.shadowMap.enabled = L.name !== 'low'; sun.castShadow = L.name !== 'low'; resize(); scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); }, { forced: params.has('quality') ? level : null });
   addEventListener('resize', resize); resize();
@@ -122,13 +131,15 @@ async function startGame(myTeam, kit, pace) {
   $('#super').style.setProperty('--c', '#ffd23f');
   const touch = matchMedia('(pointer: coarse)').matches;
   const coach = (text, sec = 4.5) => { $('#coach .line').textContent = text; $('#coach').hidden = false; clearTimeout(coach.t); coach.t = setTimeout(() => { $('#coach').hidden = true; }, sec * 1000); };
+  const seen = new Set(), once = (key, text, sec = 4.5) => { if (seen.has(key)) return; seen.add(key); coach(text, sec); };
+  $('#flakes b').textContent = save.snowflakes || 0; $('#flakes').hidden = !arena.world;
   const banner = (text, cls = '', sec = 1.6) => { const b = $('#banner'); b.textContent = text; b.className = 'show ' + cls; clearTimeout(banner.t); banner.t = setTimeout(() => { b.className = ''; }, sec * 1000); };
   const feed = (html) => { const li = document.createElement('div'); li.className = 'feed-item'; li.innerHTML = html; $('#feed').prepend(li); setTimeout(() => li.remove(), 3500); while ($('#feed').children.length > 3) $('#feed').lastChild.remove(); };
 
   // mini-map (top left) and the big map: tap a place to walk there
   const FAM = { answer: 'B', sort: 'C', match: 'A', listen: 'E', build: 'D' };
   const mapImg = document.createElement('canvas'), MP = 4; mapImg.width = arena.w * MP; mapImg.height = arena.h * MP;
-  const TILE_COL = { H: '#5e6888', S: '#d9cfa6', K: '#f4f8ff', Q: '#a99bd2', C: '#8e86b8', W: '#5f9bd0', G: '#b98a6a', O: '#24304f', c: '#7c84a8', t: '#2d5a5d', '_': '#ffffff', '=': '#eef0fa', '+': '#e3dcf6', q: '#ece6fb', P: '#d5c79c', f: '#d5c79c', '#': '#d5c79c', d: '#ffffff', Y: '#eadfc0', h: '#eadfc0', r: '#f4f8ff', j: '#b98a6a', p: '#dfeee3', '.': '#e7edf8' };
+  const TILE_COL = { H: '#5e6888', S: '#d9cfa6', K: '#f4f8ff', Q: '#a99bd2', C: '#8e86b8', W: '#5f9bd0', G: '#b98a6a', O: '#24304f', c: '#7c84a8', t: '#2d5a5d', '_': '#ffffff', '=': '#eef0fa', '+': '#e3dcf6', q: '#ece6fb', P: '#d5c79c', f: '#d5c79c', '#': '#d5c79c', d: '#ffffff', Y: '#eadfc0', h: '#eadfc0', r: '#f4f8ff', j: '#b98a6a', p: '#dfeee3', '.': '#e7edf8', u: '#f6f8ff', s: '#cfe0fb', l: '#7c84a8', R: '#8d95b8', D: '#f4f6fc' };
   function drawMap() {
     const g = mapImg.getContext('2d');
     for (let j = 0; j < arena.h; j++) for (let i = 0; i < arena.w; i++) { g.fillStyle = TILE_COL[arena.rows[j][i]] || '#e7edf8'; g.fillRect(i * MP, j * MP, MP, MP); }
@@ -205,7 +216,7 @@ async function startGame(myTeam, kit, pace) {
     focus.set(player.x, 0, player.z - 1.6);
   }
 
-  let last = performance.now(), puffT = 0; const zoneKeys = {}, held = new Set();
+  let last = performance.now(), puffT = 0, camY = 0; const zoneKeys = {}, held = new Set();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     requestAnimationFrame(frame); quality.tick(dt);
@@ -259,6 +270,28 @@ async function startGame(myTeam, kit, pace) {
       }
       if (e.type === 'respawn' && e.id === player.id) $('#frozen').hidden = true;
       if (e.type === 'noThrowZone' && e.id === player.id) coach('Quiet zone: no snowballs near the mosque.', 3);
+      // Phase 2: sleds, pickups, snow off the roofs, wind and weather (with English to read)
+      const me = e.id === player.id;
+      if (e.type === 'sledStart') { play('sled', { near: me ? 1 : near }); if (me) { banner('WHEEE!', 'go', 1.0); once('sled', 'Sledding! You can still throw snowballs on the way down.'); } }
+      if (e.type === 'sledEnd' || e.type === 'sledCrash') { if (!reduceMotion) fx.emit(e.x, 0.2 + groundH(e.x, e.z), e.z, e.type === 'sledCrash' ? 30 : 18, '#ffffff', 3, 0.6); }
+      if (e.type === 'collect' && e.kind === 'flake') {
+        play('sparkle'); fx.emit(e.x, 0.8 + groundH(e.x, e.z), e.z, 24, '#c9f4ff', 2.5, 0.7); fx.number(e.x, e.z, '+1 ❄', 'warm');
+        save.snowflakes = (save.snowflakes || 0) + 1; writeSave(save); $('#flakes b').textContent = save.snowflakes;
+        once('flake', 'A glowing snowflake! Collect them all over the neighbourhood.');
+      }
+      if (e.type === 'collect' && e.kind === 'cocoa') { play('slurp', { near: me ? 1 : near }); fx.emit(e.x, 0.6, e.z, 16, '#ffcf9a', 2, 0.6); fx.number(e.x, e.z, '+40', 'warm'); if (me) once('cocoa', 'Hot cocoa! It warms you up.'); }
+      if (e.type === 'snowDump') {
+        const tall = e.tile === 't' ? 2.4 : e.tile === 'l' ? 1.9 : 1.3;
+        play('flump', { near }); life?.pile(e.x, e.z);
+        if (!reduceMotion) { fx.emit(e.x, tall + groundH(e.x, e.z), e.z, 34, '#ffffff', 1.4, 0.9, 1.2); fx.emit(e.x, 0.3, e.z, 16, '#f4f7ff', 3, 0.6); }
+        if (e.hit.length) once('dump', 'Splosh! Hit a roof or a tree and the snow falls on anyone below.');
+      }
+      if (e.type === 'gust') { if (e.on) { play('whoosh'); banner('POYRAZ!', 'super', 1.4); once('gust', 'Whoosh! The poyraz is a cold north-east wind. It pushes your snowballs.'); } }
+      if (e.type === 'weather') {
+        if (e.kind === 'blizzard') { banner('BLIZZARD!', 'lose', 1.8); coach('A blizzard! You can\'t see far. Sneak up on your rivals.', 4.5); }
+        else if (e.kind === 'sun') { banner('SUNSHINE!', 'win', 1.8); coach('The sun is out! You warm up faster.', 4); }
+        else coach('The weather is calm again.', 3);
+      }
       if (e.type === 'zoneCaptured') {
         const zc = sim.zones.find(zz => zz.id === e.zone) || sim.zone;
         if (e.side === 'home') { banner('OUTPOST SEIZED!', 'win', 2.6); play('capture'); fx.emit(zc.x, 0.5, zc.z, 90, myCol, 6, 1.2); fx.emit(zc.x, 0.5, zc.z, 60, '#ffffff', 5, 1.2); coach(arena.world ? `${zc.label} is yours! It is now a respawn and snowball point. In the full game, the English task card opens here.` : 'Great teamwork! In the full game, the English task card opens here while your team guards you.', 5); }
@@ -273,7 +306,7 @@ async function startGame(myTeam, kit, pace) {
     // views
     for (const [id, k] of kids) {
       const c = k.c, visible = c.side === 'home' || sim.canSee(player, c) || c.frozen;
-      k.update(dt, { visible, reduceMotion });
+      k.update(dt, { visible, reduceMotion, groundY: groundH(c.x, c.z) });
     }
     sim.drifts.forEach((d, i) => { const t = 1 - d.cd / 6; if (d.lt !== t) { d.lt = t; world.updateDrift(i, Math.max(0.2, t)); } });
     fx.update(pose ? 0 : dt, sim);
@@ -288,19 +321,28 @@ async function startGame(myTeam, kit, pace) {
     if (!params.has('zoom')) focus.z = Math.max(arena.z0 + 5, Math.min(arena.z0 + arena.h - 3.5, focus.z));
     shake = Math.max(0, shake - dt);
     const j = shake > 0 ? shake * 0.6 : 0;
-    camera.position.set(focus.x + off.x * zoom + (Math.random() - 0.5) * j, off.y * zoom, focus.z + off.z * zoom + (Math.random() - 0.5) * j);
-    camera.lookAt(focus.x, 0, focus.z); camera.updateMatrixWorld();
+    camY += (groundH(player.x, player.z) - camY) * Math.min(1, dt * 4);
+    camera.position.set(focus.x + off.x * zoom + (Math.random() - 0.5) * j, off.y * zoom + camY, focus.z + off.z * zoom + (Math.random() - 0.5) * j);
+    camera.lookAt(focus.x, camY, focus.z); camera.updateMatrixWorld();
     sun.position.set(focus.x + sunDir[0], sunDir[1], focus.z + sunDir[2]); sun.target.position.set(focus.x, 0, focus.z - 2); sun.target.updateMatrixWorld();
     world.tick(dt, focus, reduceMotion, camera);
     if (arena.world) {
       const k = forcedDusk ?? Math.min(1, sim.t / 300);
       if (Math.abs(k - dayK) > 0.01) { dayK = k; applyDay(k); }
-      life.tick(pose ? 0 : dt, sim.chars, camera, player);
+      life.tick(pose ? 0 : dt, sim.chars, camera, player, sim.weather);
+      // weather blends in and out over about two seconds
+      for (const kind of ['blizzard', 'sun']) wx[kind] += ((sim.weather.kind === kind ? 1 : 0) - wx[kind]) * Math.min(1, dt * 1.2);
+      const b = wx.blizzard, su = wx.sun;
+      scene.fog.near = base.fogNear * (1 - 0.55 * b); scene.fog.far = base.fogFar * (1 - 0.5 * b) * (1 + 0.3 * su);
+      scene.fog.color.copy(base.fog).lerp(WHITEOUT, b * 0.6);
+      sun.intensity = base.sun * (1 + 0.35 * su) * (1 - 0.35 * b); hemi.intensity = base.hemi * (1 + 0.12 * su);
+      world.setWeather({ snow: 1 + 1.8 * b, wx: sim.weather.wx, wz: sim.weather.wz });
+      $('#weather').style.setProperty('--b', b.toFixed(3)); $('#weather').style.setProperty('--s', su.toFixed(3));
     }
     // powder kicked up by running kids
     if (!reduceMotion && (puffT -= dt) <= 0) { puffT = 0.12; for (const c of sim.chars) if (!c.frozen && Math.hypot(c.vx, c.vz) > 2 && !sim.grid.has(c.x, c.z, GRID.ROAD)) fx.emit(c.x - c.vx * 0.05, 0.12, c.z - c.vz * 0.05, 2, '#f4f7ff', 0.7, 0.45, 0.8); }
     // see-through: anything between the camera and the player dissolves
-    const pv = new Vector3(player.x, 1, player.z), pr = renderer.getPixelRatio(), ndc = pv.clone().project(camera);
+    const pv = new Vector3(player.x, 1 + groundH(player.x, player.z), player.z), pr = renderer.getPixelRatio(), ndc = pv.clone().project(camera);
     CUT.center.value.set((ndc.x + 1) / 2 * innerWidth * pr, (ndc.y + 1) / 2 * innerHeight * pr);
     CUT.radius.value = Math.min(innerWidth, innerHeight) * 0.13 * pr;   // just around the player
     CUT.depth.value = pv.applyMatrix4(camera.matrixWorldInverse).z + 1.8; // only things in front of the student

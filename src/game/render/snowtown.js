@@ -7,6 +7,7 @@ import {
   BufferGeometry, Float32BufferAttribute, Mesh, MeshLambertMaterial, BoxGeometry, SphereGeometry, CylinderGeometry, ConeGeometry,
   PlaneGeometry, TorusGeometry, CapsuleGeometry, CanvasTexture, RepeatWrapping, SRGBColorSpace, Color,
 } from 'three';
+import { makeGround } from '../terrain.mjs';
 
 const paint = (size, fn) => { const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d'); fn(g, size); const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; t.wrapS = t.wrapT = RepeatWrapping; t.anisotropy = 4; return t; };
 const blot = (g, x, y, r, rgb, a) => { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(${rgb},${a})`); gr.addColorStop(1, `rgba(${rgb},0)`); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); };
@@ -14,7 +15,8 @@ const blot = (g, x, y, r, rgb, a) => { const gr = g.createRadialGradient(x, y, 0
 export function buildSnowtown(ctx) {
   const { arena, K, M, T, PAL, GEO, rbox, prism, rnd, at, group, glows, smokeSources, lights, low, lantern, pine, rock, barrel, crate, firewood, shovel,
     mSnow, mStone, mStoneDark, mBeam, mWood, mMetal, mIce, mGlass, sign, life, pools } = ctx;
-  const rows = arena.rows, W = arena.w, H = arena.h;
+  const rows = arena.rows, W = arena.w, H = arena.h, ground = makeGround(arena.hills || []);
+  const normalAt = (x, z) => { const e = 0.25, dx = (ground(x + e, z) - ground(x - e, z)) / (2 * e), dz = (ground(x, z + e) - ground(x, z - e)) / (2 * e), l = Math.hypot(dx, 1, dz); return [-dx / l, 1 / l, -dz / l]; };
   const ch = (i, j) => (i < 0 || j < 0 || i >= W || j >= H ? 'H' : rows[j][i]);
   const solid = c => 'HSKQCWGctO#fRD'.includes(c);
   const walkPath = c => '_+d'.includes(c);
@@ -36,7 +38,7 @@ export function buildSnowtown(ctx) {
   // Open snow, footpaths and the boulevard share one mesh: trodden lanes are a vertex tint that
   // fades into the snow, so the paths read as soft trampled tracks, not tiles.
   const cat = c => (c === 'W' ? 'ice' : 'POf#j'.includes(c) ? 'plaza' : 'YShrK'.includes(c) ? 'yard' : 'snow');
-  const trod = c => ('_+d'.includes(c) ? 1 : '=c'.includes(c) ? 0.8 : 'POf#jYhr'.includes(c) ? 0.9 : 0);
+  const trod = c => ('_+d'.includes(c) ? 1 : '=c'.includes(c) ? 0.8 : 'POf#jYhr'.includes(c) ? 0.9 : c === 's' ? 0.25 : 0);
   const quads = { snow: [], plaza: [], yard: [], ice: [] };
   const corner = (i, j) => { let n = 0; for (const [a, b] of [[i - 1, j - 1], [i, j - 1], [i - 1, j], [i, j]]) if ('HSKQCGR'.includes(ch(a, b))) n++; return n; };
   const wear = (i, j) => (trod(ch(i - 1, j - 1)) + trod(ch(i, j - 1)) + trod(ch(i - 1, j)) + trod(ch(i, j))) / 4;
@@ -46,7 +48,10 @@ export function buildSnowtown(ctx) {
     if (!list.length) continue;
     const P = [], N = [], U = [], Cc = [];
     const uvs = name === 'ice' ? 0.16 : 0.5;
-    const vert = (x, z, ao, w) => { P.push(x, 0, z); N.push(0, 1, 0); U.push(x * uvs, -z * uvs); const s = 1 - w; Cc.push(ao * (0.97 * s + TRODDEN[0] * w), ao * (0.97 * s + TRODDEN[1] * w), Math.min(1, ao * (1.02 * s + TRODDEN[2] * w))); };
+    const SUN = (() => { const v = [-11, 14, 7], l = Math.hypot(...v); return v.map(c => c / l); })();
+    const vert = (x, z, ao, w) => { const y = name === 'snow' ? ground(x, z) : 0;
+      if (name === 'snow' && (y > 0.001 || ground(x + 0.6, z) + ground(x - 0.6, z) + ground(x, z + 0.6) + ground(x, z - 0.6) > 0)) { const n = normalAt(x, z), d = n[0] * SUN[0] + n[1] * SUN[1] + n[2] * SUN[2]; ao *= 0.78 + 0.3 * Math.max(0, d) + (y > 1.6 ? 0.04 : 0); } /* slopes facing away from the sun read darker */
+      P.push(x, y, z); if (y > 0.001 || (name === 'snow' && ground(x + 0.3, z) + ground(x - 0.3, z) + ground(x, z + 0.3) + ground(x, z - 0.3) > 0)) N.push(...normalAt(x, z)); else N.push(0, 1, 0); U.push(x * uvs, -z * uvs); const s = 1 - w; Cc.push(ao * (0.97 * s + TRODDEN[0] * w), ao * (0.97 * s + TRODDEN[1] * w), Math.min(1, ao * (1.02 * s + TRODDEN[2] * w))); };
     for (const [i, j] of list) {
       const [x0, z0] = at(i, j).map(v => v - 0.5);
       const v = [[x0, z0, i, j], [x0 + 1, z0, i + 1, j], [x0 + 1, z0 + 1, i + 1, j + 1], [x0, z0 + 1, i, j + 1]];
@@ -55,7 +60,13 @@ export function buildSnowtown(ctx) {
       const ao = v.map(([, , ci, cj]) => (name === 'ice' ? (shore(ci, cj) ? 1.12 : 0.9) : 1 - corner(ci, cj) * 0.09));
       const w = v.map(([, , ci, cj]) => (name === 'snow' ? wear(ci, cj) : 0));
       const mine = name === 'snow' ? trod(ch(i, j)) : 0;
-      if (name === 'snow' && w.some(q => Math.abs(q - mine) > 0.01)) { // an edge cell: fan from the centre for a softer edge
+      if (name === 'snow' && ch(i, j) === 'u') { // the sled hill: finer quads so the slope is smooth
+        const D = 3, cAo = (ao[0] + ao[1] + ao[2] + ao[3]) / 4;
+        for (let b = 0; b < D; b++) for (let a = 0; a < D; a++) {
+          const q = [[a, b], [a + 1, b], [a + 1, b + 1], [a, b + 1]].map(([u, t]) => [x0 + u / D, z0 + t / D]);
+          for (const k of [0, 2, 1, 0, 3, 2]) vert(q[k][0], q[k][1], cAo, 0);
+        }
+      } else if (name === 'snow' && w.some(q => Math.abs(q - mine) > 0.01)) { // an edge cell: fan from the centre for a softer edge
         const cAo = (ao[0] + ao[1] + ao[2] + ao[3]) / 4;
         for (let k = 0; k < 4; k++) { const a = v[k], b = v[(k + 1) % 4]; vert(x0 + 0.5, z0 + 0.5, cAo, mine); vert(b[0], b[1], ao[(k + 1) % 4], w[(k + 1) % 4]); vert(a[0], a[1], ao[k], w[k]); }
       } else for (const k of [0, 2, 1, 0, 3, 2]) vert(v[k][0], v[k][1], ao[k], w[k]); // upward winding
@@ -191,6 +202,57 @@ export function buildSnowtown(ctx) {
     lantern(x + 0.36, 1.55, z, true);
     pools.push([x + 0.36, z, 2.4]);
     life.perches.push([x + 0.36, 1.92, z]);
+  }
+
+  // ---------- sled runs: a packed-snow track with grooves, rounded banks, red marker poles,
+  //            a start gate on the hilltop with signs, and a soft pile of snow at the bottom ----------
+  if (arena.sledRuns?.length) {
+    const trackTex = paint(128, (g, S) => {
+      g.fillStyle = '#e4edfb'; g.fillRect(0, 0, S, S);
+      for (let k = 0; k < 40; k++) { g.fillStyle = `rgba(255,255,255,${0.4 + rnd(k, 31) * 0.5})`; g.fillRect(rnd(k, 32) * S, rnd(k, 33) * S, 2, 3); }
+      for (const u of [0.3, 0.7]) { const gr = g.createLinearGradient((u - 0.08) * S, 0, (u + 0.08) * S, 0); gr.addColorStop(0, 'rgba(120,140,200,0)'); gr.addColorStop(0.5, 'rgba(120,140,200,0.55)'); gr.addColorStop(1, 'rgba(120,140,200,0)'); g.fillStyle = gr; g.fillRect((u - 0.08) * S, 0, 0.16 * S, S); }
+    });
+    const TP = [], TN = [], TU = [], TI = [], BP = [], BN = [], BU = [], BI = [];
+    const destName = { home: 'Our School' }; for (const pl of arena.places) if (pl.kind === 'zone') destName[pl.id] = pl.label;
+    const poleRed = M('plaster', '#e0463c'), poleWhite = M('plaster', '#f4f1ea');
+    for (const run of arena.sledRuns) {
+      // resample the run every 0.4 units
+      const pts = run.pts, samp = [];
+      for (let k = 0; k + 1 < pts.length; k++) { const [a, b] = [pts[k], pts[k + 1]], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.ceil(L / 0.4)); for (let m = 0; m < n; m++) samp.push([a[0] + (b[0] - a[0]) * m / n, a[1] + (b[1] - a[1]) * m / n]); }
+      samp.push(pts[pts.length - 1]);
+      let along = 0;
+      samp.forEach(([x, z], k) => {
+        const [px, pz] = samp[Math.max(0, k - 1)], [nx, nz] = samp[Math.min(samp.length - 1, k + 1)], tl = Math.hypot(nx - px, nz - pz) || 1, ox = -(nz - pz) / tl, oz = (nx - px) / tl;
+        if (k) along += Math.hypot(x - samp[k - 1][0], z - samp[k - 1][1]);
+        const base = TP.length / 3;
+        for (const sgn of [-1, 1]) { const vx = x + ox * 0.55 * sgn, vz = z + oz * 0.55 * sgn; TP.push(vx, ground(vx, vz) + 0.04, vz); TN.push(...normalAt(vx, vz)); TU.push(sgn < 0 ? 0 : 1, along * 0.6); }
+        if (k) TI.push(base - 2, base - 1, base, base - 1, base + 1, base);
+        // banks: half-round ridges either side
+        for (const sgn of [-1, 1]) {
+          const b0 = BP.length / 3, SEG = 4;
+          for (let q = 0; q <= SEG; q++) { const th = Math.PI * q / SEG, off = 0.78 + Math.cos(th) * 0.2, vx = x + ox * off * sgn, vz = z + oz * off * sgn; BP.push(vx, ground(x + ox * 0.78 * sgn, z + oz * 0.78 * sgn) + Math.sin(th) * 0.26, vz); BN.push(ox * Math.cos(th) * sgn, Math.sin(th), oz * Math.cos(th) * sgn); BU.push(q / SEG, along * 0.5); }
+          if (k) for (let q = 0; q < SEG; q++) { const a = b0 - (SEG + 1) * 2 + q, c = b0 + q; if (sgn > 0) BI.push(a, c, a + 1, a + 1, c, c + 1); else BI.push(a, a + 1, c, a + 1, c + 1, c); }
+        }
+        // marker poles every 3 units, alternating sides
+        if (k && k % 8 === 0 && k < samp.length - 3) { const sgn = (k / 8) % 2 ? 1 : -1, vx = x + ox * 1.05 * sgn, vz = z + oz * 1.05 * sgn, gy = ground(vx, vz); K.put('slPole', GEO.post, poleRed, vx, gy + 0.55, vz, 0, 0.9, 1.1, 0.9); K.put('slPoleTop', GEO.post, poleWhite, vx, gy + 1.2, vz, 0, 0.95, 0.2, 0.95); }
+      });
+      // the start gate over the track on the hilltop, with the run's name and where it goes
+      const [sx, sz] = pts[0], [s2x, s2z] = pts[Math.min(3, pts.length - 1)], dl = Math.hypot(s2x - sx, s2z - sz) || 1, gx = -(s2z - sz) / dl, gz = (s2x - sx) / dl, gy = ground(sx, sz);
+      for (const sgn of [-1, 1]) { K.put('gatePost', GEO.post, mBeam, sx + gx * 0.95 * sgn, gy + 1.1, sz + gz * 0.95 * sgn, 0, 1.4, 2.2, 1.4); K.put('gateCap', GEO.snowCap, mSnow, sx + gx * 0.95 * sgn, gy + 2.2, sz + gz * 0.95 * sgn, 0, 0.22, 0.12, 0.22); }
+      K.add(new CylinderGeometry(1.0, 1.05, 0.12, 16), mWood, sx, gy + 0.03, sz); K.add(new CylinderGeometry(0.95, 0.95, 0.04, 16), M('snow', '#eef3fc'), sx, gy + 0.1, sz);
+      const s1 = sign('SLED RUN', 1.8, '#a83a32'); s1.position.set(sx, gy + 2.25, sz); group.add(s1);
+      const s2 = sign('to ' + (destName[run.to] || run.to), 1.7); s2.position.set(sx, gy + 1.7, sz + 0.02); group.add(s2);
+      lantern(sx + gx * 0.95, gy + 2.3, sz + gz * 0.95, true);
+      for (const sgn of [-1, 1]) { const rx = sx - (s2x - sx) / dl * 0.9 + gx * 1.6 * sgn, rz = sz - (s2z - sz) / dl * 0.9 + gz * 1.6 * sgn; K.put('sledSpare', boxGeo, M('wood', '#b9784a'), rx, ground(rx, rz) + 0.12, rz, Math.atan2(s2x - sx, s2z - sz), 0.45, 0.08, 0.9); K.put('sledSpareRun', boxGeo, M('metal', '#c8443c'), rx, ground(rx, rz) + 0.02, rz, Math.atan2(s2x - sx, s2z - sz), 0.5, 0.06, 1.0); }
+      // the bottom: a soft pile to stop in and a finish flag
+      const [ex, ez] = pts[pts.length - 1], [e0x, e0z] = pts[Math.max(0, pts.length - 3)], el = Math.hypot(ex - e0x, ez - e0z) || 1, fx = (ex - e0x) / el, fz = (ez - e0z) / el;
+      K.put('finishPile', lowCap, mSnow, ex + fx * 1.4, 0, ez + fz * 1.4, Math.atan2(fx, fz), 2.2, 0.45, 1.4);
+      K.put('finishPole', GEO.post, mBeam, ex - fz * 1.2, 0.8, ez + fx * 1.2, 0, 1, 1.6, 1); K.put('finishFlag', boxGeo, poleRed, ex - fz * 1.2 + 0.25, 1.35, ez + fx * 1.2, 0, 0.5, 0.3, 0.03);
+    }
+    const tg = new BufferGeometry(); tg.setAttribute('position', new Float32BufferAttribute(TP, 3)); tg.setAttribute('normal', new Float32BufferAttribute(TN, 3)); tg.setAttribute('uv', new Float32BufferAttribute(TU, 2)); tg.setIndex(TI);
+    const track = new Mesh(tg, new MeshLambertMaterial({ map: trackTex, color: '#dfe8fa' })); track.receiveShadow = true; track.renderOrder = 1; group.add(track);
+    const bg = new BufferGeometry(); bg.setAttribute('position', new Float32BufferAttribute(BP, 3)); bg.setAttribute('normal', new Float32BufferAttribute(BN, 3)); bg.setAttribute('uv', new Float32BufferAttribute(BU, 2)); bg.setIndex(BI);
+    K.add(bg, mSnow, 0, 0, 0);
   }
 
   // ---------- the buried town: roof ridges, chimneys and dormers poking out of the drifts ----------

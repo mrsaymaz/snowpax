@@ -6,6 +6,7 @@
 // seat: { mx, mz, attack: {x,z}, super: {x,z}, manual, dodge: {dx,dz}, wall: true }.
 import { CONFIG } from '../config.js';
 import { GRID } from './grid.mjs';
+import { makeGround } from './terrain.mjs';
 
 const F = CONFIG.fight, KITS = CONFIG.kits, BOULDER = CONFIG.superBoulder, ZONE = CONFIG.zone;
 export const SIM = {
@@ -19,6 +20,15 @@ export const SIM = {
   wallLife: 25, wallHalf: [1.0, 0.3],
   attackCooldown: 0.28,
 };
+// Sled runs, pickups, snow falling off roofs, wind and weather (Arena 1 world).
+export const WORLD = {
+  sled: { start: 2.5, push: 2.2, gravity: 9, max: 9.5, board: 0.75, cooldown: 1.5, cost: 2.6 },
+  cocoa: { warmth: 40, respawn: 25, reach: 0.8 },
+  flake: { reach: 0.85 },
+  dump: { reach: 1.4, damage: 6, slow: 1.1, cooldown: 4, tiles: 'HRtl' },
+  gust: { every: [25, 45], seconds: 6, strength: 2.4, dir: [-Math.SQRT1_2, Math.SQRT1_2] }, // poyraz: from the north-east
+  weather: { first: [55, 80], every: [60, 100], blizzard: 18, sun: 15, blizzardSight: 7, sunRegen: 1.6 },
+};
 
 let nextId = 1;
 
@@ -31,6 +41,7 @@ export function makeCharacter({ seat, team, side, role, x, z, kit = 'thrower', c
     frozen: 0, thaw: 0, shield: 0, dodge: 0, dodgeCd: 0, attackCd: 0,
     hidden: false, revealT: 0, lastHit: -99, lastAttack: -99, flash: 0,
     travel: null, hits: 0, frozenCount: 0, freezes: 0, guarding: false,
+    sled: null, sledCd: 0, padT: 0, slow: 0, flakes: 0,
   };
 }
 
@@ -47,6 +58,14 @@ export class Sim {
     // capture zones (outposts): one in a feel-test arena, five in a world
     this.zones = arena.places.filter(p => p.kind === 'zone').map(zp => ({ id: zp.id, label: zp.label, family: zp.family || null, x: zp.x, z: zp.z, r: zp.r || 2.3, progress: 0, owner: null, home: 0, rival: 0 }));
     this.zone = this.zones[0] || null;
+    this.ground = makeGround(arena.hills || []);
+    this.runs = (arena.sledRuns || []).map(r => { const cum = [0]; for (let k = 1; k < r.pts.length; k++) cum.push(cum[k - 1] + Math.hypot(r.pts[k][0] - r.pts[k - 1][0], r.pts[k][1] - r.pts[k - 1][1])); return { ...r, cum, len: cum[cum.length - 1] }; });
+    this.pickups = (arena.pickups || []).map(p => ({ ...p, cd: 0, taken: false }));
+    this.dumpCd = new Map();
+    // weather only in the world (the small feel-test arena stays calm)
+    const W = WORLD, rr = ([a, b]) => a + this.rng() * (b - a);
+    this.weather = { on: !!arena.world, kind: 'clear', until: 0, next: arena.world ? rr(W.weather.first) : Infinity, gust: 0, gustUntil: 0, gustNext: arena.world ? rr(W.gust.every) : Infinity, wx: 0, wz: 0 };
+    this._rr = rr;
   }
   add(char) { this.chars.push(char); return char; }
   setSpawn(side, x, z) { this.spawns[side].push({ x, z }); this.held[side].push({ x, z }); }
@@ -62,6 +81,7 @@ export class Sim {
   }
   // Hidden in a hedge: only seen from close by, or for a moment after throwing.
   canSee(viewer, target) {
+    if (this.weather.kind === 'blizzard' && Math.hypot(viewer.x - target.x, viewer.z - target.z) > WORLD.weather.blizzardSight) return false; // lost in the snow
     if (!target.hidden || target.revealT > 0) return true;
     return Math.hypot(viewer.x - target.x, viewer.z - target.z) <= F.hideRange;
   }
@@ -95,19 +115,19 @@ export class Sim {
     const base = { owner: c.id, side: c.side, team: c.team, kit: c.kit };
     if (isSuper) {
       c.super = 0;
-      this.balls.push({ ...base, kind: 'boulder', x: c.x + ux * 0.6, z: c.z + uz * 0.6, y: BOULDER.radius, vx: ux * BOULDER.speed, vz: uz * BOULDER.speed, dmg: BOULDER.damage, r: BOULDER.radius, left: BOULDER.range, hitIds: [] });
+      this.balls.push({ ...base, kind: 'boulder', x: c.x + ux * 0.6, z: c.z + uz * 0.6, y: BOULDER.radius + this.ground(c.x, c.z), vx: ux * BOULDER.speed, vz: uz * BOULDER.speed, dmg: BOULDER.damage, r: BOULDER.radius, left: BOULDER.range, hitIds: [] });
       this.emit('super', { id: c.id, x: c.x, z: c.z });
       return true;
     }
     c.ammo -= 1;
     if (kit.shot === 'lob') {
       const d = Math.min(len, kit.range), ex = c.x + ux * d, ez = c.z + uz * d;
-      this.balls.push({ ...base, kind: 'lob', x: c.x, z: c.z, y: 1.2, x0: c.x, z0: c.z, x1: ex, z1: ez, T: kit.flight * (0.6 + 0.4 * d / kit.range), t: 0, dmg: kit.damage, splash: kit.splash });
+      this.balls.push({ ...base, kind: 'lob', x: c.x, z: c.z, y: 1.2 + this.ground(c.x, c.z), x0: c.x, z0: c.z, x1: ex, z1: ez, T: kit.flight * (0.6 + 0.4 * d / kit.range), t: 0, dmg: kit.damage, splash: kit.splash });
     } else {
       const n = kit.shot === 'spread' ? kit.count : 1, spread = (kit.spreadDeg || 0) * Math.PI / 180;
       for (let i = 0; i < n; i++) {
         const a = Math.atan2(ux, uz) + (n > 1 ? (i - (n - 1) / 2) * spread : 0);
-        this.balls.push({ ...base, kind: 'straight', x: c.x + Math.sin(a) * 0.45, z: c.z + Math.cos(a) * 0.45, y: SIM.ballHeight, vx: Math.sin(a) * kit.speed, vz: Math.cos(a) * kit.speed, dmg: kit.damage, r: SIM.ballRadius, left: kit.range, d0: kit.range });
+        this.balls.push({ ...base, kind: 'straight', x: c.x + Math.sin(a) * 0.45, z: c.z + Math.cos(a) * 0.45, y: SIM.ballHeight + this.ground(c.x, c.z), vx: Math.sin(a) * kit.speed, vz: Math.cos(a) * kit.speed, dmg: kit.damage, r: SIM.ballRadius, left: kit.range, d0: kit.range });
       }
     }
     this.emit('throw', { id: c.id, kit: c.kit, x: c.x, z: c.z });
@@ -145,6 +165,7 @@ export class Sim {
     this.emit('hit', { id: c.id, by: ball.owner, dmg, kind: ball.kind, x: c.x, z: c.z });
     if (c.warmth <= 0) {
       c.frozen = CONFIG.timing.frozenSeconds; c.frozenCount++; c.travel = null; c.hidden = false;
+      if (c.sled) { c.sled = null; this.emit('sledCrash', { id: c.id, x: c.x, z: c.z }); }
       if (by) by.freezes++;
       this.emit('freeze', { id: c.id, by: ball.owner, x: c.x, z: c.z });
     }
@@ -156,9 +177,92 @@ export class Sim {
     this.t += dt;
     for (const c of this.chars) this.stepChar(c, dt, inputs.get(c.seat) || {});
     this.stepBalls(dt);
+    this.stepWorld(dt);
     for (const w of [...this.walls]) if ((w.life -= dt) <= 0) { this.removeWall(w); this.emit('wallMelt', { id: w.id }); }
     for (const d of this.drifts) d.cd = Math.max(0, d.cd - dt);
     for (const z of this.zones) this.stepZone(z, dt);
+  }
+
+  // ---------- sled runs ----------
+  runPoint(run, s) {
+    s = Math.max(0, Math.min(run.len, s)); let k = 1; while (k < run.cum.length - 1 && run.cum[k] < s) k++;
+    const a = run.pts[k - 1], b = run.pts[k], seg = run.cum[k] - run.cum[k - 1] || 1, u = (s - run.cum[k - 1]) / seg;
+    return { x: a[0] + (b[0] - a[0]) * u, z: a[1] + (b[1] - a[1]) * u, dx: (b[0] - a[0]) / seg, dz: (b[1] - a[1]) / seg };
+  }
+  stepSled(c, dt) {
+    const S = WORLD.sled, sl = c.sled, run = sl.run, p0 = this.runPoint(run, sl.s), p1 = this.runPoint(run, sl.s + 0.3);
+    const slope = (this.ground(p0.x, p0.z) - this.ground(p1.x, p1.z)) / 0.3; // downhill is positive
+    sl.v = Math.min(S.max, sl.v + (S.push + Math.max(0, slope) * S.gravity) * dt);
+    sl.s += sl.v * dt;
+    const p = this.runPoint(run, sl.s);
+    c.x = p.x; c.z = p.z; c.vx = p.dx * sl.v; c.vz = p.dz * sl.v; c.moving = sl.v; c.face = Math.atan2(p.dx, p.dz);
+    if (sl.s >= run.len) { // off at the bottom with a little glide
+      c.sled = null; c.sledCd = S.cooldown; c.vx *= 0.45; c.vz *= 0.45;
+      this.emit('sledEnd', { id: c.id, run: run.id, x: c.x, z: c.z });
+    }
+  }
+  tryBoard(c, dt) {
+    if (c.sled || c.sledCd > 0 || c.frozen || c.thaw || !this.runs.length) return;
+    for (const run of this.runs) {
+      const [px, pz] = run.pts[0], d = Math.hypot(c.x - px, c.z - pz);
+      if (d > WORLD.sled.board) continue;
+      const p = this.runPoint(run, 0.5), along = c.vx * p.dx + c.vz * p.dz;
+      c.padT += dt;
+      if (along > 0.6 || c.padT > 0.7) { // heading down the run, or waiting on the start
+        c.sled = { run, s: 0, v: WORLD.sled.start }; c.padT = 0; c.x = px; c.z = pz;
+        this.emit('sledStart', { id: c.id, run: run.id, x: px, z: pz });
+      }
+      return;
+    }
+    c.padT = 0;
+  }
+
+  // ---------- pickups, wind and weather ----------
+  stepWorld(dt) {
+    for (const p of this.pickups) {
+      if (p.taken) continue;
+      if (p.cd > 0) { p.cd -= dt; if (p.cd <= 0) this.emit('pickupBack', { pickup: p.id }); continue; }
+      for (const c of this.chars) {
+        if (c.frozen || c.thaw) continue;
+        const d = Math.hypot(c.x - p.x, c.z - p.z);
+        if (p.kind === 'flake' && c.role === 'player' && d < WORLD.flake.reach) { p.taken = true; c.flakes++; this.emit('collect', { id: c.id, pickup: p.id, kind: 'flake', x: p.x, z: p.z }); break; }
+        if (p.kind === 'cocoa' && d < WORLD.cocoa.reach && c.warmth < c.maxWarmth * 0.95) {
+          c.warmth = Math.min(c.maxWarmth, c.warmth + WORLD.cocoa.warmth); p.cd = WORLD.cocoa.respawn;
+          this.emit('collect', { id: c.id, pickup: p.id, kind: 'cocoa', x: p.x, z: p.z }); break;
+        }
+      }
+    }
+    for (const [k, t] of this.dumpCd) { if (t - dt <= 0) this.dumpCd.delete(k); else this.dumpCd.set(k, t - dt); }
+    const w = this.weather; if (!w.on) return;
+    // poyraz gusts: the north-east wind pushes snowballs for a few seconds
+    if (this.t >= w.gustNext && !w.gust) { w.gust = 1; w.gustUntil = this.t + WORLD.gust.seconds; this.emit('gust', { on: true }); }
+    if (w.gust) {
+      const u = 1 - (w.gustUntil - this.t) / WORLD.gust.seconds, env = Math.sin(Math.PI * Math.min(1, Math.max(0, u)));
+      w.wx = WORLD.gust.dir[0] * WORLD.gust.strength * env; w.wz = WORLD.gust.dir[1] * WORLD.gust.strength * env;
+      if (this.t >= w.gustUntil) { w.gust = 0; w.wx = w.wz = 0; w.gustNext = this.t + this._rr(WORLD.gust.every); this.emit('gust', { on: false }); }
+    }
+    // weather events: a blizzard (short sight) or a burst of sunshine (warm up faster)
+    if (w.kind === 'clear' && this.t >= w.next) {
+      w.kind = w.force || (this.rng() < 0.55 ? 'blizzard' : 'sun'); w.force = null; w.until = this.t + WORLD.weather[w.kind];
+      this.emit('weather', { kind: w.kind });
+    } else if (w.kind !== 'clear' && this.t >= w.until) {
+      w.kind = 'clear'; w.next = this.t + this._rr(WORLD.weather.every); this.emit('weather', { kind: 'clear' });
+    }
+  }
+
+  // a snowball hits a roof, a tree or a lamp: the snow on it falls on whoever stands below
+  snowDump(b) {
+    const rows = this.arena.rows; if (!rows) return;
+    const i = Math.floor(b.x - this.arena.x0), j = Math.floor(b.z - this.arena.z0), ch = rows[j]?.[i];
+    if (!ch || !WORLD.dump.tiles.includes(ch)) return;
+    const key = i + ',' + j; if (this.dumpCd.has(key)) return; this.dumpCd.set(key, WORLD.dump.cooldown);
+    const x = this.arena.x0 + i + 0.5, z = this.arena.z0 + j + 0.5, hit = [];
+    for (const c of this.chars) {
+      if (c.frozen || c.thaw || c.side === b.side || Math.hypot(c.x - x, c.z - z) > WORLD.dump.reach) continue;
+      c.slow = WORLD.dump.slow; hit.push(c.id);
+      this.hit(c, { ...b, kind: 'dump', dmg: WORLD.dump.damage, vx: 0, vz: 0, x, z });
+    }
+    this.emit('snowDump', { x, z, tile: ch, hit });
   }
 
   nearestZone(x, z) { let best = null, bd = Infinity; for (const zn of this.zones) { const d = Math.hypot(zn.x - x, zn.z - z); if (d < bd) { bd = d; best = zn; } } return best; }
@@ -177,7 +281,7 @@ export class Sim {
 
   stepChar(c, dt, inp) {
     c.attackCd = Math.max(0, c.attackCd - dt); c.shield = Math.max(0, c.shield - dt); c.dodgeCd = Math.max(0, c.dodgeCd - dt);
-    c.revealT = Math.max(0, c.revealT - dt); c.flash = Math.max(0, c.flash - dt);
+    c.revealT = Math.max(0, c.revealT - dt); c.flash = Math.max(0, c.flash - dt); c.sledCd = Math.max(0, c.sledCd - dt); c.slow = Math.max(0, c.slow - dt);
     if (c.frozen > 0) {
       c.vx = c.vz = 0; c.frozen -= dt;
       if (c.frozen <= 0) { c.frozen = 0; c.thaw = SIM.thawTime; this.emit('shake', { id: c.id }); }
@@ -196,7 +300,14 @@ export class Sim {
     }
     const kit = this.kitOf(c);
     if (c.ammo < F.ammoMax) c.ammo = Math.min(F.ammoMax, c.ammo + dt / kit.reload);
-    if (this.t - c.lastHit > F.regenDelay && this.t - c.lastAttack > F.regenDelay) c.warmth = Math.min(c.maxWarmth, c.warmth + F.regenRate * dt);
+    if (this.t - c.lastHit > F.regenDelay && this.t - c.lastAttack > F.regenDelay) c.warmth = Math.min(c.maxWarmth, c.warmth + F.regenRate * (this.weather.kind === 'sun' ? WORLD.weather.sunRegen : 1) * dt);
+    const aim = this.pace.autoAim * (c.side === 'home' ? 1 : 0.5);
+    if (c.sled) { // riding down a sled run: no steering, but you can still throw
+      this.stepSled(c, dt);
+      if (inp.super) this.attack(c, inp.super.x, inp.super.z, { isSuper: true, aimHelp: inp.manual ? 0 : aim });
+      else if (inp.attack) this.attack(c, inp.attack.x, inp.attack.z, { aimHelp: inp.manual ? 0 : aim });
+      return;
+    }
 
     // movement intent: stick/keys, else tap-to-move path
     let mx = inp.mx || 0, mz = inp.mz || 0;
@@ -216,7 +327,7 @@ export class Sim {
       c.vx = dx * F.moveSpeed * SIM.dodgeSpeed; c.vz = dz * F.moveSpeed * SIM.dodgeSpeed; this.emit('dodge', { id: c.id });
     }
     const f = this.grid.flags(c.x, c.z);
-    const speed = F.moveSpeed * (f & GRID.ROAD ? F.streetBonus : 1) * (c.side === 'rival' ? this.pace.rivalSpeed : 1) * (inp.speedMul || 1);
+    const speed = F.moveSpeed * (f & GRID.ROAD ? F.streetBonus : 1) * (c.side === 'rival' ? this.pace.rivalSpeed : 1) * (inp.speedMul || 1) * (c.slow > 0 ? 0.6 : 1);
     if (c.dodge > 0) c.dodge -= dt;
     else if (f & GRID.ICE) { c.vx += mx * SIM.accel * SIM.iceGrip * dt; c.vz += mz * SIM.accel * SIM.iceGrip * dt; const sp = Math.hypot(c.vx, c.vz); if (sp > speed * 1.3) { c.vx *= speed * 1.3 / sp; c.vz *= speed * 1.3 / sp; } }
     else { const k = Math.min(1, SIM.accel * dt / speed); c.vx += (mx * speed - c.vx) * k; c.vz += (mz * speed - c.vz) * k; }
@@ -226,8 +337,8 @@ export class Sim {
     c.moving = Math.hypot(c.vx, c.vz);
     if (ml > 0.1 && !inp.attack && !inp.super) c.face = Math.atan2(mx, mz);
     c.hidden = this.grid.has(c.x, c.z, GRID.BUSH);
+    this.tryBoard(c, dt);
 
-    const aim = this.pace.autoAim * (c.side === 'home' ? 1 : 0.5);
     if (inp.super) this.attack(c, inp.super.x, inp.super.z, { isSuper: true, aimHelp: inp.manual ? 0 : aim });
     else if (inp.attack) this.attack(c, inp.attack.x, inp.attack.z, { aimHelp: inp.manual ? 0 : aim });
     if (inp.wall) this.buildWall(c);
@@ -245,7 +356,8 @@ export class Sim {
       let done = false;
       if (b.kind === 'lob') {
         b.t += dt; const u = Math.min(1, b.t / b.T);
-        b.x = b.x0 + (b.x1 - b.x0) * u; b.z = b.z0 + (b.z1 - b.z0) * u; b.y = 1.2 * (1 - u) + 4 * SIM.lobPeak * u * (1 - u) + 0.2 * u;
+        b.x1 += this.weather.wx * dt * 0.6; b.z1 += this.weather.wz * dt * 0.6; // the wind carries lobs a little
+        b.x = b.x0 + (b.x1 - b.x0) * u; b.z = b.z0 + (b.z1 - b.z0) * u; b.y = 1.2 * (1 - u) + 4 * SIM.lobPeak * u * (1 - u) + 0.2 * u + this.ground(b.x, b.z);
         if (u >= 1) {
           if (this.grid.has(b.x, b.z, GRID.ZONE)) this.emit('poof', { x: b.x, y: 0.3, z: b.z });
           else {
@@ -256,14 +368,16 @@ export class Sim {
           done = true;
         }
       } else {
+        if (b.kind === 'straight' && this.weather.gust) { b.vx += this.weather.wx * dt; b.vz += this.weather.wz * dt; } // blown sideways by the poyraz
         const sx = b.vx * dt, sz = b.vz * dt, step = Math.hypot(sx, sz);
         b.x += sx; b.z += sz; b.left -= step;
-        if (b.kind === 'straight') b.y = SIM.ballHeight + 0.25 * Math.sin(Math.PI * Math.min(1, 1 - b.left / b.d0));
+        if (b.kind === 'straight') b.y = SIM.ballHeight + 0.25 * Math.sin(Math.PI * Math.min(1, 1 - b.left / b.d0)) + this.ground(b.x, b.z);
+        else b.y = BOULDER.radius + this.ground(b.x, b.z);
         if (this.grid.has(b.x, b.z, GRID.ZONE)) { this.emit('poof', { x: b.x, y: b.y, z: b.z }); done = true; }
         else if (this.grid.blocked(b.x, b.z)) {
           const w = b.kind === 'boulder' && this.wallAt(b.x, b.z);
           if (w) { this.removeWall(w); this.emit('wallBreak', { id: w.id, x: w.x, z: w.z }); }
-          else { this.emit('splat', { x: b.x - Math.sign(b.vx) * 0.2, y: b.y, z: b.z - Math.sign(b.vz) * 0.2, wall: true, big: b.kind === 'boulder', kind: b.kind, team: b.team }); done = true; }
+          else { this.emit('splat', { x: b.x - Math.sign(b.vx) * 0.2, y: b.y, z: b.z - Math.sign(b.vz) * 0.2, wall: true, big: b.kind === 'boulder', kind: b.kind, team: b.team }); this.snowDump(b); done = true; }
         }
         if (!done) for (const c of this.chars) {
           if (c.side === b.side || c.frozen || c.thaw) continue;

@@ -116,3 +116,10 @@ h2 { margin: 0 0 8px; }
 #bigmap { width: min(80vw, 64vh); height: min(96vw, 78vh); background: #e7edf8; border: 4px solid var(--ink); border-radius: 16px; box-shadow: 0 5px 0 var(--ink); }
 #bigmap-wrap p { color: #fff; font-weight: 800; margin: 8px 0 0; -webkit-text-stroke: 0.5px var(--ink); }
 @media (max-height: 430px) { #minimap { width: 92px; height: 92px; } #map-btn { left: calc(max(8px, env(safe-area-inset-left)) + 100px); } #minimap:not([hidden]) ~ #coach { top: calc(max(6px, env(safe-area-inset-top)) + 100px); } }
+
+/* Phase 2: snowflake counter, weather overlay, warm numbers */
+#flakes { position: absolute; top: calc(10px + env(safe-area-inset-top)); right: calc(64px + env(safe-area-inset-right)); background: rgba(20, 30, 70, 0.72); color: #c9f4ff; font: 800 17px system-ui, sans-serif; padding: 6px 12px; border-radius: 999px; border: 2px solid rgba(255,255,255,0.6); }
+#flakes b { color: #fff; }
+#weather { position: fixed; inset: 0; pointer-events: none; z-index: 2; --b: 0; --s: 0;
+  background: radial-gradient(ellipse at center, rgba(255,255,255,0) 35%, rgba(240,244,255, calc(var(--b) * 0.6)) 100%), radial-gradient(circle at 15% 0%, rgba(255, 214, 140, calc(var(--s) * 0.35)), rgba(255, 214, 140, 0) 55%); }
+.fx-num.warm { color: #ffd27a; text-shadow: 0 2px 0 #7a3d12, 0 0 6px rgba(0,0,0,0.3); }

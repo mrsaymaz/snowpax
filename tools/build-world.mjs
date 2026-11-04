@@ -238,8 +238,88 @@ for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (get(i, j) === '_' &&
   }
 }
 
+// 8c. sled hills and runs: Kasımpaşa slopes down to the Golden Horn. Each run starts on a
+//     round snow hill near a higher outpost and runs one way, downhill, to a lower place.
+//     Coordinates are in cells (fractional, cell centres at +0.5).
+const hills = [], sledRuns = [];
+{
+  const PROTECT = 'WQCq+GOPf#SYhrKjD';
+  const RUNS = [
+    { id: 'archery-run', label: 'Archery Hill', from: 'archery', start: [5, 6], to: 'home' },
+    { id: 'boulevard-run', label: 'Boulevard Run', from: 'boulevard', start: [-7, 7], to: 'kizilay', end: [-3, -9] },
+    { id: 'sururi-run', label: 'Sururi Run', from: 'sururi', start: [-6, 6], to: 'kizilay', end: [8, -4] },
+  ];
+  const opOf = id => outposts.find(o => o.id === id);
+  const freeSpot = (ci, cj, r) => { // nearest cell to (ci, cj) whose surroundings can become a hill
+    for (let k = 0; k < 8; k++) for (let dj = -k; dj <= k; dj++) for (let di = -k; di <= k; di++) {
+      const i = ci + di, j = cj + dj; let ok = inB(i, j);
+      for (let b = -r; ok && b <= r; b++) for (let a = -r; ok && a <= r; a++) if (Math.hypot(a, b) <= r && PROTECT.includes(get(i + a, j + b))) ok = false;
+      if (ok) return [i, j];
+    }
+    return null;
+  };
+  // cheapest lane through open snow (crossing streets is allowed, plazas and quiet zones are not)
+  const COST = { '.': 1, u: 1, s: 1, p: 1.3, '_': 2.2, '=': 2.6, d: 3, t: 5, R: 6, l: 6, H: 7, c: 4 };
+  const lanePath = (s0, t0) => {
+    const N = W * H, dist = new Float32Array(N).fill(Infinity), came = new Int32Array(N).fill(-1), done = new Uint8Array(N), heap = [[0, s0[1] * W + s0[0]]];
+    dist[heap[0][1]] = 0; const goal = t0[1] * W + t0[0];
+    while (heap.length) {
+      let m = 0; for (let k = 1; k < heap.length; k++) if (heap[k][0] < heap[m][0]) m = k; const [, u] = heap.splice(m, 1)[0];
+      if (done[u]) continue; done[u] = 1; if (u === goal) break;
+      const ui = u % W, uj = (u / W) | 0;
+      for (const [di, dj, w] of [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 1.41], [1, -1, 1.41], [-1, 1, 1.41], [-1, -1, 1.41]]) {
+        const vi = ui + di, vj = uj + dj; if (!inB(vi, vj)) continue; const c = COST[g[vj][vi]]; if (!c) continue;
+        const v = vj * W + vi, nd = dist[u] + c * w; if (nd < dist[v]) { dist[v] = nd; came[v] = u; heap.push([nd, v]); }
+      }
+    }
+    if (came[goal] < 0) return null; const out = []; for (let v = goal; v >= 0; v = came[v]) out.push([v % W + 0.5, ((v / W) | 0) + 0.5]); return out.reverse();
+  };
+  const chaikin = pts => { const o = [pts[0]]; for (let k = 0; k + 1 < pts.length; k++) { const [a, b] = [pts[k], pts[k + 1]]; o.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25], [a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]); } o.push(pts[pts.length - 1]); return o; };
+  for (const run of RUNS) {
+    const op = opOf(run.from); if (!op) continue;
+    const top = freeSpot(op.i + run.start[0], op.j + run.start[1], 5); if (!top) { console.warn('no room for hill', run.id); continue; }
+    const R = 5.5, Hh = 2.4;
+    for (let j = top[1] - 6; j <= top[1] + 6; j++) for (let i = top[0] - 6; i <= top[0] + 6; i++) if (land(i, j) && Math.hypot(i - top[0], j - top[1]) <= R - 0.5 && !PROTECT.includes(get(i, j))) set(i, j, 'u');
+    hills.push({ i: top[0] + 0.5, j: top[1] + 0.5, r: R, h: Hh });
+    run.top = top;
+    const dest = run.to === 'home' ? [home[0] + 3, home[1] - 4] : [opOf(run.to).i + run.end[0], opOf(run.to).j + run.end[1]];
+    let end = dest; for (let k = 0; k < 6 && (COST[get(...end)] === undefined); k++) end = [end[0], end[1] - 1];
+    const cells = lanePath(top, end); if (!cells) { console.warn('no lane for', run.id); continue; }
+    let pts = cells.filter((_, k) => k % 2 === 0 || k === cells.length - 1); pts = chaikin(chaikin(pts));
+    for (const [x, z] of pts) for (let j = Math.floor(z - 0.7); j <= Math.floor(z + 0.7); j++) for (let i = Math.floor(x - 0.7); i <= Math.floor(x + 0.7); i++) {
+      if (Math.hypot(i + 0.5 - x, j + 0.5 - z) > 0.75) continue; const c = get(i, j);
+      if ('.Rltdcp'.includes(c) || c === 'H') set(i, j, 's');
+    }
+    let len = 0; for (let k = 1; k < pts.length; k++) len += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
+    // snowy pines round the foot of the hill, away from the run (solid, like park trees)
+    let trees = 0;
+    for (let a = 0; a < 16 && trees < 6; a++) {
+      const ang = a / 16 * Math.PI * 2 + 0.3, ti = Math.round(top[0] + Math.cos(ang) * 5.6), tj = Math.round(top[1] + Math.sin(ang) * 5.6);
+      if (!'.u'.includes(get(ti, tj)) || near(ti, tj, 8) || pts.some(([x, z]) => Math.hypot(x - ti - 0.5, z - tj - 0.5) < 2.6) || rand() < 0.35) continue;
+      set(ti, tj, 't'); trees++;
+    }
+    sledRuns.push({ id: run.id, label: run.label, from: run.from, to: run.to, pts: pts.map(p => p.map(v => +v.toFixed(2))), len: +len.toFixed(1) });
+  }
+}
+
+// 8d. things to collect: glowing snowflakes along the paths between outposts; hot-cocoa cups
+//     (warm you up) at a few resting spots on the way
+const pickups = [];
+{
+  const farFromPlazas = (i, j, r) => !outposts.some(o => Math.hypot(i - o.i, j - o.j) < r);
+  const spaced = (i, j, r, kind) => !pickups.some(p => p.kind === kind && Math.hypot(p.i - i, p.j - j) < r);
+  for (let j = 3; j < H - 3; j++) for (let i = 3; i < W - 3; i++) {
+    const c = get(i, j); if (!'_=s'.includes(c)) continue;
+    if (farFromPlazas(i, j, 7) && !nearHome(i, j, 5) && spaced(i, j, 13, 'flake') && rand() < 0.25) pickups.push({ id: 'f' + pickups.length, kind: 'flake', i, j });
+  }
+  for (let j = 3; j < H - 3; j++) for (let i = 3; i < W - 3; i++) {
+    if (get(i, j) !== '_' || !farFromPlazas(i, j, 10) || !spaced(i, j, 28, 'cocoa') || !spaced(i, j, 2, 'flake') || rand() > 0.08) continue;
+    pickups.push({ id: 'c' + pickups.length, kind: 'cocoa', i, j });
+  }
+}
+
 // 9. everything walkable must be reachable from the school: fill pockets, open blocked outposts
-const WALK = new Set(['.', '_', '=', 'p', 'P', 'Y', 'h', 'r', 'q', '+', 'd', 'j']);
+const WALK = new Set(['.', '_', '=', 'p', 'P', 'Y', 'h', 'r', 'q', '+', 'd', 'j', 'u', 's']);
 const flood = () => {
   const seen = new Uint8Array(W * H), st = [home];
   while (st.length) { const [i, j] = st.pop(); if (!inB(i, j) || seen[j * W + i] || !WALK.has(g[j][i])) continue; seen[j * W + i] = 1; st.push([i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]); }
@@ -247,7 +327,7 @@ const flood = () => {
 };
 let seen = flood();
 // connect anything important that is cut off (an outpost plaza or the rival camp) with a straight dug path
-const dig = (from, to) => { let [i, j] = from; const [ti, tj] = to; while (i !== ti || j !== tj) { if (!seen[j * W + i] && 'HR.'.includes(g[j][i])) g[j][i] = '_'; if (seen[j * W + i]) break; if (Math.abs(ti - i) > Math.abs(tj - j)) i += Math.sign(ti - i); else j += Math.sign(tj - j); } };
+const dig = (from, to) => { let [i, j] = from; const [ti, tj] = to; while (i !== ti || j !== tj) { if (!seen[j * W + i] && 'HRl.'.includes(g[j][i])) g[j][i] = '_'; if (seen[j * W + i]) break; if (Math.abs(ti - i) > Math.abs(tj - j)) i += Math.sign(ti - i); else j += Math.sign(tj - j); } };
 for (const target of [...outposts.map(o => [o.i, o.j - 4]), rival]) {
   if (seen[target[1] * W + target[0]]) continue;
   dig(target, home); seen = flood();
@@ -262,9 +342,9 @@ const out = {
   v: 3, id: 'arena1', name: 'Home Turf', kind: 'tiles', world: true, tile: TILE, w: W, h: H,
   credit: '© OpenStreetMap contributors',
   rows, outposts: outposts.map(({ lat, lng, ...o }) => o), landmarks, scenery,
-  home, rival,
+  home, rival, hills, sledRuns, pickups,
 };
 mkdirSync(join(ROOT, 'public/arenas'), { recursive: true });
 writeFileSync(join(ROOT, 'public/arenas/arena1.json'), JSON.stringify(out));
 const count = ch => rows.join('').split(ch).length - 1;
-console.log(`World ${W}×${H} tiles (${TILE} m each): houses ${count('H')}, buried roofs ${count('R')}, open snow ${count('.')}, streets ${count('_') + count('=')}, plazas ${count('P')}, water ${count('W')}, parks ${count('p')}, scenery ${scenery.length}, landmarks ${landmarks.length}, buried cars ${count('c')}, lamps ${count('l')}, filled pockets ${filled}`);
+console.log(`World ${W}×${H} tiles (${TILE} m each): houses ${count('H')}, buried roofs ${count('R')}, open snow ${count('.')}, streets ${count('_') + count('=')}, plazas ${count('P')}, water ${count('W')}, parks ${count('p')}, scenery ${scenery.length}, landmarks ${landmarks.length}, buried cars ${count('c')}, lamps ${count('l')}, hills ${hills.length}, sled runs ${sledRuns.map(r => r.id + ' ' + r.len).join(', ')}, snowflakes ${pickups.filter(p => p.kind === 'flake').length}, cocoa ${pickups.filter(p => p.kind === 'cocoa').length}, filled pockets ${filled}`);

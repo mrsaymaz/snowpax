@@ -89,6 +89,11 @@ export class Kid {
     this.bar = new Sprite(new SpriteMaterial({ map: this.bt, depthTest: false, transparent: true }));
     this.bar.scale.set(1.9, 1.9 * this.bc.height / 160, 1); this.bar.position.y = 2.75 * s; this.bar.renderOrder = 20; root.add(this.bar);
     this.bake();
+    // a wooden sled with red runners, shown while riding a sled run
+    const sled = this.sled = new Group(); sled.visible = false; root.add(sled);
+    const plank = new Mesh(new BoxGeometry(0.62, 0.08, 1.15), new MeshLambertMaterial({ color: '#b9784a' })); plank.position.y = 0.2; sled.add(plank);
+    for (const x of [-0.27, 0.27]) { const r = new Mesh(new BoxGeometry(0.06, 0.06, 1.3), new MeshLambertMaterial({ color: '#c8443c' })); r.position.set(x, 0.07, 0.02); sled.add(r); const tip = new Mesh(new TorusGeometry(0.12, 0.03, 4, 8, Math.PI), r.material); tip.position.set(x, 0.18, 0.66); tip.rotation.y = Math.PI / 2; sled.add(tip); }
+    plank.castShadow = true;
     this.last = ''; this.t = Math.random() * 6; this.throwT = 0; this.shakeT = 0;
     emblem(c.team).onload = () => { this.last = ''; };
   }
@@ -139,9 +144,10 @@ export class Kid {
 
   onEvent(type) { if (type === 'throw' || type === 'super') this.throwT = 0.28; if (type === 'shake') this.shakeT = 0.7; }
 
-  update(dt, { visible = true, reduceMotion = false } = {}) {
+  update(dt, { visible = true, reduceMotion = false, groundY = 0 } = {}) {
     const c = this.c;
-    this.root.position.set(c.x, 0, c.z);
+    this.root.position.set(c.x, groundY, c.z);
+    this.sled.visible = !!c.sled; this.sled.rotation.y = c.face;
     this.kid.rotation.y = c.face; this.snowman.rotation.y = 0;
     const frozen = c.frozen > 0, thaw = c.thaw > 0;
     this.snowman.visible = frozen || (thaw && this.shakeT > 0.35);
@@ -153,6 +159,7 @@ export class Kid {
     const sw = Math.sin(this.t) * 0.75 * sp;
     this.legs[0].rotation.x = sw; this.legs[1].rotation.x = -sw;
     this.kid.position.y = Math.abs(Math.sin(this.t)) * 0.09 * sp;
+    if (c.sled) { this.legs[0].rotation.x = this.legs[1].rotation.x = -1.3; this.kid.position.y = 0.05 + Math.sin(this.t * 2) * 0.02; } // sitting on the sled
     this.throwT = Math.max(0, this.throwT - dt); this.shakeT = Math.max(0, this.shakeT - dt);
     this.arms[1].rotation.x = this.throwT > 0 ? -2.8 * Math.sin((this.throwT / 0.28) * Math.PI) : -sw * 0.7;
     this.arms[0].rotation.x = sw * 0.7;

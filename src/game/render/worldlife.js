@@ -1,10 +1,12 @@
 // Life in the snowed-in neighbourhood: seagulls that sit on roofs, lamps and the ferry and fly
 // off when a kid runs close, street cats warming themselves by the chimneys (they watch you go
 // by), footprints that stay in the snow for a while, and steam from tea glasses on the sills.
+// Also the things to collect (glowing snowflakes, hot-cocoa cups), streaks of powder blown by
+// the poyraz wind, and little piles where snow fell off a roof.
 // Everything is instanced: a few draw calls in total, whatever the numbers.
 import {
   Group, InstancedMesh, Mesh, MeshLambertMaterial, MeshBasicMaterial, ShaderMaterial, Object3D, Color, BufferAttribute, InstancedBufferAttribute,
-  SphereGeometry, ConeGeometry, CapsuleGeometry, TorusGeometry, BoxGeometry, PlaneGeometry, CanvasTexture,
+  SphereGeometry, ConeGeometry, CapsuleGeometry, TorusGeometry, BoxGeometry, PlaneGeometry, CanvasTexture, CylinderGeometry,
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
@@ -22,7 +24,8 @@ function bake(parts) {
 }
 
 export class WorldLife {
-  constructor(scene, life, { low = false } = {}) {
+  constructor(scene, life, { low = false, ground = () => 0, pickups = [] } = {}) {
+    this.ground = ground;
     this.g = new Group(); scene.add(this.g); this.o = new Object3D(); this.time = 0;
     const mat = new MeshLambertMaterial({ vertexColors: true });
 
@@ -81,6 +84,32 @@ export class WorldLife {
     this.steamSrc = low ? [] : (life.steam || []).slice(0, 24);
     this.steam = new InstancedMesh(new PlaneGeometry(1, 1), new MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }), Math.max(1, this.steamSrc.length * 3));
     this.steam.count = this.steamSrc.length * 3; this.steam.frustumCulled = false; this.g.add(this.steam);
+
+    // ---------- pickups: glowing snowflakes and hot-cocoa cups ----------
+    this.pickups = pickups; this.flakes = pickups.filter(p => p.kind === 'flake'); this.cocoas = pickups.filter(p => p.kind === 'cocoa');
+    const arm = new BoxGeometry(0.06, 0.5, 0.04), crystal = mergeGeometries([0, 1, 2].map(k => { const g2 = arm.clone(); g2.rotateZ(k * Math.PI / 3); return g2; }).concat([0, 1, 2, 3, 4, 5].map(k => { const g2 = new BoxGeometry(0.04, 0.14, 0.04); g2.rotateZ(0.6); g2.translate(0.04, 0.2, 0); g2.rotateZ(k * Math.PI / 3); return g2; })));
+    this.flakeMesh = new InstancedMesh(crystal, new MeshBasicMaterial({ color: '#c9f4ff' }), Math.max(1, this.flakes.length)); this.flakeMesh.count = this.flakes.length; this.flakeMesh.frustumCulled = false; this.g.add(this.flakeMesh);
+    const haloTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g2 = c.getContext('2d'); const gr = g2.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(170,235,255,0.9)'); gr.addColorStop(0.4, 'rgba(120,210,255,0.35)'); gr.addColorStop(1, 'rgba(120,210,255,0)'); g2.fillStyle = gr; g2.fillRect(0, 0, 64, 64); return new CanvasTexture(c); })();
+    this.halo = new InstancedMesh(new PlaneGeometry(1, 1), new MeshBasicMaterial({ map: haloTex, transparent: true, depthWrite: false, blending: 2 }), Math.max(1, this.flakes.length)); this.halo.count = this.flakes.length; this.halo.frustumCulled = false; this.halo.renderOrder = 4; this.g.add(this.halo);
+    const cup = bake([
+      [new CylinderGeometry(0.16, 0.13, 0.3, 12), '#e0463c', 0, 0.15, 0], [new CylinderGeometry(0.162, 0.162, 0.06, 12), '#ffffff', 0, 0.2, 0],
+      [new CylinderGeometry(0.14, 0.14, 0.02, 12), '#6b3b22', 0, 0.295, 0], [new SphereGeometry(0.07, 8, 6), '#fff6ea', 0.03, 0.31, 0.02],
+      [new TorusGeometry(0.08, 0.025, 5, 10), '#e0463c', 0.17, 0.15, 0, 0, 0, 0], [new CylinderGeometry(0.3, 0.3, 0.04, 14), '#d9d2c4', 0, -0.02, 0],
+    ]);
+    this.cupMesh = new InstancedMesh(cup, mat, Math.max(1, this.cocoas.length)); this.cupMesh.count = this.cocoas.length; this.cupMesh.frustumCulled = false; this.g.add(this.cupMesh);
+    this.cocoaSteam = new InstancedMesh(new PlaneGeometry(1, 1), this.steam.material, Math.max(1, this.cocoas.length * 3)); this.cocoaSteam.count = this.cocoas.length * 3; this.cocoaSteam.frustumCulled = false; this.g.add(this.cocoaSteam);
+
+    // ---------- poyraz: streaks of powder racing over the snow ----------
+    const streakTex = (() => { const c = document.createElement('canvas'); c.width = 64; c.height = 16; const g2 = c.getContext('2d'); const gr = g2.createLinearGradient(0, 0, 64, 0); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.85)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g2.fillStyle = gr; g2.fillRect(0, 4, 64, 8); return new CanvasTexture(c); })();
+    const sg = new PlaneGeometry(1, 1); sg.rotateX(-Math.PI / 2);
+    this.SN = low ? 18 : 40; this.streakMat = new MeshBasicMaterial({ map: streakTex, transparent: true, depthWrite: false, opacity: 0 });
+    this.streaks = new InstancedMesh(sg, this.streakMat, this.SN); this.streaks.frustumCulled = false; this.streaks.renderOrder = 3; this.g.add(this.streaks);
+    this.streakP = Array.from({ length: this.SN }, (_, k) => ({ u: rnd(k, 51) * 30 - 15, v: rnd(k, 52) * 24 - 12, y: 0.12 + rnd(k, 53) * 0.5, len: 1.5 + rnd(k, 54) * 2.5 }));
+
+    // ---------- snow that fell off a roof or a tree: soft piles that slowly settle ----------
+    this.PN = 12; this.pileI = 0; this.piles = Array.from({ length: this.PN }, () => ({ t: 99, x: 0, z: 0 }));
+    this.pileMesh = new InstancedMesh(new SphereGeometry(0.5, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2), new MeshLambertMaterial({ color: '#fbfdff' }), this.PN); this.pileMesh.frustumCulled = false; this.g.add(this.pileMesh);
+    for (let k = 0; k < this.PN; k++) { this.o.position.set(0, -9, 0); this.o.updateMatrix(); this.pileMesh.setMatrixAt(k, this.o.matrix); }
   }
 
   // A few animals go a long way: gulls and cats far from the player quietly move closer
@@ -113,11 +142,46 @@ export class WorldLife {
     if (d > 2) { w.x = c.x; w.z = c.z; return; } // respawned or knocked back: no trail across the map
     const yaw = Math.atan2(c.x - w.x, c.z - w.z), k = this.fpI = (this.fpI + 1) % this.FP;
     w.side = -w.side; w.x = c.x; w.z = c.z;
-    this.o.position.set(c.x + Math.cos(yaw) * 0.1 * w.side, 0.02, c.z - Math.sin(yaw) * 0.1 * w.side); this.o.rotation.set(0, yaw, 0); this.o.scale.setScalar(1); this.o.updateMatrix();
+    this.o.position.set(c.x + Math.cos(yaw) * 0.1 * w.side, this.ground(c.x, c.z) + 0.02, c.z - Math.sin(yaw) * 0.1 * w.side); this.o.rotation.set(0, yaw, 0); this.o.scale.setScalar(1); this.o.updateMatrix();
     this.prints.setMatrixAt(k, this.o.matrix); this.prints.instanceMatrix.needsUpdate = true; this.fpAge[k] = 0;
   }
 
-  tick(dt, chars, camera, focus = null) {
+  pile(x, z) { const p = this.piles[this.pileI = (this.pileI + 1) % this.PN]; p.t = 0; p.x = x; p.z = z; }
+
+  // wind: { wx, wz } from the simulation (0 when calm)
+  tickExtras(dt, camera, focus, wind) {
+    const t = this.time, o = this.o;
+    // pickups bob and spin; taken ones hide
+    this.flakes.forEach((p, k) => {
+      const show = !p.taken, y = this.ground(p.x, p.z) + 0.75 + Math.sin(t * 2.2 + k) * 0.12;
+      o.position.set(p.x, show ? y : -9, p.z); o.rotation.set(0, t * 1.6 + k, 0); o.scale.setScalar(1.25); o.updateMatrix(); this.flakeMesh.setMatrixAt(k, o.matrix);
+      if (camera) { o.quaternion.copy(camera.quaternion); o.scale.setScalar(show ? 1.3 + Math.sin(t * 4 + k) * 0.15 : 0); o.updateMatrix(); this.halo.setMatrixAt(k, o.matrix); }
+    });
+    this.flakeMesh.instanceMatrix.needsUpdate = true; this.halo.instanceMatrix.needsUpdate = true;
+    this.cocoas.forEach((p, k) => {
+      const show = !(p.cd > 0), gy = this.ground(p.x, p.z), y = gy + 0.25 + Math.sin(t * 1.8 + k) * 0.05;
+      o.position.set(p.x, show ? y : -9, p.z); o.rotation.set(0, t * 0.8 + k, 0); o.scale.setScalar(1.5); o.updateMatrix(); this.cupMesh.setMatrixAt(k, o.matrix);
+      if (camera) for (let j = 0; j < 3; j++) { const a = (t * 0.6 + j / 3) % 1; o.position.set(p.x + Math.sin(t * 2 + j) * 0.05, show ? y + 0.5 + a * 0.6 : -9, p.z); o.quaternion.copy(camera.quaternion); o.scale.setScalar(0.18 + a * 0.3); o.updateMatrix(); this.cocoaSteam.setMatrixAt(k * 3 + j, o.matrix); }
+    });
+    this.cupMesh.instanceMatrix.needsUpdate = true; this.cocoaSteam.instanceMatrix.needsUpdate = true;
+    // powder streaks while the wind blows
+    const ws = Math.hypot(wind.wx, wind.wz); this.streakMat.opacity = Math.min(0.9, ws * 0.45);
+    if (ws > 0.02 && focus) {
+      const ux = wind.wx / ws, uz = wind.wz / ws, yaw = Math.atan2(ux, uz) + Math.PI / 2;
+      this.streakP.forEach((q, k) => {
+        q.u += ws * 4 * dt; if (q.u > 15) { q.u -= 30; q.v = rnd(k, t * 10 | 0) * 24 - 12; }
+        const x = focus.x + ux * q.u - uz * q.v, z = focus.z + uz * q.u + ux * q.v;
+        o.position.set(x, this.ground(x, z) + q.y, z); o.rotation.set(0, yaw, 0); o.scale.set(q.len, 1, 0.38); o.updateMatrix(); this.streaks.setMatrixAt(k, o.matrix);
+      });
+      this.streaks.instanceMatrix.needsUpdate = true;
+    }
+    // piles settle over 10 s
+    let dirty = false;
+    this.piles.forEach((p, k) => { if (p.t > 10.5) return; p.t += dt; dirty = true; const s2 = p.t < 0.3 ? p.t / 0.3 : Math.max(0, 1 - (p.t - 7) / 3.5); o.position.set(p.x, p.t > 10.5 ? -9 : this.ground(p.x, p.z), p.z); o.rotation.set(0, k, 0); o.scale.set(1.2 * s2, 0.55 * s2, 1.0 * s2); o.updateMatrix(); this.pileMesh.setMatrixAt(k, o.matrix); });
+    if (dirty) this.pileMesh.instanceMatrix.needsUpdate = true;
+  }
+
+  tick(dt, chars, camera, focus = null, wind = { wx: 0, wz: 0 }) {
     this.time += dt; const t = this.time, o = this.o;
     if (focus && (this._rt = (this._rt || 0) - dt) <= 0) { this._rt = 0.8; this.gather(focus); }
     // footprints fade over 14 s
@@ -178,5 +242,6 @@ export class WorldLife {
       this.steamSrc.forEach((s, k) => { for (let j = 0; j < 3; j++) { const a = ((t * 0.5 + j / 3 + rnd(k, j)) % 1); o.position.set(s[0] + Math.sin(t * 2 + j + k) * 0.04, s[1] + a * 0.5, s[2]); o.quaternion.copy(camera.quaternion); o.scale.setScalar(0.12 + a * 0.22); o.updateMatrix(); this.steam.setMatrixAt(k * 3 + j, o.matrix); } });
       this.steam.instanceMatrix.needsUpdate = true;
     }
+    this.tickExtras(dt, camera, focus, wind);
   }
 }

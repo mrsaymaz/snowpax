@@ -22,7 +22,7 @@ export function defaultSeats(myTeam, rivalTeam, playerKit = 'thrower') {
 
 export function createMatch({ arena, myTeam, rivalTeam, pace = 'relaxed', rng = Math.random, seats = null, playerKit = 'thrower' }) {
   const grid = new Grid(arena);
-  const nav = arena.kind === 'tiles' ? new GridNav(grid, SIM.radius) : new Nav(arena, grid);
+  const nav = arena.kind === 'tiles' ? new GridNav(grid, SIM.radius, arena.sledRuns || []) : new Nav(arena, grid);
   seats = seats || defaultSeats(myTeam, rivalTeam, playerKit);
   const sim = new Sim({ arena, grid, nav, seats, rng, pace });
   const base = arena.places.find(p => p.kind === 'base');

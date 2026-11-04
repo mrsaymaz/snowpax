@@ -19,7 +19,7 @@ export function buildTileArena(def) {
   for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
     const ch = rows[j][i], k = j * w + i;
     if (SOLID.includes(ch)) grid[k] |= GRID.BLOCK;
-    if ('_=+ioPj'.includes(ch)) grid[k] |= GRID.ROAD;
+    if ('_=+ioPjs'.includes(ch)) grid[k] |= GRID.ROAD;  // s = sled lane (packed snow)
     if ('QCq+'.includes(ch)) grid[k] |= GRID.ZONE;   // places of worship, cemeteries and their quiet buffer
     if (ch === 'p') grid[k] |= GRID.PARK;
     if (ch === 'Y' || ch === 'h') grid[k] |= GRID.YARD;
@@ -49,6 +49,10 @@ export function buildTileArena(def) {
         : [{ id: 'zone', kind: 'zone', label: 'Street Outpost', x: zc[0], z: zc[1], r: def.zoneRadius || 2.3 }]),
     ],
     world: !!def.world, landmarks: def.landmarks || [], scenery: def.scenery || [],
+    // sled hills, one-way sled runs and pickups (cell coordinates → world)
+    hills: (def.hills || []).map(hl => ({ x: x0 + hl.i, z: z0 + hl.j, r: hl.r, h: hl.h })),
+    sledRuns: (def.sledRuns || []).map(r => ({ ...r, pts: r.pts.map(([i, j]) => [x0 + i, z0 + j]) })),
+    pickups: (def.pickups || []).map(pk => ({ id: pk.id, kind: pk.kind, x: x0 + pk.i + 0.5, z: z0 + pk.j + 0.5 })),
     graph: null,
   };
 }

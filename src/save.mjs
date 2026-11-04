@@ -20,6 +20,7 @@ export function defaultSave(now = Date.now()) {
     coachSeen: {},            // sub-task id → true after its first instructions
     units: {},                // unit id → progress (src/rules/progress.mjs)
     cards: [],                // landmark card ids collected
+    snowflakes: 0,            // glowing snowflakes collected in the snow, all time
     league: { outbox: [], claimed: [] },
     accessOk: false,
   };
@@ -47,6 +48,7 @@ export function migrate(raw) {
   if (!['relaxed', 'challenge'].includes(out.pace)) out.pace = 'relaxed';
   if (typeof out.units !== 'object' || Array.isArray(out.units) || !out.units) out.units = {};
   if (!Array.isArray(out.cards)) out.cards = [];
+  if (!Number.isFinite(out.snowflakes) || out.snowflakes < 0) out.snowflakes = 0;
   return out;
 }
 

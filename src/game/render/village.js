@@ -183,7 +183,9 @@ function sign(text, w = 2.2, bg = '#2b3556') {
   const c = document.createElement('canvas'); c.width = 512; c.height = 160; const g = c.getContext('2d');
   g.fillStyle = '#5a463f'; g.beginPath(); g.roundRect(4, 4, 504, 152, 26); g.fill();
   g.fillStyle = bg; g.beginPath(); g.roundRect(18, 18, 476, 124, 18); g.fill();
-  g.fillStyle = '#ffe2a8'; g.font = '900 72px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 256, 84);
+  g.fillStyle = '#ffe2a8'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  let fs = 72; g.font = `900 ${fs}px system-ui, sans-serif`; while (g.measureText(text).width > 450 && fs > 30) { fs -= 4; g.font = `900 ${fs}px system-ui, sans-serif`; } // long names shrink to fit
+  g.fillText(text, 256, 84);
   const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace;
   const m = new Mesh(new PlaneGeometry(w, w * 160 / 512), new MeshBasicMaterial({ map: t, transparent: true })); return m;
 }
@@ -600,6 +602,8 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
       smoke.forEach((u, k) => { if (Math.hypot(u.src[0] - zp.x, u.src[2] - zp.z) < 16) smokeMesh.setColorAt(k, new Color('#ffffff').lerp(col, 0.65)); });
       if (smokeMesh.instanceColor) smokeMesh.instanceColor.needsUpdate = true;
     },
+    // weather: heavier, faster snow in a blizzard; the poyraz blows it sideways
+    setWeather({ snow = 1, wx = 0, wz = 0 } = {}) { this.snowMul = snow; this.windX = wx; this.windZ = wz; flakes.material.size = 0.16 * (snow > 1.5 ? 1.5 : 1); flakes.material.opacity = snow > 1.5 ? 1 : 0.9; },
     // 0 = late afternoon, 1 = dusk: lamps, windows and lantern glows brighten
     setDusk(k) {
       glowMesh.material.opacity = 0.8 + 0.2 * k; poolMesh.material.opacity = 0.3 + 0.4 * k;
@@ -639,7 +643,8 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
       const rf = group.userData.rivalFlag; if (rf) { const pos = rf.geometry.attributes.position; for (let v = 0; v < pos.count; v++) { const x = pos.getX(v) + 0.65; pos.setZ(v, Math.sin(time * 6 - x * 4 + 1) * 0.08 * x); } pos.needsUpdate = true; }
       const fpos = flakes.geometry.attributes.position.array;
       for (let k = 0; k < flakesN; k++) {
-        let x = fpos[k * 3] + dt * (1.6 + Math.sin(time * 0.7 + k) * 0.5), y = fpos[k * 3 + 1] - dt * (1.4 + (k % 5) * 0.2), z = fpos[k * 3 + 2];
+        const sm = this.snowMul || 1, wx = this.windX || 0, wz = this.windZ || 0;
+        let x = fpos[k * 3] + dt * ((1.6 + Math.sin(time * 0.7 + k) * 0.5) * sm + wx * 3), y = fpos[k * 3 + 1] - dt * (1.4 + (k % 5) * 0.2) * sm, z = fpos[k * 3 + 2] + dt * wz * 3;
         if (y < 0) y += 14;
         if (x - focus.x > 20) x -= 40; else if (x - focus.x < -20) x += 40;
         if (z - focus.z > 15) z -= 30; else if (z - focus.z < -15) z += 30;
