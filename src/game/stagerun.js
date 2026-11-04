@@ -93,6 +93,7 @@ export class StageRunner {
     this.entries = entryPoints(grid, z);
     sim.held.rival = this.entries.map(e => ({ x: e.x, z: e.z })); sim.spawns.rival = sim.held.rival.slice();
     if (z.owner !== 'home') { z.owner = null; z.progress = 0; }
+    z.stand = true;
     // the team arrives on the circle, facing the landmark
     const far = this.entries.reduce((s, e) => s + e.a, 0) / this.entries.length + Math.PI; // away from where the rivals come in
     const tries = [far, far + 0.6, far - 0.6, far + 1.4, far - 1.4, 0, Math.PI / 2, -Math.PI / 2, Math.PI];
@@ -173,7 +174,7 @@ export class StageRunner {
     $('#outoflives').onclick = e => { const b = e.target.closest('[data-go]'); if (!b) return; $('#outoflives').hidden = true; if (b.dataset.go === 'again') this.start(this.cur); else this.showMap(); };
   }
   cleanup(lost) {
-    this.phase = null; this.flow.stageHold = false; this.ui.seizeButton?.(false);
+    this.phase = null; this.flow.stageHold = false; this.ui.seizeButton?.(false); if (this.zone) this.zone.stand = false;
     const z = this.zone; this.flow.abort(); this.flow.setStage(null);
     setWall(this.match.grid, this.wall, false); this.ui.showWall?.(null); this.wall = [];
     this.match.clearMinions(); this.ui.onGone?.();
@@ -261,7 +262,7 @@ export class StageRunner {
     else if (this.phase === 'seize' && !this.flow.busy && !this.zone.owner && !this.begun) { // walk into the circle to start seizing (after 8 s the kid walks in by itself)
       const P = this.match.player, inside = Math.hypot(P.x - this.zone.x, P.z - this.zone.z) <= this.zone.r;
       this.tSeize += dt; if (this.tSeize > 8 && !P.travel && !inside) this.walkIn();
-      if (inside && !P.frozen && !P.thaw) { this.begun = true; this.ui.seizeButton?.(false); this.flow.begin(this.zone); }
+      if ((inside || this.tSeize > 14) && !P.frozen && !P.thaw) { this.begun = true; this.ui.seizeButton?.(false); this.flow.begin(this.zone); } // never stuck outside
     }
     if (this.cur.final) { this.updateShowdown(dt, v); return; }
     if (this.waveIdx === 0 && this.tStand > 2) this.spawnWave(0);
@@ -270,7 +271,15 @@ export class StageRunner {
     // the final wave decides: beaten (or 8 s of it held off) and the outpost is yours
     if (this.finalT !== null) { this.finalT += dt; const fw = this.waves[2]; if ((fw && fw.cleared) || this.finalT > 8) { this.finalT = null; if (fw && !fw.cleared) this.ui.banner('THEY GIVE UP!', 'win', 1.2); setTimeout(() => { if (this.mode === 'outpost') this.flow.held(this.zone); }, fw?.cleared ? 600 : 1200); } }
   }
-  walkIn() { const z = this.zone, P = this.match.player; if (z && !P.frozen) this.sim.travelTo(P, z.x, z.z); }
+  // walk into the circle: to a free spot just inside its edge, nearest the player (the middle is the landmark)
+  walkIn() {
+    const z = this.zone, P = this.match.player, g = this.match.grid; if (!z || P.frozen) return;
+    const a0 = Math.atan2(P.x - z.x, P.z - z.z);
+    for (const da of [0, 0.4, -0.4, 0.8, -0.8, 1.3, -1.3, 2, -2, Math.PI]) for (const rr of [z.r - 0.7, z.r - 1.1]) {
+      const x = z.x + Math.sin(a0 + da) * rr, zz = z.z + Math.cos(a0 + da) * rr;
+      if (g.freeCircle(x, zz, 0.4) && this.sim.travelTo(P, x, zz)) return;
+    }
+  }
   // the most open direction round a circle (the schoolyard has no fight yard in the map)
   openDir(z) {
     const g = this.match.grid; let best = null;

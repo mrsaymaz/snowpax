@@ -287,7 +287,7 @@ export class Sim {
     z.home = home; z.rival = rival; z.contested = home > 0 && rival > 0;
     if (z.owner === 'home' || (z.owner && !this.taskCapture)) return;
     if (this.taskCapture) { // home seizes by answering (seizeProgress); rivals by standing in a free circle
-      if (z.owner || z.seizing) return;
+      if (z.owner || z.seizing || z.stand) return; // a stage stand: the English decides the outpost, not standing in it
       const rate = dt / ZONE.captureSeconds;
       if (rival && !home) z.progress = Math.max(-1, Math.min(0, z.progress) - rate * (1 + ZONE.extraKidBonus * (rival - 1)));
       if (z.progress <= -1) { z.owner = 'rival'; this.emit('zoneCaptured', { side: 'rival', zone: z.id }); }
