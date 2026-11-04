@@ -27,6 +27,7 @@
     <p class="note">Feel test · v{{VERSION}} · <a href="preview.html">Task preview</a></p>
   </div>
 </section>
+<section id="taskcard" class="taskcard" hidden aria-live="polite"></section>
 <div id="loading" class="screen" hidden><div class="card">Loading…</div></div>
 
 <div id="hud" hidden>
@@ -52,6 +53,7 @@
 <section id="pause-menu" class="screen" hidden>
   <div class="card">
     <h2>Paused</h2>
+    <p id="accuracy" hidden></p>
     <button id="resume" class="play-btn" type="button">Back to the snow</button>
     <button id="q-cycle" class="menu-btn" type="button">Quality: <span id="q-level">Auto</span></button>
     <button id="sound" class="menu-btn" type="button">Sound: on</button>

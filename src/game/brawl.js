@@ -1,6 +1,6 @@
-// SnowPax arena feel test: Schoolyard Snow Day. 3-vs-3 snowball brawl around Our School with
-// a capture zone (outpost) in the street. In the full game, seizing the outpost opens the
-// English task card while teammates guard you.
+// SnowPax: 3-vs-3 snowball brawl across snowed-in Kasımpaşa. Seize the five landmark outposts by
+// answering English tasks from the chosen unit while your teammates guard you (outpostflow.js).
+// ?arena=schoolyard runs the small feel-test arena instead.
 import { WebGLRenderer, Scene, PerspectiveCamera, HemisphereLight, DirectionalLight, Color, Vector3, Vector2, Raycaster, Plane, PCFSoftShadowMap, Fog } from 'three';
 import { CONFIG, TEAM_IDS } from '../config.js';
 import { emblemSVG } from '../emblems.js';
@@ -18,6 +18,8 @@ import { CUT } from './render/cutout.js';
 import { AutoQuality, guessLevel, LEVELS } from './quality.js';
 import { Sticks } from './sticks.js';
 import { unlockAudio, play, setSound } from './audio.js';
+import { OutpostFlow, assignFlakeWords } from './outpostflow.js';
+import { ensureUnit, startRun } from '../rules/progress.mjs';
 
 const $ = s => document.querySelector(s);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -63,12 +65,28 @@ async function startGame(myTeam, kit, pace) {
   const myCol = CONFIG.teams[myTeam].color, rivCol = CONFIG.teams[rivalTeam].color;
   // test helper: ?at=<outpost id> starts the student and teammates beside that outpost
   const atZone = sim.zones.find(zz => zz.id === params.get('at'));
-  if (atZone) { sim.zone = atZone; sim.chars.filter(c => c.side === 'home').forEach((c, k) => { c.x = atZone.x - 1.2 + k * 1.2; c.z = atZone.z + atZone.r + 0.6; }); }
+  if (atZone) { // the first free side of the circle, south first
+    sim.zone = atZone;
+    const r = atZone.r + 0.7, ang = [0, 0.5, -0.5, 1.2, -1.2, Math.PI / 2, -Math.PI / 2, 2.2, -2.2, Math.PI].find(a => [-1.2, 0, 1.2].every(o => { const x = atZone.x + Math.sin(a) * r + Math.cos(a) * o, z = atZone.z + Math.cos(a) * r - Math.sin(a) * o; return match.grid.freeCircle(x, z, 0.4); })) ?? 0;
+    sim.chars.filter(c => c.side === 'home').forEach((c, k) => { const o = (k - 1) * 1.2; c.x = atZone.x + Math.sin(ang) * r + Math.cos(ang) * o; c.z = atZone.z + Math.cos(ang) * r - Math.sin(ang) * o; c.face = ang + Math.PI; });
+    globalThis.__atAngle = ang;
+  }
   // ?at=<sled run id> starts beside that run's hilltop; ?weather=blizzard|sun|gust forces the weather soon after the start
   const atRun = sim.runs.find(r => r.id === params.get('at'));
   if (atRun) sim.chars.filter(c => c.side === 'home').forEach((c, k) => { c.x = atRun.pts[0][0] - 1.6 + k * 1.6; c.z = atRun.pts[0][1] + 2.2; });
   if (params.get('weather') === 'gust') sim.weather.gustNext = 1; else if (['blizzard', 'sun'].includes(params.get('weather'))) { sim.weather.next = 1; sim.weather.force = params.get('weather'); }
   const groundH = makeGround(arena.hills || []);
+  // the unit being practised (Grade 5 Unit 1 unless ?unit=g6u3 or the save says otherwise)
+  let unit = null, unitProgress = null;
+  if (arena.world) {
+    const unitId = params.get('unit') || save.unitId || 'g5u1', grade = (/^g(\d)/.exec(unitId) || [0, 5])[1];
+    const bank = await (await fetch(`content/grade${grade}.json`)).json();
+    unit = bank.units.find(u => u.id === unitId) || bank.units[0];
+    save.unitId = unit.id; unitProgress = ensureUnit(save, unit.id, rng);
+    if (!unitProgress.arenas[0].run) startRun(unitProgress, 0);
+    writeSave(save);
+    assignFlakeWords(sim, unit, unitProgress.missed, rng);
+  }
 
   // renderer, scene, lights
   const canvas = $('#scene');
@@ -134,6 +152,10 @@ async function startGame(myTeam, kit, pace) {
   const seen = new Set(), once = (key, text, sec = 4.5) => { if (seen.has(key)) return; seen.add(key); coach(text, sec); };
   $('#flakes b').textContent = save.snowflakes || 0; $('#flakes').hidden = !arena.world;
   const banner = (text, cls = '', sec = 1.6) => { const b = $('#banner'); b.textContent = text; b.className = 'show ' + cls; clearTimeout(banner.t); banner.t = setTimeout(() => { b.className = ''; }, sec * 1000); };
+  const flow = unit ? new OutpostFlow({
+    sim, player, unit, unitProgress, save, writeSave, pace, rng, root: $('#taskcard'), familyOverride: params.get('family'),
+    ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play, fx, fireworks: z => { if (reduceMotion) return; for (const col of [myCol, '#ffffff', '#ffd166', '#7cc4f0']) fx.emit(z.x, 3.5, z.z, 40, col, 6, 1.4, 1.2); } },
+  }) : null;
   const feed = (html) => { const li = document.createElement('div'); li.className = 'feed-item'; li.innerHTML = html; $('#feed').prepend(li); setTimeout(() => li.remove(), 3500); while ($('#feed').children.length > 3) $('#feed').lastChild.remove(); };
 
   // mini-map (top left) and the big map: tap a place to walk there
@@ -186,7 +208,7 @@ async function startGame(myTeam, kit, pace) {
   $('#bigmap-wrap').addEventListener('pointerup', e => { if (e.target.id === 'bigmap-wrap') $('#bigmap-wrap').hidden = true; });
   // pause
   let paused = false;
-  function pause(on) { paused = on; $('#pause-menu').hidden = !on; $('#q-level').textContent = quality.forced === null ? `Auto (${LEVELS[quality.level].name})` : LEVELS[quality.level].name; }
+  function pause(on) { paused = on; $('#pause-menu').hidden = !on; if (flow) { const a = flow.accuracy; $('#accuracy').hidden = false; $('#accuracy').innerHTML = `Right first time: <b>${a.firstTry} of ${a.total}</b> (${a.pct}%)<br><small>Get ${Math.round(CONFIG.demand.unlockAccuracy * 100)}% to unlock the next arena.</small>`; } $('#q-level').textContent = quality.forced === null ? `Auto (${LEVELS[quality.level].name})` : LEVELS[quality.level].name; }
   $('#pause').onclick = () => pause(true); $('#resume').onclick = () => pause(false);
   $('#q-cycle').onclick = () => { const n = quality.forced === null ? 0 : quality.forced + 1; if (n >= LEVELS.length) quality.auto(); else quality.set(n); pause(true); };
   $('#sound').onclick = () => { save.settings.sound = !save.settings.sound; setSound(save.settings.sound); writeSave(save); $('#sound').textContent = `Sound: ${save.settings.sound ? 'on' : 'off'}`; };
@@ -216,7 +238,7 @@ async function startGame(myTeam, kit, pace) {
     focus.set(player.x, 0, player.z - 1.6);
   }
 
-  let last = performance.now(), puffT = 0, camY = 0; const zoneKeys = {}, held = new Set();
+  let last = performance.now(), puffT = 0, camY = 0, camShift = 0; const zoneKeys = {}, held = new Set();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     requestAnimationFrame(frame); quality.tick(dt);
@@ -251,8 +273,9 @@ async function startGame(myTeam, kit, pace) {
     fx.aim(aimKind, player, aimTo || player, myCol, aimKind === 'super' ? CONFIG.superBoulder.range : kitInfo.range, kitInfo.spreadDeg || 0);
 
     // events → effects, sounds, HUD
+    if (flow && live) flow.update(dt);
     for (const e of sim.drainEvents()) {
-      fx.onEvent(e, sim);
+      fx.onEvent(e, sim); flow?.onEvent(e);
       const k = e.id !== undefined ? kids.get(e.id) : null; if (k) k.onEvent(e.type);
       const near = e.x !== undefined ? Math.max(0, 1 - Math.hypot(e.x - player.x, e.z - player.z) / 18) : 1;
       if (['throw', 'hit', 'pickup', 'poof', 'dodge'].includes(e.type)) play(e.type, { near: e.id === player.id ? 1 : near });
@@ -294,9 +317,13 @@ async function startGame(myTeam, kit, pace) {
       }
       if (e.type === 'zoneCaptured') {
         const zc = sim.zones.find(zz => zz.id === e.zone) || sim.zone;
-        if (e.side === 'home') { banner('OUTPOST SEIZED!', 'win', 2.6); play('capture'); fx.emit(zc.x, 0.5, zc.z, 90, myCol, 6, 1.2); fx.emit(zc.x, 0.5, zc.z, 60, '#ffffff', 5, 1.2); coach(arena.world ? `${zc.label} is yours! It is now a respawn and snowball point. In the full game, the English task card opens here.` : 'Great teamwork! In the full game, the English task card opens here while your team guards you.', 5); }
-        else { banner('Rivals took the outpost!', 'lose', 2.2); play('freeze'); coach('Take it back! Stand in the circle with your team.', 4); }
-        if (arena.world) { sim.held[e.side].push({ x: zc.x, z: zc.z + zc.r - 0.6 }); held.add(zc.id + ':' + e.side); drawMap(); world.setOwner(zc.id, e.side === 'home' ? myCol : rivCol); }
+        if (e.side === 'home') { banner('OUTPOST SEIZED!', 'win', 2.6); play('capture'); fx.emit(zc.x, 0.5, zc.z, 90, myCol, 6, 1.2); fx.emit(zc.x, 0.5, zc.z, 60, '#ffffff', 5, 1.2); if (!arena.world) coach('Great teamwork! In the full game, the English task card opens here while your team guards you.', 5); }
+        else { banner('Rivals took the outpost!', 'lose', 2.2); play('freeze'); coach(arena.world ? 'Take it back! Step into the circle and answer the questions.' : 'Take it back! Stand in the circle with your team.', 4); }
+        if (arena.world) {
+          const spot = { x: zc.x, z: zc.z + zc.r - 0.6 }, other = e.side === 'home' ? 'rival' : 'home';
+          sim.held[other] = sim.held[other].filter(h => !(Math.abs(h.x - spot.x) < 0.01 && Math.abs(h.z - spot.z) < 0.01)); held.delete(zc.id + ':' + other);
+          sim.held[e.side].push(spot); held.add(zc.id + ':' + e.side); drawMap(); world.setOwner(zc.id, e.side === 'home' ? myCol : rivCol);
+        }
         else resetZoneAt = sim.t + 4;
       }
     }
@@ -314,7 +341,9 @@ async function startGame(myTeam, kit, pace) {
     const z = sim.nearestZone(player.x, player.z);
 
     // camera
-    const tx = player.x, tz = player.z - 1.2;
+    const halfW0 = Math.tan(12 * Math.PI / 180) * off.length() * zoom * camera.aspect;
+    camShift += ((player.planted ? halfW0 * 0.5 : 0) - camShift) * Math.min(1, dt * 4); // reading a card: keep the student and the fight on the left half
+    const tx = player.x + camShift, tz = player.z - 1.2;
     focus.x += (tx - focus.x) * Math.min(1, dt * 5); focus.z += (tz - focus.z) * Math.min(1, dt * 5);
     const halfW = Math.tan(12 * Math.PI / 180) * off.length() * zoom * camera.aspect, lim = params.has('zoom') ? 0 : Math.max(0, arena.w / 2 - halfW + 0.5);
     focus.x = Math.max(-lim, Math.min(lim, focus.x));
@@ -350,7 +379,7 @@ async function startGame(myTeam, kit, pace) {
     // HUD
     const p = Math.round(Math.abs(z.progress) * 100);
     $('#zone-bar .home').style.width = (z.progress > 0 ? p : 0) + '%'; $('#zone-bar .rival').style.width = (z.progress < 0 ? p : 0) + '%';
-    $('#zone-label').textContent = `${z.label}: ` + (z.owner === 'home' ? 'yours!' : z.owner === 'rival' ? 'rivals hold it' : z.contested ? 'contested!' : z.home ? `seizing… ${p}%` : z.rival ? `rivals seizing… ${p}%` : `${Math.round(Math.hypot(z.x - player.x, z.z - player.z))} steps away`);
+    $('#zone-label').textContent = `${z.label}: ` + (flow?.busy && flow.zone === z ? (flow.mode === 'defend' ? 'answer to refill snowballs' : `answer to seize ${p}%`) : flow?.waveZone === z ? 'defend it!' : z.owner === 'home' ? 'yours!' : z.owner === 'rival' ? 'rivals hold it' : z.contested ? 'contested!' : z.home ? `seizing… ${p}%` : z.rival ? `rivals seizing… ${p}%` : `${Math.round(Math.hypot(z.x - player.x, z.z - player.z))} steps away`);
     drawMini();
     $('#zone').classList.toggle('contested', !!z.contested);
     $('#score .h').textContent = score.home; $('#score .r').textContent = score.rival;
@@ -362,7 +391,7 @@ async function startGame(myTeam, kit, pace) {
     renderer.render(scene, camera);
   }
   requestAnimationFrame(frame);
-  globalThis.__snowpax = { match, sim, player, quality, renderer, world, life };
+  globalThis.__snowpax = { match, sim, player, quality, renderer, world, life, flow };
 }
 
 startScreen();

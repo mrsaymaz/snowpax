@@ -53,16 +53,18 @@ test('far journeys can ride a sled run: the path goes to the start pad, then the
   assert.ok(k >= 0 && path[k + 1][0] === to[0] && path[k + 1][1] === to[1]);
 });
 
-test('the student collects glowing snowflakes; hot cocoa warms anyone up and comes back later', () => {
+test('the student collects glowing snowflakes; hot cocoa asks a question, then warms you right up and comes back later', () => {
   const m = world(); park(m); const P = m.player, sim = m.sim;
   const flake = sim.pickups.find(p => p.kind === 'flake'), cocoa = sim.pickups.find(p => p.kind === 'cocoa');
   P.x = flake.x; P.z = flake.z;
   let ev = run(m, 0.1);
   assert.ok(ev.some(e => e.type === 'collect' && e.kind === 'flake')); assert.equal(P.flakes, 1); assert.ok(flake.taken);
-  P.x = cocoa.x; P.z = cocoa.z; P.warmth = 20; P.lastHit = sim.t;
+  P.x = cocoa.x; P.z = cocoa.z; P.warmth = 20; P.ammo = 0; P.lastHit = sim.t;
   ev = run(m, 0.1);
-  assert.ok(ev.some(e => e.type === 'collect' && e.kind === 'cocoa')); assert.ok(P.warmth >= 59);
-  assert.ok(cocoa.cd > 0);
+  const ask = ev.find(e => e.type === 'cocoaAsk'); assert.ok(ask, 'the cocoa asks a question first'); assert.equal(P.warmth < 30, true);
+  sim.cocoaResult(ask.pickup, P, true);
+  assert.equal(P.warmth, P.maxWarmth); assert.ok(P.ammo >= 3); assert.ok(cocoa.cd > 0);
+  P.x += 5;
   ev = run(m, WORLD.cocoa.respawn + 0.5, () => ({ mx: 0, mz: 0 }));
   assert.ok(ev.some(e => e.type === 'pickupBack' && e.pickup === cocoa.id));
 });

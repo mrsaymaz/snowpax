@@ -23,7 +23,7 @@ export const SIM = {
 // Sled runs, pickups, snow falling off roofs, wind and weather (Arena 1 world).
 export const WORLD = {
   sled: { start: 2.5, push: 2.2, gravity: 9, max: 9.5, board: 0.75, cooldown: 1.5, cost: 2.6 },
-  cocoa: { warmth: 40, respawn: 25, reach: 0.8 },
+  cocoa: { respawn: 40, reach: 0.85, superBonus: 0.35 }, // a question first; right answer = full warmth, full snowballs, some super
   flake: { reach: 0.85 },
   dump: { reach: 1.4, damage: 6, slow: 1.1, cooldown: 4, tiles: 'HRtlTvyx' },
   gust: { every: [25, 45], seconds: 6, strength: 2.4, dir: [-Math.SQRT1_2, Math.SQRT1_2] }, // poyraz: from the north-east
@@ -41,7 +41,7 @@ export function makeCharacter({ seat, team, side, role, x, z, kit = 'thrower', c
     frozen: 0, thaw: 0, shield: 0, dodge: 0, dodgeCd: 0, attackCd: 0,
     hidden: false, revealT: 0, lastHit: -99, lastAttack: -99, flash: 0,
     travel: null, hits: 0, frozenCount: 0, freezes: 0, guarding: false,
-    sled: null, sledCd: 0, padT: 0, slow: 0, flakes: 0,
+    sled: null, sledCd: 0, padT: 0, slow: 0, flakes: 0, planted: false,
   };
 }
 
@@ -62,6 +62,8 @@ export class Sim {
     this.runs = (arena.sledRuns || []).map(r => { const cum = [0]; for (let k = 1; k < r.pts.length; k++) cum.push(cum[k - 1] + Math.hypot(r.pts[k][0] - r.pts[k - 1][0], r.pts[k][1] - r.pts[k - 1][1])); return { ...r, cum, len: cum[cum.length - 1] }; });
     this.pickups = (arena.pickups || []).map(p => ({ ...p, cd: 0, taken: false }));
     this.dumpCd = new Map();
+    // in the world, the student seizes outposts by answering tasks (rivals still seize by standing)
+    this.taskCapture = !!arena.world;
     // weather only in the world (the small feel-test arena stays calm)
     const W = WORLD, rr = ([a, b]) => a + this.rng() * (b - a);
     this.weather = { on: !!arena.world, kind: 'clear', until: 0, next: arena.world ? rr(W.weather.first) : Infinity, gust: 0, gustUntil: 0, gustNext: arena.world ? rr(W.gust.every) : Infinity, wx: 0, wz: 0 };
@@ -153,7 +155,8 @@ export class Sim {
   hit(c, ball, mul = 1) {
     if (c.frozen || c.thaw || c.shield > 0 || c.dodge > 0) return false;
     const dmg = Math.round(ball.dmg * mul);
-    c.warmth = Math.max(0, c.warmth - dmg); c.lastHit = this.t; c.hits++; c.flash = 0.12;
+    c.warmth = Math.max(c.planted ? 1 : 0, c.warmth - dmg); // answering a task: never frozen, only chilled
+    if (c.planted) this.emit('plantedHit', { id: c.id }); c.lastHit = this.t; c.hits++; c.flash = 0.12;
     const kx = ball.vx || (c.x - ball.x), kz = ball.vz || (c.z - ball.z), len = Math.hypot(kx, kz) || 1;
     const kb = ball.kind === 'boulder' ? BOULDER.knockback : ball.kind === 'lob' ? 1.6 : 1.1;
     c.vx += (kx / len) * kb; c.vz += (kz / len) * kb;
@@ -220,15 +223,14 @@ export class Sim {
   // ---------- pickups, wind and weather ----------
   stepWorld(dt) {
     for (const p of this.pickups) {
-      if (p.taken) continue;
+      if (p.taken || p.asking) continue;
       if (p.cd > 0) { p.cd -= dt; if (p.cd <= 0) this.emit('pickupBack', { pickup: p.id }); continue; }
       for (const c of this.chars) {
         if (c.frozen || c.thaw) continue;
         const d = Math.hypot(c.x - p.x, c.z - p.z);
         if (p.kind === 'flake' && c.role === 'player' && d < WORLD.flake.reach) { p.taken = true; c.flakes++; this.emit('collect', { id: c.id, pickup: p.id, kind: 'flake', x: p.x, z: p.z }); break; }
-        if (p.kind === 'cocoa' && d < WORLD.cocoa.reach && c.warmth < c.maxWarmth * 0.95) {
-          c.warmth = Math.min(c.maxWarmth, c.warmth + WORLD.cocoa.warmth); p.cd = WORLD.cocoa.respawn;
-          this.emit('collect', { id: c.id, pickup: p.id, kind: 'cocoa', x: p.x, z: p.z }); break;
+        if (p.kind === 'cocoa' && c.role === 'player' && !c.planted && !p.asking && d < WORLD.cocoa.reach) { // a question first
+          p.asking = true; this.emit('cocoaAsk', { id: c.id, pickup: p.id, x: p.x, z: p.z }); break;
         }
       }
     }
@@ -270,13 +272,44 @@ export class Sim {
     let home = 0, rival = 0;
     for (const c of this.chars) if (!c.frozen && !c.thaw && Math.hypot(c.x - z.x, c.z - z.z) <= z.r) { if (c.side === 'home') home++; else rival++; }
     z.home = home; z.rival = rival; z.contested = home > 0 && rival > 0;
-    if (z.owner) return;
+    if (z.owner === 'home' || (z.owner && !this.taskCapture)) return;
+    if (this.taskCapture) { // home seizes by answering (seizeProgress); rivals by standing in a free circle
+      if (z.owner || z.seizing) return;
+      const rate = dt / ZONE.captureSeconds;
+      if (rival && !home) z.progress = Math.max(-1, Math.min(0, z.progress) - rate * (1 + ZONE.extraKidBonus * (rival - 1)));
+      if (z.progress <= -1) { z.owner = 'rival'; this.emit('zoneCaptured', { side: 'rival', zone: z.id }); }
+      return;
+    }
     const rate = dt / ZONE.captureSeconds;
     if (home && !rival) z.progress = Math.min(1, z.progress + rate * (1 + ZONE.extraKidBonus * (home - 1)));
     if (rival && !home) z.progress = Math.max(-1, z.progress - rate * (1 + ZONE.extraKidBonus * (rival - 1)));
     if (z.progress >= 1) { z.owner = 'home'; this.emit('zoneCaptured', { side: 'home', zone: z.id }); }
     if (z.progress <= -1) { z.owner = 'rival'; this.emit('zoneCaptured', { side: 'rival', zone: z.id }); }
   }
+  // the student's answers move the bar; when it is full the outpost is theirs (even one the rivals held)
+  seizeProgress(z, p) { z.progress = Math.max(0, Math.min(1, p)); }
+  capture(z, side = 'home') { if (z.owner === side) return; z.owner = side; z.progress = side === 'home' ? 1 : -1; z.seizing = false; this.emit('zoneCaptured', { side, zone: z.id }); }
+  // a right answer: the outpost throws a volley at the nearest rivals
+  volley(c, z, n = 3) {
+    const targets = this.enemiesOf(c).filter(o => Math.hypot(o.x - z.x, o.z - z.z) < 11).sort((a, b) => Math.hypot(a.x - z.x, a.z - z.z) - Math.hypot(b.x - z.x, b.z - z.z));
+    if (!targets.length) return 0;
+    for (let k = 0; k < n; k++) {
+      const t = targets[k % targets.length], dx = t.x - z.x, dz = t.z - z.z, d = Math.hypot(dx, dz) || 1, sx = z.x + dx / d * (z.r * 0.7), sz = z.z + dz / d * (z.r * 0.7);
+      const a = Math.atan2(t.x - sx, t.z - sz) + (k - (n - 1) / 2) * 0.12;
+      this.balls.push({ owner: c.id, side: c.side, team: c.team, kit: 'thrower', kind: 'straight', x: sx, z: sz, y: 1.6 + this.ground(sx, sz), vx: Math.sin(a) * 11, vz: Math.cos(a) * 11, dmg: 12, r: SIM.ballRadius, left: 12, d0: 12 });
+    }
+    this.emit('volley', { zone: z.id, x: z.x, z: z.z, n });
+    return n;
+  }
+  refillTeam(side) { for (const c of this.chars) if (c.side === side && !c.frozen) c.ammo = F.ammoMax; }
+  // the cocoa question was answered
+  cocoaResult(pickupId, c, right) {
+    const p = this.pickups.find(q => q.id === pickupId); if (!p) return;
+    p.asking = false; p.cd = WORLD.cocoa.respawn;
+    if (right) { c.warmth = c.maxWarmth; c.ammo = F.ammoMax; const before = c.super; c.super = Math.min(1, c.super + WORLD.cocoa.superBonus); if (before < 1 && c.super >= 1) this.emit('superReady', { id: c.id }); }
+    this.emit('collect', { id: c.id, pickup: p.id, kind: 'cocoa', right, x: p.x, z: p.z });
+  }
+
   resetZone(id = null) { for (const z of this.zones) if (!id || z.id === id) Object.assign(z, { progress: 0, owner: null }); }
 
   stepChar(c, dt, inp) {
@@ -302,6 +335,7 @@ export class Sim {
     if (c.ammo < F.ammoMax) c.ammo = Math.min(F.ammoMax, c.ammo + dt / kit.reload);
     if (this.t - c.lastHit > F.regenDelay && this.t - c.lastAttack > F.regenDelay) c.warmth = Math.min(c.maxWarmth, c.warmth + F.regenRate * (this.weather.kind === 'sun' ? WORLD.weather.sunRegen : 1) * dt);
     const aim = this.pace.autoAim * (c.side === 'home' ? 1 : 0.5);
+    if (c.planted) { c.vx = c.vz = 0; c.moving = 0; c.travel = null; return; } // reading a task card: stays put while the team guards
     if (c.sled) { // riding down a sled run: no steering, but you can still throw
       this.stepSled(c, dt);
       if (inp.super) this.attack(c, inp.super.x, inp.super.z, { isSuper: true, aimHelp: inp.manual ? 0 : aim });

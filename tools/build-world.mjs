@@ -322,7 +322,7 @@ const pickups = [];
     if (farFromPlazas(i, j, 7) && !nearHome(i, j, 5) && spaced(i, j, 13, 'flake') && rand() < 0.25) pickups.push({ id: 'f' + pickups.length, kind: 'flake', i, j });
   }
   for (let j = 3; j < H - 3; j++) for (let i = 3; i < W - 3; i++) {
-    if (get(i, j) !== '_' || !farFromPlazas(i, j, 10) || !spaced(i, j, 28, 'cocoa') || !spaced(i, j, 2, 'flake') || rand() > 0.08) continue;
+    if (get(i, j) !== '_' || pickups.filter(p => p.kind === 'cocoa').length >= 5 || !farFromPlazas(i, j, 10) || !spaced(i, j, 40, 'cocoa') || !spaced(i, j, 2, 'flake') || rand() > 0.08) continue;
     pickups.push({ id: 'c' + pickups.length, kind: 'cocoa', i, j });
   }
 }

@@ -6,7 +6,7 @@
 // Everything is instanced: a few draw calls in total, whatever the numbers.
 import {
   Group, InstancedMesh, Mesh, MeshLambertMaterial, MeshBasicMaterial, ShaderMaterial, Object3D, Color, BufferAttribute, InstancedBufferAttribute,
-  SphereGeometry, ConeGeometry, CapsuleGeometry, TorusGeometry, BoxGeometry, PlaneGeometry, CanvasTexture, CylinderGeometry,
+  SphereGeometry, ConeGeometry, CapsuleGeometry, TorusGeometry, BoxGeometry, PlaneGeometry, CanvasTexture, CylinderGeometry, Sprite, SpriteMaterial, SRGBColorSpace,
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
@@ -88,9 +88,20 @@ export class WorldLife {
     // ---------- pickups: glowing snowflakes and hot-cocoa cups ----------
     this.pickups = pickups; this.flakes = pickups.filter(p => p.kind === 'flake'); this.cocoas = pickups.filter(p => p.kind === 'cocoa');
     const arm = new BoxGeometry(0.06, 0.5, 0.04), crystal = mergeGeometries([0, 1, 2].map(k => { const g2 = arm.clone(); g2.rotateZ(k * Math.PI / 3); return g2; }).concat([0, 1, 2, 3, 4, 5].map(k => { const g2 = new BoxGeometry(0.04, 0.14, 0.04); g2.rotateZ(0.6); g2.translate(0.04, 0.2, 0); g2.rotateZ(k * Math.PI / 3); return g2; })));
-    this.flakeMesh = new InstancedMesh(crystal, new MeshBasicMaterial({ color: '#c9f4ff' }), Math.max(1, this.flakes.length)); this.flakeMesh.count = this.flakes.length; this.flakeMesh.frustumCulled = false; this.g.add(this.flakeMesh);
-    const haloTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g2 = c.getContext('2d'); const gr = g2.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(170,235,255,0.9)'); gr.addColorStop(0.4, 'rgba(120,210,255,0.35)'); gr.addColorStop(1, 'rgba(120,210,255,0)'); g2.fillStyle = gr; g2.fillRect(0, 0, 64, 64); return new CanvasTexture(c); })();
+    this.flakeMesh = new InstancedMesh(crystal, new MeshBasicMaterial({ color: '#ffc93c' }), Math.max(1, this.flakes.length)); this.flakeMesh.count = this.flakes.length; this.flakeMesh.frustumCulled = false; this.g.add(this.flakeMesh);
+    const haloTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g2 = c.getContext('2d'); const gr = g2.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,214,110,0.95)'); gr.addColorStop(0.4, 'rgba(255,170,60,0.4)'); gr.addColorStop(1, 'rgba(255,150,40,0)'); g2.fillStyle = gr; g2.fillRect(0, 0, 64, 64); return new CanvasTexture(c); })();
     this.halo = new InstancedMesh(new PlaneGeometry(1, 1), new MeshBasicMaterial({ map: haloTex, transparent: true, depthWrite: false, blending: 2 }), Math.max(1, this.flakes.length)); this.halo.count = this.flakes.length; this.halo.frustumCulled = false; this.halo.renderOrder = 4; this.g.add(this.halo);
+    // each snowflake shows its English word on a little golden tag
+    this.labels = this.flakes.map(p => {
+      if (!p.word) return null;
+      const c = document.createElement('canvas'); c.width = 256; c.height = 64; const g2 = c.getContext('2d');
+      g2.font = '900 34px system-ui, sans-serif'; const w = Math.min(244, g2.measureText(p.word.en).width + 28);
+      g2.fillStyle = 'rgba(122,72,10,0.88)'; g2.beginPath(); g2.roundRect((256 - w) / 2, 6, w, 52, 18); g2.fill();
+      g2.strokeStyle = '#ffd166'; g2.lineWidth = 3; g2.stroke();
+      g2.fillStyle = '#fff6d6'; g2.textAlign = 'center'; g2.textBaseline = 'middle'; g2.fillText(p.word.en, 128, 33, 236);
+      const tex = new CanvasTexture(c); tex.colorSpace = SRGBColorSpace;
+      const sp = new Sprite(new SpriteMaterial({ map: tex, depthWrite: false, transparent: true })); sp.scale.set(1.6, 0.4, 1); sp.renderOrder = 5; this.g.add(sp); return sp;
+    });
     const cup = bake([
       [new CylinderGeometry(0.16, 0.13, 0.3, 12), '#e0463c', 0, 0.15, 0], [new CylinderGeometry(0.162, 0.162, 0.06, 12), '#ffffff', 0, 0.2, 0],
       [new CylinderGeometry(0.14, 0.14, 0.02, 12), '#6b3b22', 0, 0.295, 0], [new SphereGeometry(0.07, 8, 6), '#fff6ea', 0.03, 0.31, 0.02],
@@ -156,6 +167,7 @@ export class WorldLife {
       const show = !p.taken, y = this.ground(p.x, p.z) + 0.75 + Math.sin(t * 2.2 + k) * 0.12;
       o.position.set(p.x, show ? y : -9, p.z); o.rotation.set(0, t * 1.6 + k, 0); o.scale.setScalar(1.25); o.updateMatrix(); this.flakeMesh.setMatrixAt(k, o.matrix);
       if (camera) { o.quaternion.copy(camera.quaternion); o.scale.setScalar(show ? 1.3 + Math.sin(t * 4 + k) * 0.15 : 0); o.updateMatrix(); this.halo.setMatrixAt(k, o.matrix); }
+      const lb = this.labels[k]; if (lb) { lb.visible = show; lb.position.set(p.x, y + 0.7, p.z); }
     });
     this.flakeMesh.instanceMatrix.needsUpdate = true; this.halo.instanceMatrix.needsUpdate = true;
     this.cocoas.forEach((p, k) => {

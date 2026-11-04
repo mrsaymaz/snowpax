@@ -1,0 +1,65 @@
+// One outpost visit (brief §9): SEIZE by answering rounds from the outpost's task family, then
+// DEFEND with one short round between rival waves. No DOM here, so it is tested in node.
+// Items are counted the way the 80% rule counts them: each pair, card or question once.
+import { CONFIG } from '../config.js';
+import { makeRound } from '../tasks/subtasks.mjs';
+
+const D = CONFIG.demand;
+
+// How many scorable items a step holds.
+export const stepItems = st => (st.kind === 'match' ? st.left.length : st.kind === 'sort' ? st.cards.length : 1);
+// Order-pairs become two ordinary steps, so the card only ever shows one thing at a time.
+export const flatten = steps => steps.flatMap(s => (s.kind === 'order-pair' ? s.steps : [s]));
+
+// Seconds for a step on the Challenge pace (scaled by the pace's taskTime).
+const SECONDS = { choice: 14, listen: 15, spell: 18, order: 20, matchPair: 9, sortCard: 8 };
+export function stepSeconds(st, pace = 'challenge') {
+  const k = CONFIG.pace[pace]?.taskTime ?? 1;
+  const base = st.kind === 'match' ? SECONDS.matchPair * st.left.length : st.kind === 'sort' ? SECONDS.sortCard * st.cards.length : SECONDS[st.kind] || 15;
+  return Math.round(base * k);
+}
+
+export class Visit {
+  constructor({ unit, family, arena = 1, rng = Math.random, history = [], speech = true, phase = 'seize' }) {
+    this.unit = unit; this.family = family; this.arena = arena; this.rng = rng; this.history = history; this.speech = speech;
+    this.setPhase(phase);
+  }
+  setPhase(phase) {
+    this.phase = phase;
+    const rounds = phase === 'seize' ? D.seizeRounds[this.arena - 1] : D.defendRounds[this.arena - 1];
+    this.total = rounds * D.itemsPerRound; this.done = 0; this.firstTry = 0; this.queue = []; this.title = null; this.coach = null;
+  }
+  get progress() { return Math.min(1, this.done / this.total); }
+  get finished() { return this.done >= this.total; }
+  // The next step to show (a fresh round when the last one is used up), or null when finished.
+  next() {
+    if (this.finished) return null;
+    if (!this.queue.length) {
+      const round = makeRound(this.unit, this.family, this.arena, { rng: this.rng, history: this.history, speech: this.speech });
+      if (!round) return null;
+      this.history.push(round.subtask); this.title = round.title; this.coach = round.coach; this.subtask = round.subtask;
+      this.queue = flatten(round.steps);
+    }
+    return this.queue.shift();
+  }
+  answer(correctFirstTry) { this.done++; if (correctFirstTry) this.firstTry++; }
+}
+
+// One quick question for a hot-cocoa cup: a clue for a word of this unit (or an ending, a gap …).
+export function cocoaQuestion(unit, rng = Math.random) {
+  for (const fam of ['answer', 'match']) {
+    const round = makeRound(unit, fam, 1, { rng, speech: false });
+    const step = round && flatten(round.steps).find(s => s.kind === 'choice');
+    if (step) return step;
+  }
+  const w = unit.words[Math.floor(rng() * unit.words.length)], others = unit.words.filter(x => x !== w).sort(() => rng() - 0.5).slice(0, 2);
+  const options = [w, ...others].sort(() => rng() - 0.5).map(x => x.tr);
+  return { kind: 'choice', prompt: `What is "${w.en}" in Turkish?`, options, answer: options.indexOf(w.tr), answerText: w.tr, sourceIds: [w.id] };
+}
+
+// Words for the glowing snowflakes: missed words first, then the rest of the unit, shuffled.
+export function flakeWords(unit, n, missed = {}, rng = Math.random) {
+  const words = unit.words.filter(w => w.en && w.tr && w.en.length <= 16);
+  const weight = w => (missed[w.id] || 0) * 10 + rng();
+  return words.sort((a, b) => weight(b) - weight(a)).slice(0, n).map(w => ({ id: w.id, en: w.en, tr: w.tr }));
+}

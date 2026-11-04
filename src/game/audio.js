@@ -46,6 +46,7 @@ export function play(type, { near = 1 } = {}) {
     case 'sled': noise(0.9, 500, 2200, 0.22 * v, 'bandpass'); break;
     case 'whoosh': noise(1.6, 300, 900, 0.18, 'bandpass'); break;
     case 'flump': noise(0.4, 1200, 200, 0.4 * v, 'lowpass'); break;
+    case 'bell': [1046, 1318].forEach((f, i) => setTimeout(() => tone(f, 0.9, 0.12, 'sine', 0.995), i * 30)); break;
     case 'capture': [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.22, 0.16, 'triangle'), i * 110)); break;
   }
 }
