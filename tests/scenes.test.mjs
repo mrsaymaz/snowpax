@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { sceneFor, DEFAULT_SCENES, LANDMARK_SCENES, useBasicScenes } from '../src/game/cards/scenes.js';
+import { sceneFor, worldSceneFor, DEFAULT_SCENES, LANDMARK_SCENES, useBasicScenes } from '../src/game/cards/scenes.js';
+import { castleWorldOrder, castleWorldSpell } from '../src/game/cards/castle3d.js';
 import { castleOrderScene, castleSpellScene } from '../src/game/cards/castle.js';
 import { blockOrder } from '../src/game/cards/util.js';
 import { makeRound, makeRng, FAMILIES } from '../src/tasks/subtasks.mjs';
@@ -27,4 +28,10 @@ test('sentence blocks come back in sentence order', () => {
     const r = makeRound(unit, 'build', 1, { rng: makeRng(4) }); if (!r) continue;
     for (const st of flatten(r.steps).filter(s => s.kind === 'order')) assert.equal(blockOrder(st.blocks).map(b => b.text).join(' ').replace(/\s+/g, ' ').trim().toLowerCase(), st.text.replace(/\s+/g, ' ').trim().toLowerCase());
   }
+});
+
+test('the Snow Castle is a 3D action on the real castle; other landmarks keep their cards for now', () => {
+  assert.equal(worldSceneFor('order', 'sururi'), castleWorldOrder); assert.equal(worldSceneFor('spell', 'sururi'), castleWorldSpell);
+  assert.equal(worldSceneFor('choice', 'sururi'), null); assert.equal(worldSceneFor('order', 'boulevard'), null);
+  useBasicScenes(true); assert.equal(worldSceneFor('order', 'sururi'), null); useBasicScenes(false);
 });

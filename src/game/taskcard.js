@@ -9,7 +9,7 @@
 // wired into the place (build the Snow Castle's wall …) or the default layout for the task kind.
 import { speech } from './speech.js';
 import { esc, wait } from './cards/util.js';
-import { sceneFor } from './cards/scenes.js';
+import { sceneFor, worldSceneFor } from './cards/scenes.js';
 
 // Little drawings for each outpost's card (inline SVG, no downloads)
 export const THEME_ICON = {
@@ -23,8 +23,8 @@ export const THEME_ICON = {
 };
 
 export class TaskCard {
-  constructor(root, { onItem, onStepDone, timerFor = null, rng = Math.random, coach = () => {}, sound = () => {} } = {}) {
-    this.root = root; this.onItem = onItem; this.onStepDone = onStepDone; this.timerFor = timerFor; this.rng = rng; this.coach = coach; this.sound = sound;
+  constructor(root, { onItem, onStepDone, timerFor = null, rng = Math.random, coach = () => {}, sound = () => {}, world = null, worldColor = null } = {}) {
+    this.root = root; this.onItem = onItem; this.onStepDone = onStepDone; this.timerFor = timerFor; this.rng = rng; this.coach = coach; this.sound = sound; this.world = world; this.worldColor = worldColor;
     root.innerHTML = `<div class="tc-head"><div class="tc-icon"></div><div class="tc-titles"><div class="tc-title"></div><div class="tc-coach"></div></div><div class="tc-timer" hidden><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" class="bg"/><circle cx="18" cy="18" r="15" class="fg"/></svg><b></b></div></div>
       <div class="tc-bar"><i></i></div><div class="tc-body"></div>
       <div class="tc-foot"><button type="button" class="tc-say" aria-label="Read it aloud">🔊</button><span class="tc-note"></span><button type="button" class="tc-leave">Step out</button></div>`;
@@ -44,7 +44,7 @@ export class TaskCard {
   setCoach(text) { this.$('.tc-coach').textContent = text; }
   setProgress(p) { this.$('.tc-bar i').style.width = Math.round(Math.min(1, p) * 100) + '%'; }
   chill() { this.root.classList.remove('chill'); void this.root.offsetWidth; this.root.classList.add('chill'); }
-  close() { this.endScene(); this.root.classList.remove('in'); speech.stop(); this.step = null; clearTimeout(this.hideT); this.hideT = setTimeout(() => { if (!this.root.classList.contains('in')) this.root.hidden = true; }, 260); }
+  close() { this.endScene(); this.leaveWorld(); this.root.classList.remove('in'); speech.stop(); this.step = null; clearTimeout(this.hideT); this.hideT = setTimeout(() => { if (!this.root.classList.contains('in')) this.root.hidden = true; }, 260); }
   get open_() { return !this.root.hidden && this.root.classList.contains('in'); }
 
   // ---------- timer (Challenge pace) ----------
@@ -80,6 +80,14 @@ export class TaskCard {
     const body = this.$('.tc-body'); body.innerHTML = ''; body.className = 'tc-body k-' + step.kind;
     this.$('.tc-note').textContent = '';
     if (step.kind === 'order-pair') { this.showPair(step, theme); return; }
+    // a 3D action on the real landmark when there is one and the student is at it
+    const ws = this.world && worldSceneFor(step.kind, theme), session = ws ? this.world.open(theme) : null;
+    if (session) {
+      this.root.classList.add('world'); session.clearStep();
+      const ctx = this.sceneCtx(step, body, theme); ctx.world = session; ctx.worldColor = this.worldColor;
+      const end = ws(ctx); this.sceneEnd = typeof end === 'function' ? end : null; this.startTimer(step); return;
+    }
+    this.leaveWorld();
     const scene = sceneFor(step.kind, theme);
     if (!scene) { this.finish(); return; } // a kind this arena never uses
     if (scene.cls) body.classList.add(scene.cls);
@@ -104,6 +112,8 @@ export class TaskCard {
       reduceMotion: globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false,
     };
   }
+  get inWorld() { return this.root.classList.contains('world'); }
+  leaveWorld() { if (this.inWorld) { this.world?.close(); this.root.classList.remove('world'); } }
   endScene() { for (const t of this.sceneTimers || []) clearTimeout(t); this.sceneTimers = []; this.sceneEnd?.(); this.sceneEnd = null; }
   showPair(st, theme) { // two sentences, one after the other
     const steps = st.steps.slice(), outer = this.onStepDone;
@@ -117,5 +127,5 @@ export class TaskCard {
   }
   item(id, ok) { this.onItem?.({ itemId: id, correctFirstTry: ok }); }
   async finish(delay = 0) { this.busy = true; this.timeTotal = 0; this.$('.tc-timer').hidden = true; if (delay) await wait(delay); if (this.step) { this.step = null; this.onStepDone?.(); } }
-  reveal(text, tr = null) { this.$('.tc-note').innerHTML = `✓ ${esc(text)}${tr ? ` <span class="tr">${esc(tr)}</span>` : ''}`; }
+  reveal(text, tr = null) { const html = `✓ ${esc(text)}${tr ? ` <span class="tr">${esc(tr)}</span>` : ''}`; this.$('.tc-note').innerHTML = html; if (this.inWorld) this.world.session?.say(html); }
 }

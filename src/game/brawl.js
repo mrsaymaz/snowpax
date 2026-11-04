@@ -27,6 +27,7 @@ import { stageState, STAGES } from './stages.mjs';
 import { SnowmanView } from './render/snowmen.js';
 import { ShowdownView } from './render/showdown.js';
 import { useBasicScenes } from './cards/scenes.js';
+import { WorldTasks } from './render/worldtask.js';
 import { InstancedMesh, MeshLambertMaterial, SphereGeometry, Object3D } from 'three';
 
 const $ = s => document.querySelector(s);
@@ -182,8 +183,10 @@ async function startGame(myTeam, kit, pace) {
   const seen = new Set(), once = (key, text, sec = 4.5) => { if (seen.has(key)) return; seen.add(key); coach(text, sec); };
   $('#flakes b').textContent = save.snowflakes || 0; $('#flakes').hidden = !arena.world;
   const banner = (text, cls = '', sec = 1.6) => { const b = $('#banner'); b.textContent = text; b.className = 'show ' + cls; clearTimeout(banner.t); banner.t = setTimeout(() => { b.className = ''; }, sec * 1000); };
+  // English tasks as 3D actions on the real landmarks (where a landmark has one; ?scenes=basic for the plain cards)
+  const worldTasks = arena.world ? new WorldTasks({ scene, layer: $('#wt-layer'), groundH: (x, z) => groundH(x, z), fx, zones: () => sim.zones, player, reduceMotion }) : null;
   const flow = unit ? new OutpostFlow({
-    sim, player, unit, unitProgress, save, writeSave, pace, rng, root: $('#taskcard'), familyOverride: params.get('family'),
+    sim, player, unit, unitProgress, save, writeSave, pace, rng, root: $('#taskcard'), familyOverride: params.get('family'), world: worldTasks, worldColor: myCol,
     ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play, fx, fireworks: z => { if (reduceMotion) return; for (const col of [myCol, '#ffffff', '#ffd166', '#7cc4f0']) fx.emit(z.x, 3.5, z.z, 40, col, 6, 1.4, 1.2); } },
   }) : null;
   // Arena 1 plays as stages (?free for the old free-roaming world)
@@ -296,9 +299,11 @@ async function startGame(myTeam, kit, pace) {
     focus.set(player.x, 0, player.z - 1.6);
   }
 
-  let last = performance.now(), puffT = 0, camY = 0, camShift = 0; const zoneKeys = {}, held = new Set();
+  let last = performance.now(), puffT = 0, camY = 0, camShift = 0, tScale = 1, wtBlend = 0, wtPose = null; const wtLook = new Vector3(); const zoneKeys = {}, held = new Set();
   function frame(now) {
-    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    const rdt = Math.min(0.05, (now - last) / 1000); last = now; // real time
+    tScale += ((worldTasks?.active ? 0.25 : 1) - tScale) * Math.min(1, rdt * 3); // a 3D task: the fight goes on in slow motion
+    const dt = rdt * tScale;
     requestAnimationFrame(frame); quality.tick(dt);
     LOOK.time.value += dt;
     if (paused) { draw(stages?.mode === 'sled' ? stages.sled.scene : scene, stages?.mode === 'sled' ? stages.sled.camera : camera); return; }
@@ -333,7 +338,7 @@ async function startGame(myTeam, kit, pace) {
     fx.aim(aimKind, player, aimTo || player, myCol, aimKind === 'super' ? CONFIG.superBoulder.range : kitInfo.range, kitInfo.spreadDeg || 0);
 
     // events → effects, sounds, HUD
-    if (flow && live) flow.update(dt);
+    if (flow && live) flow.update(rdt); // card timers run in real time
     for (const e of sim.drainEvents()) {
       fx.onEvent(e, sim); flow?.onEvent(e); stages?.onEvent(e);
       if (e.type === 'spawnMinion') { const c = sim.chars.find(q => q.id === e.id); if (c) { const v = new SnowmanView(c); snowmen.set(c.id, v); scene.add(v.root); fx.emit(e.x, 0.6, e.z, 20, '#ffffff', 3, 0.6); } }
@@ -396,9 +401,11 @@ async function startGame(myTeam, kit, pace) {
     // views
     for (const [id, k] of kids) {
       const c = k.c, visible = !c.benched && (c.side === 'home' || sim.canSee(player, c) || c.frozen);
-      k.update(dt, { visible, reduceMotion, groundY: groundH(c.x, c.z) });
+      // a 3D task: kids standing in front of the landmark fade out of the way, and nobody's bar covers it
+      const wz = worldTasks?.session?.zone, ghost = !!wz && Math.hypot(c.x - wz.x, c.z - wz.z) < 7.5 && c.z > wz.z - 1;
+      k.update(dt, { visible, reduceMotion, groundY: groundH(c.x, c.z), ghost, bars: !worldTasks?.active });
     }
-    for (const v of snowmen.values()) { v.update(dt, groundH(v.c.x, v.c.z)); v.root.visible = sim.canSee(player, v.c) || v.c.frozen > 0; }
+    for (const v of snowmen.values()) { v.update(dt, groundH(v.c.x, v.c.z)); v.root.visible = sim.canSee(player, v.c) || v.c.frozen > 0; if (worldTasks?.active) v.bar.visible = false; }
     sim.drifts.forEach((d, i) => { const t = 1 - d.cd / 6; if (d.lt !== t) { d.lt = t; world.updateDrift(i, Math.max(0.2, t)); } });
     fx.update(pose ? 0 : dt, sim);
     for (const zz of sim.zones) { const key = `${zz.progress.toFixed(3)}|${zz.contested}`; if (key !== zoneKeys[zz.id] || zz.contested) { zoneKeys[zz.id] = key; world.setZone(zz.progress, myCol, rivCol, zz.contested, now / 1000, zz.id); } }
@@ -406,7 +413,7 @@ async function startGame(myTeam, kit, pace) {
 
     // camera
     const halfW0 = Math.tan(12 * Math.PI / 180) * off.length() * zoom * camera.aspect;
-    camShift += ((player.planted ? halfW0 * 0.5 : 0) - camShift) * Math.min(1, dt * 4); // reading a card: keep the student and the fight on the left half
+    camShift += ((player.planted && !worldTasks?.active ? halfW0 * 0.5 : 0) - camShift) * Math.min(1, dt * 4); // reading a card: keep the student and the fight on the left half
     const tx = player.x + camShift, tz = player.z - 1.2;
     focus.x += (tx - focus.x) * Math.min(1, dt * 5); focus.z += (tz - focus.z) * Math.min(1, dt * 5);
     const halfW = Math.tan(12 * Math.PI / 180) * off.length() * zoom * camera.aspect, lim = params.has('zoom') ? 0 : Math.max(0, arena.w / 2 - halfW + 0.5);
@@ -416,9 +423,14 @@ async function startGame(myTeam, kit, pace) {
     const j = shake > 0 ? shake * 0.6 : 0;
     camY += (groundH(player.x, player.z) - camY) * Math.min(1, dt * 4);
     camera.position.set(focus.x + off.x * zoom + (Math.random() - 0.5) * j, off.y * zoom + camY, focus.z + off.z * zoom + (Math.random() - 0.5) * j);
-    camera.lookAt(focus.x, camY, focus.z); camera.updateMatrixWorld();
+    camera.lookAt(focus.x, camY, focus.z);
+    // a 3D task: the camera swoops to the landmark and back
+    const wp = worldTasks?.pose(); if (wp) wtPose = wp;
+    wtBlend += ((wp ? 1 : 0) - wtBlend) * Math.min(1, rdt * (wp ? 3 : 4)); if (worldTasks) worldTasks.blend = wtBlend;
+    if (wtPose && wtBlend > 0.002) { const e = wtBlend * wtBlend * (3 - 2 * wtBlend); wtLook.set(focus.x, camY, focus.z).lerp(wtPose.look, e); camera.position.lerp(wtPose.eye, e); camera.lookAt(wtLook); }
+    camera.updateMatrixWorld();
     sun.position.set(focus.x + sunDir[0], sunDir[1], focus.z + sunDir[2]); sun.target.position.set(focus.x, 0, focus.z - 2); sun.target.updateMatrixWorld();
-    world.tick(dt, focus, reduceMotion, camera); showdownView.tick(dt);
+    world.tick(dt, focus, reduceMotion, camera); showdownView.tick(dt); worldTasks?.tick(rdt, camera);
     if (arena.world) {
       const k = V2 ? 0 : forcedDusk ?? Math.min(1, sim.t / 300); // the v2 sample: a fixed time of day per stage
       if (Math.abs(k - dayK) > 0.01) { dayK = k; applyDay(k); }

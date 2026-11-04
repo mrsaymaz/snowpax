@@ -122,7 +122,7 @@ export class Kid {
 
   onEvent(type) { if (type === 'throw' || type === 'super') this.throwT = 0.28; if (type === 'shake') this.shakeT = 0.7; }
 
-  update(dt, { visible = true, reduceMotion = false, groundY = 0 } = {}) {
+  update(dt, { visible = true, reduceMotion = false, groundY = 0, ghost = false, bars = true } = {}) {
     const c = this.c;
     this.root.position.set(c.x, groundY, c.z);
     this.sled.visible = !!c.sled; this.sled.rotation.y = c.face;
@@ -146,11 +146,11 @@ export class Kid {
     this.vc.emissive.setScalar(c.flash > 0 ? 0.75 : 0);
     if (thaw && this.shakeT < 0.35 && !reduceMotion) this.kid.rotation.y = c.face + (1 - this.shakeT / 0.35) * Math.PI * 2;
     // hidden in a hedge: you see yourself (and your team) faded
-    const fade = c.hidden && c.revealT <= 0 ? 0.45 : 1;
+    const fade = ghost ? 0.18 : c.hidden && c.revealT <= 0 ? 0.45 : 1;
     for (const m of this.mats) m.opacity = fade;
     // spawn shield: soft blink
     this.kid.visible = this.kid.visible && !(c.shield > 0 && Math.floor(c.shield * 10) % 2 === 1);
-    this.drawBars(); this.bar.visible = !frozen && visible;
+    this.drawBars(); this.bar.visible = !frozen && visible && bars;
     if (this.innerRing) this.innerRing.rotation.z += dt * 1.5;
   }
 }

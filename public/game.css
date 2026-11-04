@@ -330,3 +330,37 @@ body.reading #banner.go { font-size: 46px; }
   .cs-pole { height: 24px; } .cs-stage.done .cs-flag { bottom: 9px; } .cs-brick { min-height: 38px; font-size: 14px; padding: 0 10px; } .cs-pile { gap: 6px; }
 }
 @media (prefers-reduced-motion: reduce) { .cs-sky i, .cs-slot.drop, .cs-brick.wrong, .cs-brick.show, .cs-stage.done .cs-flag { animation: none; } .cs-flag { transition: none; } }
+
+/* ---------- world tasks: 3D actions on the landmark (render/worldtask.js) ---------- */
+#wt-layer { position: fixed; inset: 0; z-index: 36; pointer-events: none; }
+#wt-layer[hidden] { display: none; }
+.wt-label { position: fixed; left: 0; top: 0; pointer-events: auto; font: inherit; font-weight: 800; font-size: 16px; line-height: 1.1; color: #1d2733; white-space: nowrap; transition: opacity 0.25s; will-change: transform; }
+button.wt-label { cursor: pointer; touch-action: manipulation; }
+.wt-brick { min-height: 40px; min-width: 40px; padding: 6px 12px; border-radius: 9px; border: 2px solid rgba(110, 160, 205, 0.9); background: rgba(255, 255, 255, 0.92); box-shadow: 0 3px 0 rgba(90, 140, 190, 0.55); }
+.wt-brick.ice { min-width: 42px; padding: 6px 4px; font-size: 21px; text-align: center; background: rgba(226, 246, 255, 0.92); border-color: #6cb8e8; }
+.wt-brick.placed, .wt-brick.given { pointer-events: none; box-shadow: none; background: rgba(255, 255, 255, 0.82); }
+.wt-brick.given { color: #5b6c86; }
+.wt-brick.show { border-color: #f2b705; box-shadow: 0 0 0 3px #ffd166, 0 0 16px rgba(255, 207, 60, 0.8); }
+.wt-brick.wrong { border-color: #e0707a; background: #ffe8ea; }
+.wt-caption { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); transform: translateX(-50%); max-width: min(92vw, 720px); padding: 8px 16px; border-radius: 14px; background: rgba(20, 28, 54, 0.82); color: #fff; font-weight: 800; font-size: 17px; text-align: center; pointer-events: none; }
+.wt-caption[hidden] { display: none; }
+.wt-caption.show { animation: wt-in 0.3s ease-out; }
+.wt-caption .tr { display: block; font-size: 13px; font-weight: 700; color: #cfe3ff; }
+@keyframes wt-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+/* the card becomes a slim strip along the top while a 3D action is on */
+.taskcard.world { top: calc(8px + env(safe-area-inset-top)); bottom: auto; right: auto; left: 50%; width: min(760px, 96vw); transform: translate(-50%, -140%); display: grid; grid-template-columns: 1fr auto; }
+.taskcard.world.in { transform: translate(-50%, 0); }
+.taskcard.world .tc-body { display: none; }
+.taskcard.world .tc-head { grid-column: 1; grid-row: 1; }
+.taskcard.world .tc-foot { grid-column: 2; grid-row: 1; border-top: 0; background: var(--head); padding: 6px 10px; }
+.taskcard.world .tc-foot .tc-note { display: none; }
+.taskcard.world .tc-bar { grid-column: 1 / 3; grid-row: 2; }
+body.worldtask #minimap, body.worldtask #map-btn, body.worldtask #zone, body.worldtask #flakes, body.worldtask #lives { opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+body.worldtask #joy-base, body.worldtask #joy-knob, body.worldtask #attack, body.worldtask #super { opacity: 0; pointer-events: none; }
+body.worldtask.reading #banner { left: 50%; width: auto; font-size: 34px; top: 30%; }
+@media (max-height: 430px) {
+  .wt-label { font-size: 13px; } .wt-brick { min-height: 34px; padding: 4px 8px; } .wt-brick.ice { font-size: 17px; min-width: 34px; }
+  .wt-caption { font-size: 14px; padding: 5px 12px; bottom: 6px; }
+  .taskcard.world .tc-icon { display: none; } .taskcard.world .tc-foot { padding: 4px 6px; }
+}
+@media (prefers-reduced-motion: reduce) { .wt-caption.show { animation: none; } }

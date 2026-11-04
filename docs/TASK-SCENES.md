@@ -1,5 +1,45 @@
 # Task scenes
 
+## 3D actions on the landmarks (inspired by Languini)
+
+Where a landmark has a world scene, the English task is played as a 3D action on the real landmark
+in the arena, not on a card:
+
+- **Camera:** it swoops in to the landmark and back when the task ends.
+- **The fight goes on in slow motion around it,** at a quarter speed. While the task is on, rival
+  hits never chill the bar, and teammates standing in front of the landmark fade out of the way.
+- **The card becomes a slim strip along the top:** title, coach line, progress, timer, read-aloud,
+  Step out. The prompt and the answer show in a caption at the bottom.
+- **Words sit on 3D things** as HTML labels pinned to them every frame
+  (`render/worldtask.js`), so they stay sharp, tappable and readable aloud.
+- **Fallback:** the flat card scene is used when the student is not at that landmark (for example
+  a Showdown banner far from the castle), in the card lab, and with `?scenes=basic`.
+
+**The Snow Castle (Sururi Park, `cards/castle3d.js`):**
+- A wooden scaffold beam spans the castle front, with ghost bricks showing where the new course
+  goes.
+- Snow bricks carrying the sentence blocks lie on the snow in front. Tap them in sentence order:
+  each flies up onto the beam with a rising bell note and a puff of snow.
+- A wrong brick hops and wobbles, and the right one glows.
+- The finished sentence raises the flag, and the course drops into a snow wall in front of the
+  castle that grows with every sentence of the visit.
+- Spelling lays ice letters the same way.
+
+A world scene is a scene function that also gets `ctx.world` (a session):
+
+| | |
+|---|---|
+| `frame(eye, look)` | the camera pose, in the landmark's local space |
+| `step`, `persist` | groups for this step's things / things that stay for the whole visit |
+| `label(html, { obj, at, onTap })` | an HTML label pinned to a 3D object |
+| `measure(el)`, `pxPerMeter()` | to size 3D things to their words |
+| `fly(obj, to)`, `wobble(obj)`, `puff(obj)` | arcs, wrong-answer hops, snow puffs |
+| `say(html)` | the caption at the bottom |
+
+Register it in `WORLD_SCENES` (`cards/scenes.js`).
+
+## Card scenes
+
 The task card is a **shell** with a **scene** in it (inspired by Growbloom's garden tasks and
 Wordramp's road tasks: the English item stays the same, answering it is an action in the place).
 
@@ -56,7 +96,7 @@ Register it in `LANDMARK_SCENES` under the outpost's theme and the step kinds it
 `cards.html?family=build&theme=sururi&unit=g5u1&seed=3`. In the game, `?scenes=basic` shows the
 plain cards everywhere, to compare.
 
-## Next scenes
+## Next scenes (to become 3D actions too)
 
 | Outpost · family | Scene |
 |---|---|

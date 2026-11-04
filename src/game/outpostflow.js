@@ -34,14 +34,14 @@ export function assignFlakeWords(sim, unit, missed, rng) {
 }
 
 export class OutpostFlow {
-  constructor({ sim, player, unit, unitProgress, save, writeSave, pace, rng, root, ui, familyOverride = null }) {
+  constructor({ sim, player, unit, unitProgress, save, writeSave, pace, rng, root, ui, familyOverride = null, world = null, worldColor = null }) {
     Object.assign(this, { sim, player, unit, up: unitProgress, save, writeSave, pace, rng, ui, familyOverride });
     this.visits = new Map(); this.history = []; this.mode = null; this.zone = null; this.shown = 0; this.chillT = 0; this.waveT = 0; this.waveZone = null; this.outside = new Set();
     this.card = new TaskCard(root, {
       rng, coach: text => this.card.setCoach(text),
       timerFor: pace === 'challenge' ? st => stepSeconds(st, pace) : null,
       onItem: r => this.onItem(r), onStepDone: () => this.onStepDone(),
-      sound: (name, opt) => this.ui.play?.(name, opt),
+      sound: (name, opt) => this.ui.play?.(name, opt), world, worldColor,
     });
     this.card.onLeave = () => this.leave();
   }
@@ -176,7 +176,7 @@ export class OutpostFlow {
     }
   }
   onEvent(e) {
-    if (e.type === 'plantedHit' && e.id === this.player.id && (this.mode === 'seize' || this.mode === 'seize-fill')) { this.chillT = 1.2; this.card.chill(); }
+    if (e.type === 'plantedHit' && e.id === this.player.id && (this.mode === 'seize' || this.mode === 'seize-fill') && !this.card.inWorld) { this.chillT = 1.2; this.card.chill(); } // 3D actions are protected: hits never chill the bar
     if (e.type === 'cocoaAsk' && e.id === this.player.id) this.openCocoa(e.pickup);
     if (e.type === 'collect' && e.kind === 'flake') {
       const p = this.sim.pickups.find(q => q.id === e.pickup), w = p?.word;
