@@ -28,7 +28,7 @@ shared pieces in `cards/stationkit.js`):
 | Archers' Lodge · Sorting | Category titles over archery targets, in front of a log lodge. Pick an arrow card from the rack, then a target. The arrow flies and sticks, and the word joins the list under the target. A wrong target and the arrow bounces off. |
 | Kızılay Fountain · Matching | Ice tiles on the frozen fountain. Tap a word, then its match, and a golden skate trail carves across the ice and the tiles turn mosaic colours. A wrong pair leaves a red trail that fades. |
 | Snow Castle · Builder | Snow bricks onto the castle wall, which grows a course with every sentence (above). |
-| Admiral's Bell · Listening | A pier on the frozen Golden Horn, a ferry and the far shore. Ring the bell to hear the word. Gulls carry the answers; the right gull flies to the bell and rings it. |
+| Admiral's Bell · Listening | A pier on the frozen Golden Horn, a ferry and the far shore. The bell rings and the word is read ("Hear it again" to repeat). Seagulls hover over the pier, each with a word: toss a simit to the right one. It catches it, gobbles it up and flies to ring the bell. A wrong gull ducks and the simit drops on the pier. |
 
 **Polish shared by every station:**
 - **Your own kid:** the player's girl or boy in their team jacket and kit hat stands in the station.
@@ -133,5 +133,5 @@ plain cards everywhere, to compare.
 | Treehouse · Answer | snowball the right birdhouse |
 | Archers' Lodge · Sorting | arrows into category targets |
 | Kızılay Fountain · Matching | skate trails on the frozen fountain |
-| Admiral's Bell · Listening | gulls carry the words to the bell |
+| Admiral's Bell · Listening | (done: simit for the gulls) |
 | Hot cocoa | pour into the right mug |

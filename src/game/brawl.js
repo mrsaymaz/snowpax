@@ -182,6 +182,17 @@ async function startGame(myTeam, kit, pace) {
     surface: canvas, attackBtn: $('#attack'), superBtn: $('#super'), joyBase: $('#joy-base'), joyKnob: $('#joy-knob'), groundAt,
     tapToMove: CONFIG.pace[pace].tapToMove, onTapGround: p => { if (sim.travelTo(player, p.x, p.z)) play('tap'); },
     onKey: k => { if (k === 'pause') pause(!paused); },
+    // tap a rival: a snowball at them; tap your own kid: a snowball at the nearest rival
+    onTap: (x, y) => {
+      if (player.planted || player.frozen || player.thaw) return null;
+      const R = Math.max(40, Math.min(innerWidth, innerHeight) * 0.09), v = new Vector3();
+      const scr = c => { v.set(c.x, groundH(c.x, c.z) + (c.role === 'minion' ? 0.9 : 1.0), c.z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; };
+      let best = null, bd = R;
+      for (const c of sim.enemiesOf(player)) { if (c.frozen || c.gone || !sim.canSee(player, c)) continue; const [sx, sy] = scr(c), d = Math.hypot(sx - x, sy - y); if (d < bd) { bd = d; best = c; } }
+      if (best) { fx.number?.(best.x, best.z, '🎯', 'warm'); return { target: best.id }; }
+      const [px, py] = scr(player); if (Math.hypot(px - x, py - y) < R * 1.1) return { auto: true };
+      return null;
+    },
   });
   $('#hud').hidden = !!(arena.world && !params.has('free'));
   $('#zone-bar .home').style.background = myCol; $('#zone-bar .rival').style.background = rivCol;
@@ -329,6 +340,7 @@ async function startGame(myTeam, kit, pace) {
     const kitInfo = KITS[player.kit];
     const shotTarget = (cmd, isSuper) => {
       const range = isSuper ? CONFIG.superBoulder.range : kitInfo.range;
+      if (cmd.target != null) { const t = sim.chars.find(c => c.id === cmd.target); return t ? { x: t.x, z: t.z } : null; } // a tapped rival
       if (cmd.mouse) { const m = r.mouse && groundAt(r.mouse.x, r.mouse.y); return m ? { x: m.x, z: m.z, manual: true } : null; }
       if (cmd.auto) { const t = sim.autoTarget(player, isSuper ? range : null); return t ? { x: t.x, z: t.z } : { x: player.x + Math.sin(player.face) * range, z: player.z + Math.cos(player.face) * range, manual: true }; }
       const d = range * (0.3 + 0.7 * cmd.mag); return { x: player.x + cmd.sx * d, z: player.z - cmd.sy * d, manual: true };
@@ -458,7 +470,7 @@ async function startGame(myTeam, kit, pace) {
     // HUD
     const p = Math.round(Math.abs(z.progress) * 100);
     $('#zone-bar .home').style.width = (z.progress > 0 ? p : 0) + '%'; $('#zone-bar .rival').style.width = (z.progress < 0 ? p : 0) + '%';
-    $('#zone-label').textContent = `${z.label}: ` + (z.showdown ? (z.owner === 'home' ? 'giant snowball!' : `banners ${stages?.bannersUp || 0} of 5`) : flow?.busy && flow.zone === z ? (flow.mode === 'defend' ? 'answer to refill snowballs' : `answer to seize ${p}%`) : flow?.waveZone === z ? 'defend it!' : z.owner === 'home' ? 'yours!' : z.owner === 'rival' ? 'rivals hold it' : z.contested ? 'contested!' : z.home ? `seizing… ${p}%` : z.rival ? `rivals seizing… ${p}%` : `${Math.round(Math.hypot(z.x - player.x, z.z - player.z))} steps away`);
+    $('#zone-label').textContent = `${z.label}: ` + (stages?.phase === 'fight' && stages.zone === z ? 'clear the snowmen!' : z.showdown ? (z.owner === 'home' ? 'giant snowball!' : `banners ${stages?.bannersUp || 0} of 5`) : flow?.busy && flow.zone === z ? (flow.mode === 'defend' ? 'answer to refill snowballs' : `answer to seize ${p}%`) : flow?.waveZone === z ? 'defend it!' : z.owner === 'home' ? 'yours!' : z.owner === 'rival' ? 'rivals hold it' : z.contested ? 'contested!' : z.home ? `seizing… ${p}%` : z.rival ? `rivals seizing… ${p}%` : `${Math.round(Math.hypot(z.x - player.x, z.z - player.z))} steps away`);
     drawMini();
     $('#zone').classList.toggle('contested', !!z.contested);
     $('#score .h').textContent = score.home; $('#score .r').textContent = score.rival;
@@ -470,7 +482,8 @@ async function startGame(myTeam, kit, pace) {
     const wts = worldTasks?.session, inStation = wts && now >= wts.showAt; draw(inStation ? wts.scene : scene, inStation ? wts.camera : camera); // a station shows its own set
   }
   requestAnimationFrame(frame);
-  globalThis.__snowpax = { match, sim, player, quality, renderer, world, life, flow, stages, scene, snowmen };
+  const screenOf = c => { const v = new Vector3(c.x, groundH(c.x, c.z) + (c.role === 'minion' ? 0.9 : 1.0), c.z).project(camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight }; };
+  globalThis.__snowpax = { match, sim, player, quality, renderer, world, life, flow, stages, scene, snowmen, screenOf };
   if (stages) stages.showMap();
 }
 

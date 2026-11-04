@@ -13,6 +13,7 @@ import { speech } from './speech.js';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const FIGHT_MAX = 14; // seconds of the opening fight at most
 const STAR = n => '★'.repeat(n) + '☆'.repeat(3 - n);
 const ICON = { boulevard: 'boulevard', archery: 'archery', kizilay: 'kizilay', sururi: 'sururi', waterfront: 'waterfront', showdown: 'schoolyard' };
 
@@ -109,7 +110,9 @@ export class StageRunner {
     this.ui.banner(st.title.toUpperCase(), 'go', 1.6);
     if (st.final) { this.bannersUp = 0; this.giant = null; this.ui.showdown?.start(z, BANNERS); this.ui.coach('Home at last! The rivals want Our School. Raise all five banners with English, then roll the giant snowball!', 6); }
     if (st.newRival && RIVAL_INFO[st.newRival]) this.newRival(st.newRival);
-    setTimeout(() => { if (this.mode === 'outpost' && !this.flow.busy) this.flow.begin(z); }, 900);
+    // first a fight: clear the first wave of snowmen, then seize the outpost with English
+    this.phase = 'fight'; this.tFight = 0; this.flow.stageHold = true;
+    if (!this.toldTap) { this.toldTap = true; setTimeout(() => { if (this.phase === 'fight') this.ui.coach('Snowmen! Tap a rival to throw a snowball at it, or tap yourself to throw at the nearest one.', 6); }, 1800); }
   }
   newRival(type) {
     const info = RIVAL_INFO[type], el = $('#newrival');
@@ -154,6 +157,7 @@ export class StageRunner {
     $('#outoflives').onclick = e => { const b = e.target.closest('[data-go]'); if (!b) return; $('#outoflives').hidden = true; if (b.dataset.go === 'again') this.start(this.cur); else this.showMap(); };
   }
   cleanup(lost) {
+    this.phase = null; this.flow.stageHold = false;
     const z = this.zone; this.flow.abort(); this.flow.setStage(null);
     setWall(this.match.grid, this.wall, false); this.ui.showWall?.(null); this.wall = [];
     this.match.clearMinions(); this.ui.onGone?.();
@@ -237,12 +241,22 @@ export class StageRunner {
     this.tStand += dt;
     const gone = this.match.removeGone(); if (gone.length) this.ui.onGone?.(gone);
     const v = this.flow.visits.get(this.zone.id);
+    if (this.phase === 'fight') this.updateFight(dt);
+    else if (this.phase === 'seize' && !this.flow.busy && !this.zone.owner && !this.begun) { const P = this.match.player; if (!P.frozen && !P.thaw) { this.begun = true; this.flow.begin(this.zone); } }
     if (this.cur.final) { this.updateShowdown(dt, v); return; }
     if (this.waveIdx === 0 && this.tStand > 2) this.spawnWave(0);
     if (this.waveIdx === 1 && ((v && v.done >= 3 && this.alive(this.waves[0]) <= 1) || this.waves[0].t > 30) && !this.zone.owner) this.spawnWave(1);
     for (const w of this.waves) { if (!w || w.cleared) continue; w.t += dt; if (!this.alive(w)) { w.cleared = true; if (!w.final) { this.ui.banner('WAVE CLEAR!', 'win', 1.3); this.ui.play('superReady'); } } }
-    // the final wave decides: beaten (or 10 s of it held off) and the outpost is yours
-    if (this.finalT !== null) { this.finalT += dt; const fw = this.waves[2]; if ((fw && fw.cleared) || this.finalT > 10) { this.finalT = null; if (fw && !fw.cleared) this.ui.banner('THEY GIVE UP!', 'win', 1.2); setTimeout(() => { if (this.mode === 'outpost') this.flow.held(this.zone); }, fw?.cleared ? 600 : 1200); } }
+    // the final wave decides: beaten (or 8 s of it held off) and the outpost is yours
+    if (this.finalT !== null) { this.finalT += dt; const fw = this.waves[2]; if ((fw && fw.cleared) || this.finalT > 8) { this.finalT = null; if (fw && !fw.cleared) this.ui.banner('THEY GIVE UP!', 'win', 1.2); setTimeout(() => { if (this.mode === 'outpost') this.flow.held(this.zone); }, fw?.cleared ? 600 : 1200); } }
+  }
+  // The opening fight: when the first wave is (nearly) cleared, or after FIGHT_MAX seconds, the
+  // landmark opens for seizing.
+  updateFight(dt) {
+    this.tFight += dt; const w0 = this.waves[0];
+    if (!w0 || !((this.alive(w0) <= 1 && this.tFight > 6) || this.tFight > FIGHT_MAX)) return;
+    this.phase = 'seize'; this.begun = false; this.flow.stageHold = false;
+    this.ui.banner(this.cur.final ? 'RAISE THE BANNERS!' : 'SEIZE IT!', 'go', 1.3); this.ui.play('superReady');
   }
   // Showdown waves come with the banners: the captain after two, everyone after four.
   updateShowdown(dt, v) {

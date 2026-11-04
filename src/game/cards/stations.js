@@ -2,7 +2,7 @@
 //   Treehouse (Boulevard) · Answer    – snowball the birdhouse with the right answer
 //   Archers' Lodge · Sorting          – shoot each arrow card into its category's target
 //   Kızılay Fountain · Matching       – skate a trail across the frozen fountain to the match
-//   Admiral's Bell (Waterfront) · Listening – ring the bell, send the right gull to it
+//   Admiral's Bell (Waterfront) · Listening – hear the word, toss a simit to the gull that has it
 // Each scene scores exactly like its flat card (basic.js): one item per question, pair or card,
 // right first time or not; a miss shows the right one glowing and the task goes on.
 import {
@@ -11,6 +11,7 @@ import {
 } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { stage, pines, mounds, bunting, row, actor } from './stationkit.js';
+import { gullGroup } from '../render/gull.js';
 import { esc, shuffle } from './util.js';
 
 const L = (c) => new MeshLambertMaterial({ color: c });
@@ -278,33 +279,56 @@ export function bellStation(s, { color = '#f5b616' } = {}) {
     tick: dt => { t += dt; K.tick(dt); A?.tick(dt); if ((gullT -= dt) <= 0) { gullT = 5 + Math.random() * 6; s.sound?.('gull'); } if (s.reduceMotion) return; wave(t); ferry.position.x = -6.5 + Math.sin(t * 0.15) * 0.6; if (ringT > 0) { ringT -= dt; swing.rotation.z = Math.sin(t * 10) * 0.5 * Math.min(1, ringT); } else swing.rotation.z *= 0.9; },
   };
 }
-function gull() {
-  const g = new Group(), white = L('#ffffff'), grey = L('#9aa3b5');
-  const body = new Mesh(new SphereGeometry(0.22, 12, 8), white); body.scale.set(1.5, 0.9, 0.9); g.add(body);
-  const head = new Mesh(new SphereGeometry(0.13, 10, 8), white); head.position.set(0.3, 0.1, 0); g.add(head);
-  const beak = new Mesh(new ConeGeometry(0.04, 0.14, 6), L('#f2b705')); beak.rotation.z = -Math.PI / 2; beak.position.set(0.47, 0.08, 0); g.add(beak);
-  const wings = [-1, 1].map(sd => { const w = new Mesh(new BoxGeometry(0.34, 0.03, 0.62), grey); w.position.set(0, 0.08, sd * 0.36); g.add(w); return w; });
-  g.userData.wings = wings; return g;
+// a simit: a sesame ring, golden brown
+function simit() {
+  const g = new Group();
+  const ring = new Mesh(new TorusGeometry(0.13, 0.05, 10, 22), L('#c27a35')); ring.castShadow = true; g.add(ring);
+  const top = new Mesh(new TorusGeometry(0.13, 0.042, 6, 22, Math.PI * 2), L('#a9622a')); top.position.z = 0.012; top.scale.set(1, 1, 0.6); g.add(top);
+  for (let k = 0; k < 14; k++) { const a = k / 14 * Math.PI * 2, sd = new Mesh(new SphereGeometry(0.011, 4, 3), L('#f3e2b8')); sd.position.set(Math.cos(a) * (0.13 + (k % 2 ? 0.02 : -0.02)), Math.sin(a) * (0.13 + (k % 2 ? 0.02 : -0.02)), 0.05); g.add(sd); }
+  return g;
 }
 export function bellListen(ctx) {
-  const s = ctx.world, st = ctx.step, set = s.set, K = set.K, voice = ctx.speech.available;
-  const T = tall(); frameFor(s, { eye: [0, 3.0, 10.6], look: [0, 1.9, 0] }, { eye: [0, 3.2, 11.6], look: [0, 1.8, 0] }, { eye: [0, 2.8, 9.6], look: [0, 2.9, 0.6], width: 38 });
-  s.say(`${esc(st.prompt)}${voice ? '' : ` <span class="tr">${esc(st.fallbackText || st.speak)}</span>`}`);
-  const play = () => { set.A?.throw(); set.ring(); ctx.sound('bell'); ctx.later(() => ctx.speech.say(st.speak), 250); };
-  s.label('🔔 Ring the bell', { cls: 'wt-bell', at: innerHeight < 430 ? [1.75, 2.55, -1.6] : [0, 3.75, -1.6], onTap: play });
+  const s = ctx.world, st = ctx.step, set = s.set, K = set.K, voice = ctx.speech.available, A = set.A;
+  const T = tall(); frameFor(s, { eye: [0, 3.0, 10.6], look: [0, 1.9, 0] }, { eye: [0, 3.2, 11.6], look: [0, 1.8, 0] }, { eye: [0, 2.8, 9.6], look: [0, 2.6, 0.6], width: 38 });
+  s.say(`${esc(st.prompt)} <span class="tr">Toss the simit to that gull!</span>${voice ? '' : ` <span class="tr">${esc(st.fallbackText || st.speak)}</span>`}`);
+  const play = () => { set.ring(); ctx.sound('bell'); ctx.later(() => ctx.speech.say(st.speak), 250); };
+  s.label('🔔 Hear it again', { cls: 'wt-bell', at: innerHeight < 430 ? [1.75, 2.55, -1.6] : [0, 3.75, -1.6], onTap: play });
   if (voice) ctx.later(play, 450); else ctx.note('No English voice on this device: read the word instead.');
+  // the gulls hover over the pier, each with a word; you toss a simit to the right one
   const els = st.options.map((o, i) => s.label(st.pics?.[i] ? `<img src="${esc(st.pics[i])}" alt=""><span>${esc(o)}</span>` : esc(o), { cls: 'wt-opt gullsign', onTap: () => pick(i) }));
-  const ws = els.map(el => sized(s, el, 1.7, 0.4)), xs = T ? st.options.map((o, i) => (i % 2 ? 0.95 : -0.95)) : row(ws, 0.7);
+  const ws = els.map(el => sized(s, el, 1.7, 0.4)), xs = T ? st.options.map((o, i) => (i % 2 ? -0.95 : 0.95)) : row(ws, 0.7); // portrait: a zigzag from the right, clear of the kid
   const gulls = st.options.map((o, i) => {
-    const g = gull(); g.position.set(xs[i], T ? 2.7 - i * 0.95 : 2.05 + (i % 2) * 0.2, 2.6); g.rotation.y = -Math.PI / 2 + (xs[i] > 0 ? 0.25 : -0.25); s.step.add(g);
-    els[i]._pin.obj = g; els[i]._pin.at.set(0, -0.62, 0);
-    const ph = i * 1.3, y0 = g.position.y; s.onTick(() => { if (s.reduceMotion || g.userData.flying) return; const t = performance.now() / 1000; g.position.y = y0 + Math.sin(t * 2 + ph) * 0.12; g.userData.wings.forEach((w, k) => { w.rotation.x = (k ? 1 : -1) * Math.sin(t * 9 + ph) * 0.5; }); });
+    const g = gullGroup(1.9); g.position.set(xs[i], T ? 3.35 - i * 0.8 : 2.1 + (i % 2) * 0.25, 1.3); g.rotation.set(0.1, xs[i] > 0.1 ? -0.55 : xs[i] < -0.1 ? 0.55 : 0, 0); s.step.add(g);
+    els[i]._pin.obj = g; els[i]._pin.at.set(0, -0.55, 0);
+    const ph = i * 1.3; g.userData.y0 = g.position.y;
+    s.onTick(() => { if (g.userData.flying) return; const t = performance.now() / 1000; if (!s.reduceMotion) g.position.y = g.userData.y0 + Math.sin(t * 2 + ph) * 0.1; g.userData.flap(t * 9 + ph, s.reduceMotion ? 0.2 : 1); });
     return g;
   });
+  const beakOf = g => g.userData.body.localToWorld(new Vector3(0, 0.1, 0.4)).sub(s.group.position);
+  const toss = (i, done) => { // the kid throws a simit to gull i
+    const sm = simit(), from = A ? A.hand() : new Vector3(0, 0.8, 3.4); sm.position.copy(from); s.step.add(sm); A?.throw();
+    const to = beakOf(gulls[i]); s.fly(sm, [to.x, to.y, to.z], { T: 0.5, lift: 0.9, spin: 6, done: () => done(sm, to) });
+  };
   const glow = i => els[i].classList.add('show');
   const pick = chooser(ctx, {
     answerText: st.options[st.answer], glow,
-    onRight: i => { const g = gulls[i]; g.userData.flying = true; els[i].classList.add('right'); ctx.sound('gull'); const b = set.bellPos(); s.fly(g, [b.x + 0.5, b.y + 0.6, b.z + 0.3], { T: 0.7, lift: 0.8, done: () => { set.ring(); ctx.sound('bell'); K.burst(b); set.A?.cheer(); } }); },
-    onWrong: i => { els[i].classList.remove('wrong'); void els[i].offsetWidth; els[i].classList.add('wrong'); s.wobble(gulls[i]); set.A?.oops(); },
+    onRight: i => {
+      els[i].classList.add('right');
+      toss(i, sm => { // caught! it flies up with the simit in its beak and gobbles it, then rings the bell
+        const g = gulls[i]; g.userData.flying = true; ctx.sound('gull');
+        s.step.remove(sm); g.userData.body.add(sm); sm.position.set(0, 0.09, 0.42); sm.rotation.set(Math.PI / 2, 0, 0); sm.scale.setScalar(0.55);
+        const b = set.bellPos(); let t0 = 0;
+        s.onTick(dt => { t0 += dt; g.userData.flap(t0 * 16, 1); if (t0 > 0.35) sm.scale.setScalar(Math.max(0.001, 0.55 * (1 - (t0 - 0.35) / 0.4))); });
+        s.fly(g, [b.x + 0.55, b.y + 0.75, b.z + 0.4], { T: 0.8, lift: 0.9, done: () => { set.ring(); ctx.sound('bell'); K.burst(b); A?.cheer(); } });
+        ctx.later(() => ctx.sound('pickup'), 500); // gulp
+      });
+    },
+    onWrong: i => {
+      els[i].classList.remove('wrong'); void els[i].offsetWidth; els[i].classList.add('wrong');
+      toss(i, sm => { // it ducks; the simit bounces off and drops onto the pier
+        s.wobble(gulls[i]); ctx.sound('gull'); A?.oops();
+        s.fly(sm, [sm.position.x + 0.4, 0.47, Math.min(3.2, sm.position.z + 1.2)], { T: 0.45, lift: 0.3, spin: 3, done: () => { sm.rotation.set(-Math.PI / 2, 0, 0); } });
+      });
+    },
   });
 }

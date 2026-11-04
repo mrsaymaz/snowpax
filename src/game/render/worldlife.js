@@ -9,6 +9,7 @@ import {
   SphereGeometry, ConeGeometry, CapsuleGeometry, TorusGeometry, BoxGeometry, PlaneGeometry, CanvasTexture, CylinderGeometry, Sprite, SpriteMaterial, SRGBColorSpace,
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { gullBodyParts, gullWingParts } from './gull.js';
 
 const rnd = (a, b = 0) => { let h = Math.imul((a * 73856093) ^ (b * 19349663), 2654435761); h ^= h >>> 13; h = Math.imul(h, 1597334677); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 
@@ -30,14 +31,8 @@ export class WorldLife {
     const mat = new MeshLambertMaterial({ vertexColors: true });
 
     // ---------- seagulls ----------
-    const body = bake([
-      [new SphereGeometry(0.12, 8, 6), '#f4f6fb', 0, 0, 0, 0, 0, 0, 1, 0.9, 1.9],
-      [new SphereGeometry(0.085, 8, 6), '#ffffff', 0, 0.08, 0.2],
-      [new ConeGeometry(0.025, 0.1, 5), '#f0a43a', 0, 0.07, 0.31, Math.PI / 2],
-      [new ConeGeometry(0.07, 0.18, 5), '#9aa3b8', 0, 0.01, -0.27, -Math.PI / 2, 0, 0, 1, 1, 0.6],
-      [new SphereGeometry(0.02, 4, 3), '#1c2340', 0.05, 0.11, 0.25], [new SphereGeometry(0.02, 4, 3), '#1c2340', -0.05, 0.11, 0.25],
-    ]);
-    const wing = bake([[new BoxGeometry(0.36, 0.02, 0.15), '#a9b1c6', 0.18, 0, 0], [new BoxGeometry(0.1, 0.021, 0.12), '#2f344a', 0.33, 0, -0.01]]); // pivot at the shoulder
+    const body = bake(gullBodyParts()); // the shared herring-gull design (render/gull.js)
+    const wing = bake(gullWingParts()), wingL = bake(gullWingParts().map(([g, c, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, ...sc]) => [g, c, -x, y, z, rx, -ry, -rz, ...sc])); // pivots at the shoulder
     const perches = (life.perches || []).filter((p, k) => rnd(k, 11) < 0.55);
     this.perches = perches.map(p => ({ p, taken: false }));
     const n = low ? Math.min(10, this.perches.length) : Math.min(30, this.perches.length);
@@ -46,7 +41,7 @@ export class WorldLife {
       const slot = this.perches[Math.floor(k * this.perches.length / n)]; slot.taken = true;
       this.gulls.push({ slot, x: slot.p[0], y: slot.p[1], z: slot.p[2], yaw: rnd(k, 5) * 6.28, state: 'sit', t: rnd(k, 7) * 4, vx: 0, vy: 0, vz: 0, flap: rnd(k, 9) * 6 });
     }
-    this.gBody = new InstancedMesh(body, mat, Math.max(1, n)); this.gWingL = new InstancedMesh(wing, mat, Math.max(1, n)); this.gWingR = new InstancedMesh(wing, mat, Math.max(1, n));
+    this.gBody = new InstancedMesh(body, mat, Math.max(1, n)); this.gWingL = new InstancedMesh(wingL, mat, Math.max(1, n)); this.gWingR = new InstancedMesh(wing, mat, Math.max(1, n));
     for (const m of [this.gBody, this.gWingL, this.gWingR]) { m.count = n; m.frustumCulled = false; m.castShadow = !low; this.g.add(m); }
 
     // ---------- cats by the chimneys ----------
@@ -227,10 +222,10 @@ export class WorldLife {
       const flying = gl.state !== 'sit', flap = flying ? Math.sin(t * (gl.state === 'land' ? 9 : 13) + gl.flap) * 0.85 : -0.12, bob = flying ? 0 : Math.max(0, Math.sin(t * 3 + k)) * 0.01;
       o.position.set(gl.x, gl.y + bob, gl.z); o.rotation.set(flying ? -0.15 : 0, gl.yaw, 0); o.scale.setScalar(1.2); o.updateMatrix(); this.gBody.setMatrixAt(k, o.matrix);
       for (const [mesh, s] of [[this.gWingR, 1], [this.gWingL, -1]]) {
-        o.position.set(gl.x + Math.cos(gl.yaw) * 0.07 * s, gl.y + bob + 0.05, gl.z - Math.sin(gl.yaw) * 0.07 * s);
-        o.rotation.set(0, gl.yaw + (s < 0 ? Math.PI : 0), 0);
-        if (!flying) o.rotateY(s * 1.35); // folded along the back
-        o.rotateZ(flap);
+        o.position.set(gl.x + Math.cos(gl.yaw) * 0.1 * s, gl.y + bob + 0.06, gl.z - Math.sin(gl.yaw) * 0.1 * s);
+        o.rotation.set(0, gl.yaw, 0);
+        if (!flying) o.rotateY(s * 1.2); // folded back along the body
+        o.rotateZ(s * flap);
         o.scale.setScalar(1.2); o.updateMatrix(); mesh.setMatrixAt(k, o.matrix);
       }
     });

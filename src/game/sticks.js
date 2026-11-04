@@ -1,14 +1,15 @@
 // Controls for the arena.
-// Touch: floating move stick on the left half · Throw button (tap = auto-aim at the nearest
-// rival, drag = aim yourself, release = throw) · Super button (same, when charged) · in
-// Relaxed pace a quick tap on the snow walks there.
+// Touch: floating move stick on the left half · tap a rival to throw at them, or tap your own kid
+// to throw at the nearest rival · Throw button (tap = auto-aim at the nearest rival, drag = aim
+// yourself, release = throw) · Super button (same, when charged) · in Relaxed pace a quick tap on
+// the snow walks there.
 // Computer: WASD/arrows move · mouse aims · left click throws · right click or Q/E = super ·
 // Space dodges · Esc pauses.
 const JOY_R = 58, DEAD = 16;
 
 export class Sticks {
-  constructor({ surface, attackBtn, superBtn, joyBase, joyKnob, groundAt, onTapGround, onKey, tapToMove }) {
-    Object.assign(this, { surface, attackBtn, superBtn, joyBase, joyKnob, groundAt, onTapGround, onKey, tapToMove });
+  constructor({ surface, attackBtn, superBtn, joyBase, joyKnob, groundAt, onTapGround, onKey, tapToMove, onTap = null }) {
+    Object.assign(this, { surface, attackBtn, superBtn, joyBase, joyKnob, groundAt, onTapGround, onKey, tapToMove, onTap });
     this.keys = new Set(); this.move = null; this.aim = null; this.mouse = null; this.mouseDown = null; this.taps = new Map();
     this.pending = { attack: null, super: null, dodge: null };
     this.usedTouch = false;
@@ -77,13 +78,15 @@ export class Sticks {
     }
     if (this.move && e.pointerId === this.move.id) {
       const tap = !this.move.moved && now - this.move.t0 < 260;
-      if (tap && !cancelled && this.tapToMove) this.tapGround(e.clientX, e.clientY);
+      if (tap && !cancelled && !this.tapThrow(e.clientX, e.clientY) && this.tapToMove) this.tapGround(e.clientX, e.clientY);
       this.move = null; this.showJoy(false); return;
     }
     const t = this.taps.get(e.pointerId); this.taps.delete(e.pointerId);
-    if (t && !cancelled && this.tapToMove && Math.hypot(e.clientX - t.x, e.clientY - t.y) < 12 && now - t.t0 < 260) this.tapGround(e.clientX, e.clientY);
+    if (t && !cancelled && Math.hypot(e.clientX - t.x, e.clientY - t.y) < 14 && now - t.t0 < 300 && !this.tapThrow(e.clientX, e.clientY) && this.tapToMove) this.tapGround(e.clientX, e.clientY);
   }
 
+  // a tap on a rival or on your own kid throws (onTap decides and returns the shot, or null)
+  tapThrow(x, y) { const shot = this.onTap?.(x, y); if (!shot) return false; this.pending.attack = shot; return true; }
   tapGround(x, y) { const p = this.groundAt(x, y); if (p) this.onTapGround?.(p); }
   showJoy(on) { this.joyBase.style.display = this.joyKnob.style.display = on ? 'block' : 'none'; if (on) this.drawJoy(); }
   drawJoy() {

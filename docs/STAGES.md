@@ -5,12 +5,12 @@ stages played in order, nearest outpost first:
 
 | # | Stage | Sled ride | Task family | New rival |
 |---|---|---|---|---|
-| 1 | Boulevard Park | 36 s, plane-tree avenue | Answer | snowmen (waddlers) |
-| 2 | Archery Ground | 38 s, record stones and targets, spelling letters | Sorting | shield snowmen |
-| 3 | Kızılay Square | 38 s, tiled kiosks and simit carts | Matching | sledder snowmen |
-| 4 | Sururi Park | 40 s, snow castles and slides, spelling letters | Builder | lobber snowmen |
-| 5 | Waterfront Park | 42 s, along the frozen Golden Horn | Listening | — (everything mixed) |
-| 6 | Schoolyard Showdown | 30 s, home to Our School | all five | the rival captain |
+| 1 | Boulevard Park | 28 s, plane-tree avenue | Answer | snowmen (waddlers) |
+| 2 | Archery Ground | 28 s, record stones and targets, spelling letters | Sorting | shield snowmen |
+| 3 | Kızılay Square | 30 s, tiled kiosks and simit carts | Matching | sledder snowmen |
+| 4 | Sururi Park | 30 s, snow castles and slides, spelling letters | Builder | lobber snowmen |
+| 5 | Waterfront Park | 32 s, along the frozen Golden Horn | Listening | — (everything mixed) |
+| 6 | Schoolyard Showdown | 24 s, home to Our School | all five | the rival captain |
 
 ## Look, time of day and dressing
 
@@ -48,14 +48,18 @@ Each stage has its own time of day (`STAGE_LIGHT` in `brawl.js`, presets in `DAY
        never counted toward the 80%)
    - **Crashes:** a crash costs a life and drops 3 snowflakes.
    - **First ride:** the first ride says "JUMP!" or "DUCK!" before each new kind of obstacle.
-3. **Stand at the outpost** (`stagerun.js`, `waves.mjs`).
+3. **Stand at the outpost** (since the play-test: a fight comes first)
+   - **The opening fight:** the first wave walks in and the team fights it. When it is (nearly)
+     cleared, after at least 6 s, or after 14 s at most, "SEIZE IT!" and the station opens.
+   - **Controls:** move with the stick on the left; tap a rival to throw at it, tap your own kid
+     to throw at the nearest rival, or use the throw button (tap = nearest, drag = aim). (`stagerun.js`, `waves.mjs`).
    - **Arrival:** the team skids into the circle and the task card opens. A ring of snowbanks
      closes the stage, and the waves walk in from up to three entry points.
    - **Waves:**
      - Wave 1 comes on arrival.
      - Wave 2 comes after three answers, once wave 1 is nearly cleared (or after 30 s).
      - When the bar is full, the final wave "They want it back!" comes.
-     - When the final wave is beaten (or after 10 s of it) the outpost is yours.
+     - When the final wave is beaten (or after 8 s of it) the outpost is yours.
    - **Banners:** WAVE and WAVE CLEAR banners, and a "New rivals!" card with a tip.
    - **Answers:** each right answer fires the landmark's attack, snowballs arcing from the top of
      the landmark onto the nearest rivals.
@@ -101,21 +105,21 @@ Frozen snowmen melt away. Each one wears the rival team's colours and has a ring
 **Timing:** `arenaTime()` in `timing.mjs` times the real tasks each stage deals (from the unit),
 using what a Grade 5 student needs per item on the Relaxed pace (choice 7 s, listening 9 s,
 spelling or ordering 12 s, a match pair or sort card 5 s, plus 1.5 s of feedback per step), plus
-the rides and the moments between (arriving, the final wave, results). Arena 1 comes to about
-**11.8 minutes** for every Grade 5 unit:
+the rides and the moments between (arriving, the opening fight, the final wave, the station's
+celebration, results). Arena 1 comes to about **11.9 minutes** for every Grade 5 unit:
 
 | Stage | Ride | Tasks (items) | Between | Total |
 |---|---|---|---|---|
-| Boulevard | 36 s | 51 s (6) | 19 s | 1:46 |
-| Archery | 38 s | 33 s (6) | 19 s | 1:30 |
-| Kızılay | 38 s | 33 s (6) | 19 s | 1:30 |
-| Sururi | 40 s | 81 s (6) | 19 s | 2:20 |
-| Waterfront | 42 s | 63 s (6) | 19 s | 2:04 |
-| Showdown | 30 s | 98 s (12) | 19 s | 2:27 |
+| Boulevard | 28 s | 51 s (6) | 29 s | 1:48 |
+| Archery | 28 s | 33 s (6) | 29 s | 1:30 |
+| Kızılay | 30 s | 33 s (6) | 29 s | 1:32 |
+| Sururi | 30 s | 81 s (6) | 29 s | 2:20 |
+| Waterfront | 32 s | 63 s (6) | 29 s | 2:04 |
+| Showdown | 24 s | 98 s (12) | 31 s | 2:33 |
 
-To fit 10–12 minutes, the rides were shortened by about a fifth and the stage stands lost their
-refill round. The test checks 10 seeds. Real play with students should confirm the per-item
-seconds; if they are slower, the rides are the first thing to shorten.
+After the first play-test an opening fight was added at every stand (about 10 s), so the rides
+were shortened again (now 24–32 s) and the final wave lasts at most 8 s. The test checks 10
+seeds. Real play with students should confirm the per-item seconds.
 
 **Test links:**
 - `?free` brings back the free-roaming world.
