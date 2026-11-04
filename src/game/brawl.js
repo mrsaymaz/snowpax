@@ -20,6 +20,10 @@ import { Sticks } from './sticks.js';
 import { unlockAudio, play, setSound } from './audio.js';
 import { OutpostFlow, assignFlakeWords } from './outpostflow.js';
 import { ensureUnit, startRun } from '../rules/progress.mjs';
+import { StageRunner } from './stagerun.js';
+import { stageState, STAGES } from './stages.mjs';
+import { SnowmanView } from './render/snowmen.js';
+import { InstancedMesh, MeshLambertMaterial, SphereGeometry, Object3D } from 'three';
 
 const $ = s => document.querySelector(s);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -125,10 +129,11 @@ async function startGame(myTeam, kit, pace) {
   // about 50° down: kids show their faces, the arena reads like a stage
   const off = new Vector3(0, 17.6, 16.0); let zoom = 1, shake = 0;
   const focus = new Vector3(player.x, 0, player.z - 1.2);
+  let stages = null; // set below once the HUD exists
   function resize() {
     const w = innerWidth, h = innerHeight; camera.aspect = w / h;
     zoom = Math.min(1.35, Math.max(1, Math.min(w, h) / 390)) * (w / h < 1.5 ? 1.12 : 1) * (Number(params.get('zoom')) || 1);
-    camera.updateProjectionMatrix(); renderer.setSize(w, h, false);
+    camera.updateProjectionMatrix(); renderer.setSize(w, h, false); stages?.sled?.resize(w, h);
     const dist = off.length() * zoom; scene.fog.near = base.fogNear = dist * 1.25; scene.fog.far = base.fogFar = dist * 2.9; // haze only beyond the arena
   }
   const quality = new AutoQuality(level, L => { renderer.setPixelRatio(Math.min(devicePixelRatio || 1, L.maxDpr)); renderer.shadowMap.enabled = L.name !== 'low'; sun.castShadow = L.name !== 'low'; resize(); scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); }, { forced: params.has('quality') ? level : null });
@@ -143,7 +148,7 @@ async function startGame(myTeam, kit, pace) {
     tapToMove: CONFIG.pace[pace].tapToMove, onTapGround: p => { if (sim.travelTo(player, p.x, p.z)) play('tap'); },
     onKey: k => { if (k === 'pause') pause(!paused); },
   });
-  $('#hud').hidden = false;
+  $('#hud').hidden = !!(arena.world && !params.has('free'));
   $('#zone-bar .home').style.background = myCol; $('#zone-bar .rival').style.background = rivCol;
   $('#score .home').innerHTML = emblemSVG(myTeam, 22); $('#score .rival').innerHTML = emblemSVG(rivalTeam, 22);
   $('#super').style.setProperty('--c', '#ffd23f');
@@ -156,6 +161,27 @@ async function startGame(myTeam, kit, pace) {
     sim, player, unit, unitProgress, save, writeSave, pace, rng, root: $('#taskcard'), familyOverride: params.get('family'),
     ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play, fx, fireworks: z => { if (reduceMotion) return; for (const col of [myCol, '#ffffff', '#ffd166', '#7cc4f0']) fx.emit(z.x, 3.5, z.z, 40, col, 6, 1.4, 1.2); } },
   }) : null;
+  // Arena 1 plays as stages (?free for the old free-roaming world)
+  stages = flow && !params.has('free') ? new StageRunner({
+    match, flow, unit, unitProgress, save, writeSave, pace, rng, team: myTeam, kit, reduceMotion,
+    ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play,
+      snapCamera: () => { focus.set(player.x, 0, player.z - 1.2); camShift = 0; },
+      showWall: cells => showWall(cells), onGone: list => dropSnowmen(list) },
+  }) : null;
+  // outposts held in earlier stages stay held
+  if (stages) for (const st of STAGES) if (stageState(unitProgress)[st.id]?.done && st.outpost) { const zz = sim.zones.find(q => q.id === st.outpost); if (zz) { zz.owner = 'home'; zz.progress = 1; world.setOwner(zz.id, myCol); } }
+  // snowbanks round the stage
+  let wallMesh = null;
+  const showWall = cells => {
+    if (wallMesh) { scene.remove(wallMesh); wallMesh.geometry.dispose(); wallMesh = null; }
+    if (!cells || !cells.length) return;
+    wallMesh = new InstancedMesh(new SphereGeometry(0.5, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2), new MeshLambertMaterial({ color: '#f6f8ff' }), cells.length);
+    const o = new Object3D(); cells.forEach(([, , x, z], k) => { o.position.set(x, 0, z); o.rotation.y = k; o.scale.set(1.5 + (k % 3) * 0.2, 1.2 + (k % 4) * 0.25, 1.5); o.updateMatrix(); wallMesh.setMatrixAt(k, o.matrix); });
+    wallMesh.receiveShadow = true; scene.add(wallMesh);
+  };
+  // rival snowmen views
+  const snowmen = new Map();
+  const dropSnowmen = list => { for (const [id, v] of snowmen) if (!list || list.some(c => c.id === id) || !sim.chars.some(c => c.id === id)) { scene.remove(v.root); v.dispose(); snowmen.delete(id); } };
   const feed = (html) => { const li = document.createElement('div'); li.className = 'feed-item'; li.innerHTML = html; $('#feed').prepend(li); setTimeout(() => li.remove(), 3500); while ($('#feed').children.length > 3) $('#feed').lastChild.remove(); };
 
   // mini-map (top left) and the big map: tap a place to walk there
@@ -183,6 +209,7 @@ async function startGame(myTeam, kit, pace) {
   function drawMini() {
     if (!arena.world) return;
     const dpr = Math.min(2, devicePixelRatio || 1), W2 = mini.clientWidth, H2 = mini.clientHeight;
+    if (W2 < 8 || H2 < 8) return; // hidden (stage map, sled run)
     if (mini.width !== Math.round(W2 * dpr)) { mini.width = Math.round(W2 * dpr); mini.height = Math.round(H2 * dpr); }
     const g = mini.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); const s = W2 / 36;
     g.save(); g.beginPath(); g.arc(W2 / 2, H2 / 2, W2 / 2 - 1, 0, 7); g.clip(); g.fillStyle = '#e7edf8'; g.fillRect(0, 0, W2, H2);
@@ -218,7 +245,7 @@ async function startGame(myTeam, kit, pace) {
 
   // round flow: countdown, then play; capturing the zone celebrates and resets it
   const pose = params.has('pose');
-  let countdown = pose ? 0 : 3.2, lastCount = 4, resetZoneAt = 0, score = { home: 0, rival: 0 };
+  let countdown = pose || stages ? 0 : 3.2, lastCount = 4, resetZoneAt = 0, score = { home: 0, rival: 0 };
   if (!pose) coach(arena.world ? (touch ? 'Snow day in Kasımpaşa! Five outposts to seize. Tap the map to walk to one, or use your left thumb.' : 'Snow day in Kasımpaşa! Five outposts to seize. Click the map to walk there, or use WASD.') : (touch ? 'Move with your left thumb. Tap the snowball to throw, or drag it to aim. Take the outpost in the street!' : 'Move with WASD. Aim with the mouse and click to throw. Take the outpost in the street!'), 6);
   const name = c => (c === player ? 'You' : c.side === 'home' ? `Your ${KITS[c.kit].name}` : `${CONFIG.teams[c.team].name} ${KITS[c.kit].name}`);
 
@@ -242,8 +269,9 @@ async function startGame(myTeam, kit, pace) {
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     requestAnimationFrame(frame); quality.tick(dt);
-    if (paused) { renderer.render(scene, camera); return; }
-    const live = !pose && countdown <= 0;
+    if (paused) { renderer.render(stages?.mode === 'sled' ? stages.sled.scene : scene, stages?.mode === 'sled' ? stages.sled.camera : camera); return; }
+    if (stages?.mode === 'sled') { stages.update(dt); renderer.render(stages.sled.scene, stages.sled.camera); return; } // the sled journey has its own scene
+    const live = !pose && countdown <= 0 && (!stages || stages.mode === 'outpost');
     if (!pose && countdown > 0) {
       countdown -= dt; const n = Math.ceil(countdown);
       if (n !== lastCount) { lastCount = n; if (n > 0) { banner(String(n), 'count', 0.9); play('tap'); } else { banner('SNOW!', 'go', 1.1); play('superReady'); } }
@@ -262,7 +290,7 @@ async function startGame(myTeam, kit, pace) {
     if (live && r.attack) { const t = shotTarget(r.attack, false); if (t) { if (player.ammo < 1) { $('#attack').classList.add('empty-flash'); setTimeout(() => $('#attack').classList.remove('empty-flash'), 250); } inp.attack = t; inp.manual = !!t.manual; } }
     if (live && r.super) { if (player.super >= 1) { const t = shotTarget(r.super, true); if (t) { inp.super = t; inp.manual = !!t.manual; } } }
     if (live && r.dodge) inp.dodge = { dx: inp.mx, dz: inp.mz };
-    if (live) match.step(dt, inp); else for (const c of sim.chars) c.moving = 0;
+    if (live) { match.step(dt, inp); stages?.update(dt); } else for (const c of sim.chars) c.moving = 0;
 
     // aim indicator while dragging (or always the mouse on desktop)
     let aimKind = null, aimTo = null;
@@ -275,7 +303,10 @@ async function startGame(myTeam, kit, pace) {
     // events → effects, sounds, HUD
     if (flow && live) flow.update(dt);
     for (const e of sim.drainEvents()) {
-      fx.onEvent(e, sim); flow?.onEvent(e);
+      fx.onEvent(e, sim); flow?.onEvent(e); stages?.onEvent(e);
+      if (e.type === 'spawnMinion') { const c = sim.chars.find(q => q.id === e.id); if (c) { const v = new SnowmanView(c); snowmen.set(c.id, v); scene.add(v.root); fx.emit(e.x, 0.6, e.z, 20, '#ffffff', 3, 0.6); } }
+      if (e.type === 'melt') fx.emit(e.x, 0.5, e.z, 22, '#f4f7ff', 2.5, 0.8);
+      if (e.type === 'blast') fx.emit(e.x, 3.2, e.z, 16, myCol, 3, 0.6);
       const k = e.id !== undefined ? kids.get(e.id) : null; if (k) k.onEvent(e.type);
       const near = e.x !== undefined ? Math.max(0, 1 - Math.hypot(e.x - player.x, e.z - player.z) / 18) : 1;
       if (['throw', 'hit', 'pickup', 'poof', 'dodge'].includes(e.type)) play(e.type, { near: e.id === player.id ? 1 : near });
@@ -332,9 +363,10 @@ async function startGame(myTeam, kit, pace) {
 
     // views
     for (const [id, k] of kids) {
-      const c = k.c, visible = c.side === 'home' || sim.canSee(player, c) || c.frozen;
+      const c = k.c, visible = !c.benched && (c.side === 'home' || sim.canSee(player, c) || c.frozen);
       k.update(dt, { visible, reduceMotion, groundY: groundH(c.x, c.z) });
     }
+    for (const v of snowmen.values()) { v.update(dt, groundH(v.c.x, v.c.z)); v.root.visible = sim.canSee(player, v.c) || v.c.frozen > 0; }
     sim.drifts.forEach((d, i) => { const t = 1 - d.cd / 6; if (d.lt !== t) { d.lt = t; world.updateDrift(i, Math.max(0.2, t)); } });
     fx.update(pose ? 0 : dt, sim);
     for (const zz of sim.zones) { const key = `${zz.progress.toFixed(3)}|${zz.contested}`; if (key !== zoneKeys[zz.id] || zz.contested) { zoneKeys[zz.id] = key; world.setZone(zz.progress, myCol, rivCol, zz.contested, now / 1000, zz.id); } }
@@ -391,7 +423,8 @@ async function startGame(myTeam, kit, pace) {
     renderer.render(scene, camera);
   }
   requestAnimationFrame(frame);
-  globalThis.__snowpax = { match, sim, player, quality, renderer, world, life, flow };
+  globalThis.__snowpax = { match, sim, player, quality, renderer, world, life, flow, stages, scene, snowmen };
+  if (stages) stages.showMap();
 }
 
 startScreen();

@@ -4,6 +4,7 @@
 // closes in, sniper (water) keeps long range, builder (nature) puts up snow walls.
 import { CONFIG } from '../config.js';
 import { GRID } from './grid.mjs';
+import { MINIONS } from './sim.mjs';
 
 const STYLE = CONFIG.styles, KITS = CONFIG.kits;
 const PREF = { thrower: 6, lobber: 5.2, sprayer: 3.4 };
@@ -120,6 +121,30 @@ export class Bot {
       this.state = 'move';
       Object.assign(inp, this.steerTo(goal[0], goal[1], dt, 0.6));
     }
+    return inp;
+  }
+}
+
+// A rival snowman: waddles toward the outpost, throws at the nearest kid in range, never retreats.
+export class MinionBot {
+  constructor(sim, char, { goal, rng = Math.random } = {}) {
+    this.sim = sim; this.c = char; this.goal = goal; this.rng = rng; this.M = MINIONS[char.minion] || MINIONS.waddler;
+    this.throwT = 0.8 + rng() * this.M.reload; this.path = null; this.pathT = 0; this.slot = rng() * Math.PI * 2;
+    this.inner = new Bot(sim, char, { style: 'rusher', rng });
+  }
+  think(dt) {
+    const c = this.c, sim = this.sim; if (c.frozen || c.thaw) return {};
+    this.throwT -= dt;
+    const inp = { mx: 0, mz: 0, speedMul: this.M.speed / (sim.pace.rivalSpeed || 1) };
+    let t = null, bd = Infinity;
+    for (const o of sim.enemiesOf(c)) { const d = Math.hypot(o.x - c.x, o.z - c.z); if (d < bd && d <= this.M.range + 1.5) { bd = d; t = o; } }
+    if (t && this.throwT <= 0 && c.ammo >= 1 && (this.M.kit === 'lobber' || sim.grid.clearLine(c.x, c.z, t.x, t.z))) {
+      inp.attack = { x: t.x + (this.rng() - 0.5) * 0.8, z: t.z + (this.rng() - 0.5) * 0.8 }; inp.manual = true; this.throwT = this.M.reload * (0.8 + this.rng() * 0.5);
+    }
+    // walk to a spot on the outpost circle (snowmen stand round it); stop when a kid is close
+    const g = this.goal, a = this.slot + sim.t * 0.05, gx = g.x + Math.sin(a) * g.r * 0.7, gz = g.z + Math.cos(a) * g.r * 0.7;
+    if (!(t && bd < this.M.range * 0.7)) Object.assign(inp, this.inner.steerTo(gx, gz, dt, 0.6), { speedMul: inp.speedMul });
+    if (t) c.face = Math.atan2(t.x - c.x, t.z - c.z);
     return inp;
   }
 }

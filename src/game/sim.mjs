@@ -20,6 +20,17 @@ export const SIM = {
   wallLife: 25, wallHalf: [1.0, 0.3],
   attackCooldown: 0.28,
 };
+// Snowmen the rivals have built, who waddle in waves toward the outpost (Tower Swarm-style).
+// warmth: how many hits; speed: × normal; kit: how they throw; shield: dustbin lid that blocks
+// straight snowballs from the front (× damage taken); range: how far they throw.
+export const MINIONS = {
+  waddler: { warmth: 24, speed: 0.55, kit: 'thrower', range: 5.0, dmg: 6, reload: 1.7 },
+  shield: { warmth: 36, speed: 0.48, kit: 'thrower', range: 4.5, dmg: 6, reload: 2.0, shield: 0.25 },
+  sledder: { warmth: 18, speed: 1.15, kit: 'sprayer', range: 3.4, dmg: 5, reload: 1.6 },
+  lobber: { warmth: 22, speed: 0.5, kit: 'lobber', range: 6.0, dmg: 8, reload: 2.3 },
+  captain: { warmth: 160, speed: 0.75, kit: 'thrower', range: 6.5, dmg: 10, reload: 1.0, shield: 0.6 },
+};
+
 // Sled runs, pickups, snow falling off roofs, wind and weather (Arena 1 world).
 export const WORLD = {
   sled: { start: 2.5, push: 2.2, gravity: 9, max: 9.5, board: 0.75, cooldown: 1.5, cost: 2.6 },
@@ -73,8 +84,8 @@ export class Sim {
   setSpawn(side, x, z) { this.spawns[side].push({ x, z }); this.held[side].push({ x, z }); }
   emit(type, data) { this.events.push({ type, t: this.t, ...data }); }
   drainEvents() { const e = this.events; this.events = []; return e; }
-  enemiesOf(c) { return this.chars.filter(o => o.side !== c.side && !o.frozen && !o.thaw); }
-  alliesOf(c) { return this.chars.filter(o => o.side === c.side && o !== c && !o.frozen); }
+  enemiesOf(c) { return this.chars.filter(o => o.side !== c.side && !o.frozen && !o.thaw && !o.benched); }
+  alliesOf(c) { return this.chars.filter(o => o.side === c.side && o !== c && !o.frozen && !o.benched); }
   kitOf(c) { return KITS[c.kit] || KITS.thrower; }
   nearestHeld(side, x, z) {
     let best = this.held[side][0], bd = Infinity;
@@ -153,8 +164,10 @@ export class Sim {
   wallAt(x, z) { return this.walls.find(w => w.cells.some(([px, pz]) => Math.floor(px) === Math.floor(x) && Math.floor(pz) === Math.floor(z))); }
 
   hit(c, ball, mul = 1) {
-    if (c.frozen || c.thaw || c.shield > 0 || c.dodge > 0) return false;
-    const dmg = Math.round(ball.dmg * mul);
+    if (c.frozen || c.thaw || c.shield > 0 || c.dodge > 0 || c.benched) return false;
+    let dmgMul = mul;
+    if (c.shieldFront && ball.kind === 'straight') { const bl = Math.hypot(ball.vx, ball.vz) || 1; if ((ball.vx * Math.sin(c.face) + ball.vz * Math.cos(c.face)) / bl < -0.3) dmgMul *= c.shieldFront; } // the lid takes it
+    const dmg = Math.round(ball.dmg * dmgMul);
     c.warmth = Math.max(c.planted ? 1 : 0, c.warmth - dmg); // answering a task: never frozen, only chilled
     if (c.planted) this.emit('plantedHit', { id: c.id }); c.lastHit = this.t; c.hits++; c.flash = 0.12;
     const kx = ball.vx || (c.x - ball.x), kz = ball.vz || (c.z - ball.z), len = Math.hypot(kx, kz) || 1;
@@ -270,7 +283,7 @@ export class Sim {
   nearestZone(x, z) { let best = null, bd = Infinity; for (const zn of this.zones) { const d = Math.hypot(zn.x - x, zn.z - z); if (d < bd) { bd = d; best = zn; } } return best; }
   stepZone(z, dt) {
     let home = 0, rival = 0;
-    for (const c of this.chars) if (!c.frozen && !c.thaw && Math.hypot(c.x - z.x, c.z - z.z) <= z.r) { if (c.side === 'home') home++; else rival++; }
+    for (const c of this.chars) if (!c.frozen && !c.thaw && !c.benched && Math.hypot(c.x - z.x, c.z - z.z) <= z.r) { if (c.side === 'home') home++; else rival++; }
     z.home = home; z.rival = rival; z.contested = home > 0 && rival > 0;
     if (z.owner === 'home' || (z.owner && !this.taskCapture)) return;
     if (this.taskCapture) { // home seizes by answering (seizeProgress); rivals by standing in a free circle
@@ -301,6 +314,21 @@ export class Sim {
     this.emit('volley', { zone: z.id, x: z.x, z: z.z, n });
     return n;
   }
+  spawnMinion(type, x, z, team) {
+    const M = MINIONS[type] || MINIONS.waddler;
+    const c = makeCharacter({ seat: 'mn' + nextId, team, side: 'rival', role: 'minion', x, z, kit: M.kit });
+    Object.assign(c, { minion: type, warmth: M.warmth, maxWarmth: M.warmth, shieldFront: M.shield || 0, captain: type === 'captain' });
+    this.add(c); this.emit('spawnMinion', { id: c.id, minion: type, x, z }); return c;
+  }
+  removeGone() { const gone = this.chars.filter(c => c.gone); if (gone.length) this.chars = this.chars.filter(c => !c.gone); return gone; }
+  // the landmark's own attack (stage outposts): snowballs arc from the top of the landmark onto
+  // the nearest rivals — a right answer powers it
+  blast(c, z, n = 3, dmg = 30) {
+    const targets = this.enemiesOf(c).filter(o => Math.hypot(o.x - z.x, o.z - z.z) < 13).sort((a, b) => Math.hypot(a.x - z.x, a.z - z.z) - Math.hypot(b.x - z.x, b.z - z.z)).slice(0, n);
+    for (const t of targets) this.balls.push({ owner: c.id, side: c.side, team: c.team, kit: 'lobber', kind: 'lob', blast: z.id, x: z.x, z: z.z, y: 3, x0: z.x, z0: z.z, x1: t.x + t.vx * 0.5, z1: t.z + t.vz * 0.5, T: 0.7, t: 0, dmg, splash: 1.1 });
+    this.emit('blast', { zone: z.id, x: z.x, z: z.z, n: targets.length });
+    return targets.length;
+  }
   refillTeam(side) { for (const c of this.chars) if (c.side === side && !c.frozen) c.ammo = F.ammoMax; }
   // the cocoa question was answered
   cocoaResult(pickupId, c, right) {
@@ -313,6 +341,7 @@ export class Sim {
   resetZone(id = null) { for (const z of this.zones) if (!id || z.id === id) Object.assign(z, { progress: 0, owner: null }); }
 
   stepChar(c, dt, inp) {
+    if (c.benched) return; // waiting for their wave, off the field
     c.attackCd = Math.max(0, c.attackCd - dt); c.shield = Math.max(0, c.shield - dt); c.dodgeCd = Math.max(0, c.dodgeCd - dt);
     c.revealT = Math.max(0, c.revealT - dt); c.flash = Math.max(0, c.flash - dt); c.sledCd = Math.max(0, c.sledCd - dt); c.slow = Math.max(0, c.slow - dt);
     if (c.frozen > 0) {
@@ -322,6 +351,7 @@ export class Sim {
     }
     if (c.thaw > 0) {
       c.thaw -= dt;
+      if (c.thaw <= 0 && c.role === 'minion') { c.thaw = 0; c.gone = true; this.emit('melt', { id: c.id, x: c.x, z: c.z }); return; } // snowmen melt away
       if (c.thaw <= 0) {
         c.thaw = 0; const h = this.nearestHeld(c.side, c.x, c.z) || this.spawns[c.side][0]; // back at the nearest point your team holds
         c.x = h.x + (this.rng() - 0.5) * 1.5; c.z = h.z + (this.rng() - 0.5) * 1.5;

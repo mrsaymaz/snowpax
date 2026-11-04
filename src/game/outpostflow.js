@@ -79,8 +79,9 @@ export class OutpostFlow {
     this.card.setProgress(v.progress);
     if (correctFirstTry) {
       this.ui.play('sparkle'); this.streak = (this.streak || 0) + 1;
-      if (this.mode === 'seize') this.sim.volley(this.player, this.zone, 2);
-      else { this.sim.refillTeam('home'); this.sim.volley(this.player, this.zone, 3); }
+      if (this.stageZone) this.sim.blast(this.player, this.zone, this.mode === 'seize' ? 3 : 4); // the landmark's attack
+      else if (this.mode === 'seize') this.sim.volley(this.player, this.zone, 2);
+      if (this.mode === 'defend') { this.sim.refillTeam('home'); if (!this.stageZone) this.sim.volley(this.player, this.zone, 3); }
       if (this.zone?.id === 'waterfront') this.ui.play('bell');
       if (this.streak === 3) this.ui.banner('3 IN A ROW!', 'good', 1.2); else if (this.streak === 6) this.ui.banner('ON FIRE!', 'super', 1.2);
     } else this.streak = 0;
@@ -96,7 +97,8 @@ export class OutpostFlow {
   // ---------- defend ----------
   startDefend(z) {
     this.card.close(); this.plant(false); z.seizing = false; this.mode = null; this.zone = null;
-    this.waveZone = z; this.waveT = Math.min(14, T.defendWave * 0.7);
+    this.waveZone = z; this.waveT = this.stageZone ? Infinity : Math.min(14, T.defendWave * 0.7); // stages: the final wave decides
+    this.ui.onCaptured?.(z);
     this.ui.banner('DEFEND!', 'lose', 1.6); this.ui.coach('The rivals are coming back! Throw snowballs to keep your outpost.', 4.5);
   }
   openDefendTask(z) {
@@ -109,8 +111,13 @@ export class OutpostFlow {
     this.showNext();
   }
   finishDefend() { const z = this.zone; this.card.close(); this.plant(false); this.mode = null; this.zone = null; this.held(z); }
+  // stage mode: only this outpost opens a card, and the stage runner decides when the final wave ends
+  setStage(z) { this.stageZone = z; if (z) { this.visits.delete(z.id); this.defendVisit = null; this.waveZone = null; this.mode = null; this.zone = null; this.streak = 0; } }
+  stageStats(z) { const v = this.visits.get(z.id), d = this.defendVisit; return { firstTry: (v?.firstTry || 0) + (d?.firstTry || 0), total: (v?.done || 0) + (d?.done || 0) }; }
+  abort() { if (this.mode) { this.card.close(); this.plant(false); if (this.zone) this.zone.seizing = false; } this.mode = null; this.zone = null; this.waveZone = null; }
   held(z) {
     holdOutpost(this.up, 0, this.familyOf(z)); this.writeSave(this.save); this.waveZone = null;
+    if (this.stageZone) { this.ui.onHeld?.(z); return; }
     this.ui.banner('OUTPOST HELD!', 'win', 2.2); this.ui.play('capture'); this.ui.fireworks?.(z);
     const a = this.accuracy; this.ui.coach(`${z.label} is yours for good! Right first time so far: ${a.firstTry} of ${a.total} (${a.pct}%).`, 5);
   }
@@ -157,7 +164,7 @@ export class OutpostFlow {
       for (const z of sim.zones) {
         const inside = Math.hypot(P.x - z.x, P.z - z.z) <= z.r;
         if (!inside) { this.outside.add(z.id); continue; }
-        if (z.owner === 'home' || !this.outside.has(z.id) || this.waveZone) continue;
+        if (z.owner === 'home' || !this.outside.has(z.id) || this.waveZone || (this.stageZone && z !== this.stageZone) || this.stageHold) continue;
         this.outside.delete(z.id); this.begin(z); break;
       }
     }

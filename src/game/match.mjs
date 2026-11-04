@@ -6,7 +6,7 @@ import { Grid } from './grid.mjs';
 import { Nav } from './nav.mjs';
 import { GridNav } from './gridnav.mjs';
 import { Sim, makeCharacter, SIM } from './sim.mjs';
-import { Bot } from './bots.mjs';
+import { Bot, MinionBot } from './bots.mjs';
 
 export function defaultSeats(myTeam, rivalTeam, playerKit = 'thrower') {
   const mateKits = ['thrower', 'lobber', 'sprayer'].filter(k => k !== playerKit);
@@ -45,6 +45,14 @@ export function createMatch({ arena, myTeam, rivalTeam, pace = 'relaxed', rng = 
 
   return {
     sim, grid, nav, bots, player, seats, base, rivalBase: rv,
+    // a rival snowman joins the fight, walking toward `goal` (an outpost)
+    addMinion(type, x, z, goal) {
+      const c = sim.spawnMinion(type, x, z, rivalTeam);
+      const seat = { id: c.seat, team: rivalTeam, side: 'rival', role: 'minion', controller: 'bot' };
+      seats.push(seat); bots.set(seat.id, new MinionBot(sim, c, { goal, rng })); return c;
+    },
+    clearMinions() { for (const c of sim.chars) if (c.role === 'minion') c.gone = true; this.removeGone(); },
+    removeGone() { const gone = sim.removeGone(); for (const c of gone) { const i = seats.findIndex(s => s.id === c.seat); if (i >= 0) seats.splice(i, 1); bots.delete(c.seat); } return gone; },
     // remoteInputs: inputs that arrived from peers (unused in version 1).
     step(dt, localInput = {}, remoteInputs = new Map()) {
       const inputs = new Map();
