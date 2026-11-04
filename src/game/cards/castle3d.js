@@ -1,43 +1,15 @@
-// The Snow Castle as a 3D action (Sururi Park · Builder). Snow bricks carrying the sentence blocks
-// lie on the snow: tap them in sentence order and each flies up into the new course with a rising
-// bell note. A wrong brick hops and wobbles, and the right one glows. The finished sentence raises
-// the castle's flag. Spelling lays ice letters the same way. Two layouts:
-//   STATION (default) – the Snow Castle workshop, a staged set of its own: the castle wall up close
-//                       between two towers; each sentence becomes a new course on top of the wall,
-//                       so the castle grows taller with every sentence of the visit
-//   ARENA (?tasks=arena) – on the real castle: a scaffold beam across its front, and finished
-//                       courses drop into a snow wall in front of it
+// The Snow Castle station (Sururi Park · Builder): the castle wall up close between two towers.
+// Snow bricks carrying the sentence blocks lie on the snow: tap them in sentence order and each
+// flies up onto the top of the wall with a rising bell note. A wrong brick hops and wobbles, and the
+// right one glows. The finished sentence raises the castle's flag and stays on as a new course, so
+// the castle grows taller with every sentence of the visit, and the camera rises with it.
+// Spelling lays ice letters the same way.
 import { Mesh, MeshLambertMaterial, MeshStandardMaterial, MeshBasicMaterial, BoxGeometry, CylinderGeometry, ConeGeometry, PlaneGeometry, SphereGeometry, TorusGeometry, Shape, ShapeGeometry, LineSegments, EdgesGeometry, LineBasicMaterial, Color, DoubleSide, HemisphereLight, DirectionalLight, CanvasTexture, SRGBColorSpace, RepeatWrapping, Fog, Points, PointsMaterial, BufferGeometry, Float32BufferAttribute, Group } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { stage, actor } from './stationkit.js';
 import { esc, shuffle, blockOrder } from './util.js';
 
 const NOTES = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5, 1567.98, 1760, 1975.5, 2093];
-const BEAM = { y: 2.15, z: 2.55, len: 5.0 }, PILE_Z = [4.1, 4.95], WALL = { y: 0, z: 3.25, span: 3.4, scale: 0.62 }; // WALL: the snow wall the finished courses build
-const CAM = { eye: [0, 6.6, 12.6], look: [0, 1.25, 3.0] }, CAM_SHORT = { eye: [0, 7.9, 14.4], look: [0, 1.35, 3.5] }; // short (phone) screens see a little more
-
-// the scaffold beam, its poles and the flag: built once per visit
-function scaffold(s, color) {
-  if (s.persist.userData.scaffold) return s.persist.userData.scaffold;
-  const wood = new MeshLambertMaterial({ color: '#b9845a' }), dark = new MeshLambertMaterial({ color: '#8a5f3e' });
-  const beam = new Mesh(new BoxGeometry(BEAM.len, 0.12, 0.34), wood); beam.position.set(0, BEAM.y, BEAM.z); beam.castShadow = true; s.persist.add(beam);
-  for (const x of [-BEAM.len / 2 + 0.15, BEAM.len / 2 - 0.15]) { const p = new Mesh(new CylinderGeometry(0.06, 0.07, BEAM.y, 8), dark); p.position.set(x, BEAM.y / 2, BEAM.z); p.castShadow = true; s.persist.add(p); }
-  const pole = new Mesh(new CylinderGeometry(0.035, 0.035, 1.5, 6), dark); pole.position.set(BEAM.len / 2 - 0.15, BEAM.y + 0.75, BEAM.z); s.persist.add(pole);
-  const sh = new Shape(); sh.moveTo(0, 0); sh.lineTo(0.62, -0.19); sh.lineTo(0, -0.38); sh.closePath();
-  const flag = new Mesh(new ShapeGeometry(sh), new MeshLambertMaterial({ color, side: DoubleSide })); flag.position.set(BEAM.len / 2 - 0.12, BEAM.y + 0.5, BEAM.z); s.persist.add(flag);
-  s.persist.userData = { scaffold: { flag }, courses: 0 };
-  return s.persist.userData.scaffold;
-}
-
-// the arena layout: the scaffold beam on the real castle
-const ARENA = {
-  prepare(s, ctx) {
-    const { flag } = scaffold(s, ctx.worldColor || '#f3a6c8');
-    const cam = innerHeight < 430 ? CAM_SHORT : CAM; s.frame(cam.eye, cam.look);
-    flag.position.y = BEAM.y + 0.5;
-    return { flag, flagUp: BEAM.y + 1.15, slotY: BEAM.y + 0.06, slotZ: BEAM.z, pileZ: PILE_Z, rowMax: 5.6 };
-  },
-};
 // the station layout: courses on top of the castle wall, which grows; the camera rises with it
 const STATION = {
   prepare(s, ctx, H) {
@@ -56,7 +28,7 @@ const STATION = {
 // one builder step in 3D: pieces (shuffled on the snow) go onto the beam in the expected order
 function build3d(ctx, { kind, pieces, expected, sayAtEnd, revealText, revealTr, wrongCoach, caption }) {
   const s = ctx.world, ice = kind === 'spell', H = ice ? 0.44 : 0.42, D = ice ? 0.44 : 0.36;
-  const L = (s.station ? STATION : ARENA).prepare(s, ctx, H), { flag } = L;
+  const L = STATION.prepare(s, ctx, H), { flag } = L;
   s.say(caption);
   // labels first, to size the bricks to their words
   const ppm = s.pxPerMeter();
@@ -100,15 +72,7 @@ function build3d(ctx, { kind, pieces, expected, sayAtEnd, revealText, revealTr, 
     ctx.reveal(revealText, revealTr); if (sayAtEnd) ctx.speech.say(sayAtEnd);
     s.fly(flag, [flag.position.x, L.flagUp, flag.position.z], { T: 0.7, lift: 0 });
     for (const it of items) if (it.used) { it.mesh.material = glowM; s.puff(it.mesh, 6, '#ffe7a0'); }
-    if (L.keep) { ctx.later(() => L.keep(items.filter(it => it.used), mat), right ? 900 : 1300); ctx.finish(right ? 1800 : 2300); return; } // the station: the course stays on the wall
-    // the arena: the course goes down into a snow wall in front of the castle; it grows with every sentence
-    ctx.later(() => {
-      const k = s.persist.userData.courses++, sc = Math.min(WALL.scale, WALL.span / total);
-      for (const it of items) { if (!it.used) continue; s.unlabel(it.el); it.mesh.material = mat; s.step.remove(it.mesh); s.persist.add(it.mesh); }
-      const used = expected.map(e => items.find(it => it.used && it.p.key === e.key && !it.lifted)).filter(Boolean);
-      let lx = -total * sc / 2;
-      used.forEach(it => { it.lifted = true; const cx = lx + it.w * sc / 2; lx += (it.w + gap) * sc; it.mesh.scale.setScalar(sc); s.fly(it.mesh, [cx + (k % 2 ? 0.12 : 0), WALL.y + H * sc * (k + 0.5), WALL.z], { T: 0.55, lift: 0.5 }); });
-    }, right ? 900 : 1300);
+    ctx.later(() => L.keep(items.filter(it => it.used), mat), right ? 900 : 1300); // the course stays on the wall
     ctx.finish(right ? 1800 : 2300);
   };
   const tap = it => {

@@ -12,6 +12,24 @@ stages played in order, nearest outpost first:
 | 5 | Waterfront Park | 42 s, along the frozen Golden Horn | Listening | — (everything mixed) |
 | 6 | Schoolyard Showdown | 30 s, home to Our School | all five | the rival captain |
 
+## Look, time of day and dressing
+
+The bold look (cartoon shading, outlines, glow, a build of only the stage area with a painted
+backdrop beyond the snowbanks) is the default. `?look=v1` brings back the old diorama look, and
+`?free` the free-roaming world.
+
+Each stage has its own time of day (`STAGE_LIGHT` in `brawl.js`, presets in `DAYLIGHT` in
+`render/village.js`, each with its own colour grade), so Arena 1 runs from morning to evening:
+
+| Stage | Time of day | Dressing round the plaza (`DRESS` in `tools/build-world.mjs`) |
+|---|---|---|
+| Boulevard Park | crisp blue morning, long shadows | hedges, snow walls, benches, snowmen, lamps, plane trees; chestnut, çay and salep stalls |
+| Archery Ground | bright white noon | fenced shooting lanes, snow walls, hedges, benches, a ring of spruces; salep and chestnut stalls |
+| Kızılay Square | lavender afternoon | benches round the fountain, lamps, hedges, plane trees; simit, çay and roasted-corn stalls |
+| Sururi Park | warm golden hour | a snowman park, snow forts, hedges, birches and rowans; salep and roasted-corn stalls |
+| Waterfront Park | pink sunset, lamps coming on | railings, benches, lamps, spruces; fish-sandwich, simit and çay stalls |
+| Schoolyard Showdown | evening, lamps and windows lit | the schoolyard with its five banners and the bell |
+
 ## A stage
 
 1. **Stage map.** Six stops showing locked, open or done with stars, plus the first-try score

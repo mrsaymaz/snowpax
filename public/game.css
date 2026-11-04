@@ -407,3 +407,5 @@ body.station #newrival, body.station #coach { display: none !important; } /* the
 .wt-finger.tap { animation: wt-tap 0.5s ease-in-out; }
 @keyframes wt-tap { 0%, 100% { scale: 1; } 50% { scale: 0.82; } }
 body.station #banner { display: none; } /* the fight's banners wait; the station caption carries the news */
+/* long banners shrink and wrap on small screens instead of running off the sides */
+@media (max-width: 760px), (max-height: 430px) { #banner { font-size: 28px; white-space: normal; text-align: center; width: 88vw; line-height: 1.1; } #banner.count { font-size: 72px; } #banner.go { font-size: 58px; } }

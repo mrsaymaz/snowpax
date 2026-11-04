@@ -596,7 +596,7 @@ export function buildSnowtown(ctx) {
       lantern(x - 0.7, 1.7, z + 1.75, true); lantern(x + 0.7, 1.7, z + 1.75);
       flagAt(lm.outpost, x - 1.55, 6.2, z - 1.55); glows.push([x, 1.2, z + 1.8, 1.0]);
     } else if (lm.type === 'stall') { // a winter street stall: striped awning, warm light, steam (roasted chestnuts, çay, salep)
-      const [x, z] = centre(lm), K2 = lm.kind, wood = M('wood', '#a5714f'), awn = K2 === 'cay' ? '#2d6fb5' : K2 === 'salep' ? '#7a4fa0' : '#c8443c';
+      const [x, z] = centre(lm), K2 = lm.kind, wood = M('wood', '#a5714f'), awn = { cay: '#2d6fb5', salep: '#7a4fa0', simit: '#c8443c', corn: '#e0a800', fish: '#2d8a8a' }[K2] || '#c8443c';
       K.add(rbox(1.8, 0.8, 0.9, 0.05), wood, x, 0, z); K.add(rbox(1.9, 0.9, 0.08, 0.02), M('wood', '#c99a6e'), x, 0.9, z);
       for (const sx of [-0.85, 0.85]) K.add(new CylinderGeometry(0.05, 0.05, 1.5, 6), wood, x + sx, 1.3, z - 0.35);
       for (let k = 0; k < 6; k++) K.add(rbox(0.32, 0.95, 0.06, 0.01), M('fabric', k % 2 ? '#f4f1ea' : awn), x - 0.8 + k * 0.32, 2.0, z + 0.05, -0.35);
@@ -604,6 +604,9 @@ export function buildSnowtown(ctx) {
       if (K2 === 'chestnut') { K.add(new CylinderGeometry(0.32, 0.26, 0.2, 14), M('metal', '#2b2f45'), x - 0.3, 1.02, z); for (let k = 0; k < 9; k++) K.add(new SphereGeometry(0.06, 6, 4), M('wood', '#6a3a22'), x - 0.3 + Math.cos(k) * 0.18, 1.14, z + Math.sin(k) * 0.18); glows.push([x - 0.3, 1.15, z, 0.9]); smokeSources.push([x - 0.3, 1.3, z]); }
       if (K2 === 'cay') { K.add(new CylinderGeometry(0.16, 0.2, 0.5, 12), M('metal', '#d9a640'), x - 0.4, 1.2, z); K.add(new SphereGeometry(0.1, 8, 6), M('metal', '#d9a640'), x - 0.4, 1.5, z); for (let k = 0; k < 4; k++) K.add(new CylinderGeometry(0.04, 0.03, 0.1, 6), M('glow', '#c4502c'), x + 0.1 + k * 0.14, 0.99, z + 0.2); life.steam.push([x - 0.4, 1.6, z]); }
       if (K2 === 'salep') { K.add(new CylinderGeometry(0.22, 0.22, 0.45, 12), M('metal', '#c9c6dc'), x - 0.35, 1.17, z); for (let k = 0; k < 3; k++) K.add(new CylinderGeometry(0.06, 0.05, 0.12, 8), M('plaster', '#f4ead6'), x + 0.2 + k * 0.16, 1.0, z + 0.2); life.steam.push([x - 0.35, 1.45, z]); }
+      if (K2 === 'simit') { for (let k = 0; k < 7; k++) K.add(new TorusGeometry(0.11, 0.035, 6, 12), M('wood', '#b8743c'), x - 0.5 + (k % 4) * 0.24, 0.98 + Math.floor(k / 4) * 0.07, z + 0.05 + Math.floor(k / 4) * 0.04, Math.PI / 2); K.add(rbox(0.5, 0.05, 0.4, 0.02), M('wood', '#8a5a3a'), x + 0.45, 0.93, z); for (let k = 0; k < 3; k++) K.add(new TorusGeometry(0.1, 0.03, 6, 12), M('wood', '#c9853f'), x + 0.32 + k * 0.13, 1.0, z, Math.PI / 2); }
+      if (K2 === 'corn') { K.add(rbox(0.9, 0.12, 0.45, 0.03), M('metal', '#2b2f45'), x - 0.15, 0.98, z); for (let k = 0; k < 5; k++) K.add(new CylinderGeometry(0.045, 0.04, 0.32, 8), M('glow', '#f2c14e'), x - 0.45 + k * 0.15, 1.1, z, 0, 0, Math.PI / 2); glows.push([x - 0.15, 1.1, z, 0.8]); smokeSources.push([x - 0.15, 1.3, z]); }
+      if (K2 === 'fish') { K.add(rbox(0.9, 0.12, 0.45, 0.03), M('metal', '#2b2f45'), x - 0.2, 0.98, z); for (let k = 0; k < 3; k++) { K.add(new SphereGeometry(0.07, 8, 6), M('metal', '#8fa3b8'), x - 0.45 + k * 0.25, 1.09, z, 0, 0, 0, 2.2, 0.7, 1); K.add(new ConeGeometry(0.05, 0.1, 4), M('metal', '#8fa3b8'), x - 0.3 + k * 0.25, 1.09, z, 0, 0, -Math.PI / 2); } for (let k = 0; k < 2; k++) K.add(new SphereGeometry(0.1, 8, 6), M('wood', '#d9a35f'), x + 0.4 + k * 0.22, 1.0, z + 0.1, 0, 0, 0, 1.7, 0.8, 0.9); glows.push([x - 0.2, 1.1, z, 0.8]); smokeSources.push([x - 0.2, 1.3, z]); }
       lantern(x + 0.7, 1.6, z + 0.35, true); pools.push([x, z + 0.8, 2.0]);
     } else if (lm.type === 'slide') {
       const [x, z] = centre(lm);

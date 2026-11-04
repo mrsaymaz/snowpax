@@ -1,17 +1,23 @@
 # Task scenes
 
-## 3D actions (inspired by Languini)
+## Task stations (inspired by Languini)
 
-Where a landmark has a world scene, the English task is played as a 3D action, not on a card.
-There are two ways to play it:
+Each outpost plays its own task family as a **station**: a staged 3D set of its own fills the
+screen, like Languini's stations, and a snow flurry covers the cut in and out.
 
-- **A station opens (default).** A staged 3D set of its own fills the screen, like Languini's
-  stations, and a snow flurry covers the cut in and out. The Snow Castle workshop is the castle
-  wall up close between two towers, with bunting, pines, a sled of bricks and falling snow. Each
-  sentence becomes a new course on top of the wall, so the castle grows taller through the visit,
-  and the camera rises with it. A station works anywhere, including the Showdown's banners.
-- **On the real landmark (`?tasks=arena`).** The camera swoops to the real castle in the arena,
-  as described below.
+- **The fight** goes on in slow motion (a quarter speed) meanwhile, and rival hits never chill the
+  bar while a station is open.
+- **The card becomes a slim strip along the top:** title, coach line, progress, timer, read-aloud,
+  Step out. The prompt and then the answer show in a caption at the bottom.
+- **Words sit on 3D things** as HTML labels pinned to them every frame (`render/worldtask.js`),
+  so they stay sharp, tappable and readable aloud.
+- **Stations work anywhere,** including the Showdown, where each banner opens its own outpost's
+  station.
+- **The flat card** is still used for cocoa questions and any other kind of step, in the card
+  lab, and with `?scenes=basic`.
+
+(An earlier version played the tasks on the real landmark in the arena, with the camera swooping
+in. It was removed in favour of the stations.)
 
 **The stations, one per outpost and its task family** (`cards/castle3d.js`, `cards/stations.js`,
 shared pieces in `cards/stationkit.js`):
@@ -48,40 +54,19 @@ shared pieces in `cards/stationkit.js`):
 Inside a station, the coach bubble and the "New rivals!" card stay hidden (the strip carries the
 coaching), and so do the arena's damage numbers. Cocoa questions and any other kind keep the card.
 
-On the real landmark:
-
-- **Camera:** it swoops in to the landmark and back when the task ends.
-- **The fight goes on in slow motion around it,** at a quarter speed. While the task is on, rival
-  hits never chill the bar, and teammates standing in front of the landmark fade out of the way.
-- **The card becomes a slim strip along the top:** title, coach line, progress, timer, read-aloud,
-  Step out. The prompt and the answer show in a caption at the bottom.
-- **Words sit on 3D things** as HTML labels pinned to them every frame
-  (`render/worldtask.js`), so they stay sharp, tappable and readable aloud.
-- **Fallback:** the flat card scene is used when the student is not at that landmark (for example
-  a Showdown banner far from the castle), in the card lab, and with `?scenes=basic`.
-
-**The Snow Castle (Sururi Park, `cards/castle3d.js`):**
-- A wooden scaffold beam spans the castle front, with ghost bricks showing where the new course
-  goes.
-- Snow bricks carrying the sentence blocks lie on the snow in front. Tap them in sentence order:
-  each flies up onto the beam with a rising bell note and a puff of snow.
-- A wrong brick hops and wobbles, and the right one glows.
-- The finished sentence raises the flag, and the course drops into a snow wall in front of the
-  castle that grows with every sentence of the visit.
-- Spelling lays ice letters the same way.
-
-A world scene is a scene function that also gets `ctx.world` (a session):
+A station scene is a scene function that also gets `ctx.world` (a session):
 
 | | |
 |---|---|
-| `frame(eye, look)` | the camera pose, in the landmark's local space |
+| `frame(eye, look)` | the camera pose, in the station's space |
 | `step`, `persist` | groups for this step's things / things that stay for the whole visit |
 | `label(html, { obj, at, onTap })` | an HTML label pinned to a 3D object |
 | `measure(el)`, `pxPerMeter()` | to size 3D things to their words |
 | `fly(obj, to)`, `wobble(obj)`, `puff(obj)` | arcs, wrong-answer hops, snow puffs |
 | `say(html)` | the caption at the bottom |
 
-Register it in `WORLD_SCENES` (`cards/scenes.js`).
+Register it in `WORLD_SCENES` (`cards/scenes.js`), and its set builder in the `stations` map in
+`brawl.js`.
 
 ## Card scenes
 

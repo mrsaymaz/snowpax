@@ -13,8 +13,8 @@ export const LANDMARK_SCENES = {
   sururi: { order: castleOrderScene, spell: castleSpellScene }, // the Snow Castle: build the wall
 };
 
-// 3D actions on the real landmark (render/worldtask.js), used when the student is at it; the
-// flat scene above is the fallback (card lab, the Showdown far from the castle)
+// task stations (render/worldtask.js): a staged 3D set per outpost for its own task family; the
+// flat scene above is the fallback (cocoa questions, other kinds, the card lab, ?scenes=basic)
 export const WORLD_SCENES = {
   sururi: { order: castleWorldOrder, spell: castleWorldSpell },
   boulevard: { choice: treehouseChoice },

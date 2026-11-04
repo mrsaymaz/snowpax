@@ -90,9 +90,10 @@ export function makePost(renderer, quality) {
   const composer = new EffectComposer(renderer); composer.setPixelRatio(renderer.getPixelRatio());
   const pass = new RenderPass(null, null); composer.addPass(pass);
   const bloom = new UnrealBloomPass(new Vector2(size.x / 2, size.y / 2), quality === 'high' ? 0.22 : 0.16, 0.25, 0.98); composer.addPass(bloom);
-  composer.addPass(new OutputPass()); composer.addPass(new ShaderPass(Grade)); // grade the final (sRGB) image
+  const grade = new ShaderPass(Grade); composer.addPass(new OutputPass()); composer.addPass(grade); // grade the final (sRGB) image
   return {
     render(scene, camera) { pass.scene = scene; pass.camera = camera; composer.render(); },
+    setGrade({ tint = '#fbfcff', sat = 1.18 } = {}) { grade.uniforms.uTint.value.set(tint); grade.uniforms.uSat.value = sat; }, // per stage: the time of day
     setSize(w, h) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); bloom.resolution.set(w / 2, h / 2); },
   };
 }

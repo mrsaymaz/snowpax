@@ -1,15 +1,10 @@
-// World tasks (inspired by Languini's station close-ups): an English task played as a 3D action on
-// the real landmark. The camera swoops in to the landmark, the fight goes on in slow motion around
-// it, and the words sit on 3D things (snow bricks, birdhouses …) as crisp HTML labels pinned to
-// them every frame, so they stay sharp, tappable and readable aloud.
+// Task stations (inspired by Languini's stations): an English task played as a 3D action in a staged
+// set of its own that fills the screen (the Snow Castle workshop, the Treehouse …). A snow flurry
+// covers the cut in and out, the fight goes on in slow motion meanwhile, and the words sit on 3D
+// things (snow bricks, birdhouses …) as crisp HTML labels pinned to them every frame, so they stay
+// sharp, tappable and readable aloud.
 //
-// Two ways to play them (?tasks=arena for the first):
-//   'station' (default) – a station opens: its own staged 3D set fills the screen (the Snow Castle
-//                         workshop …), like Languini's stations; a snow flurry covers the cut
-//   'arena'             – on the real landmark in the arena: the camera swoops in to it
-// Either way the fight goes on in slow motion.
-//
-// The task card shell asks open(theme) for a session when a step has a world scene
+// The task card shell asks open(theme) for a session when a step has a station scene
 // (cards/scenes.js). A session lives while the card stays open on that landmark; each step clears
 // its own things, and things put in session.persist stay for the whole visit.
 import { Group, Vector3, Scene, PerspectiveCamera } from 'three';
@@ -17,39 +12,34 @@ import { Group, Vector3, Scene, PerspectiveCamera } from 'three';
 const EASE = t => t * t * (3 - 2 * t);
 
 export class WorldTasks {
-  constructor({ scene, layer, groundH = () => 0, fx = null, zones = () => [], player = null, reduceMotion = false, mode = 'station', stations = {}, sound = null }) {
-    Object.assign(this, { scene, layer, groundH, fx, zones, player, reduceMotion, mode, stations, sound });
+  constructor({ layer, player = null, reduceMotion = false, stations = {}, sound = null }) {
+    Object.assign(this, { layer, player, reduceMotion, stations, sound });
     this.wipe = document.createElement('div'); this.wipe.className = 'wt-wipe'; document.body.appendChild(this.wipe);
     this.finger = document.createElement('div'); this.finger.className = 'wt-finger'; this.finger.textContent = '👆'; this.finger.hidden = true; layer.appendChild(this.finger);
     this.toured = new Set(); this.lastTap = null;
-    this.session = null; this.blend = 0; this.lastPose = null;
+    this.session = null;
     this.caption = document.createElement('div'); this.caption.className = 'wt-caption'; this.caption.hidden = true; layer.appendChild(this.caption);
   }
   get active() { return !!this.session; }
-  // the camera pose the arena camera blends to: { eye, look } in world space, or null
-  pose() { return this.session && !this.session.station ? this.session.camPose : null; }
   flurry() { if (this.reduceMotion) return; this.wipe.classList.remove('on'); void this.wipe.offsetWidth; this.wipe.classList.add('on'); }
 
-  // a session on the landmark of this theme, if the student is at it (else null: the flat scene)
+  // the station of this theme (null if the theme has none: the flat card is used)
   open(theme) {
     if (this.session?.theme === theme) return this.session;
-    const build = this.stations[theme], station = this.mode === 'station' && !!build;
-    const z = this.zones().find(q => q.id === theme);
-    if (!station && (!z || !this.player || Math.hypot(this.player.x - z.x, this.player.z - z.z) > 16)) return null;
+    const build = this.stations[theme]; if (!build) return null;
     this.close();
-    // a station: its own scene and camera, with the staged set built once per visit
-    const scene = station ? new Scene() : this.scene, camera = station ? new PerspectiveCamera(34, innerWidth / innerHeight, 0.1, 200) : null;
-    const group = new Group();
-    if (station) { scene.add(group); this.flurry(); } else { group.position.set(z.x, this.groundH(z.x, z.z), z.z); this.scene.add(group); }
+    // its own scene and camera, with the staged set built once per visit
+    const scene = new Scene(), camera = new PerspectiveCamera(34, innerWidth / innerHeight, 0.1, 200), group = new Group(), station = true;
+    scene.add(group); this.flurry();
     const persist = new Group(), step = new Group(); group.add(persist, step);
     const labels = new Set(), wt = this;
     const s = this.session = {
-      theme, zone: z, group, persist, step, camPose: null, reduceMotion: this.reduceMotion, station, player: this.player, kick: 0, sound: (n, o) => wt.sound?.(n, o), showAt: performance.now() + (station && !this.reduceMotion ? 160 : 0), scene: station ? scene : null, camera, set: null, // showAt: the cut hides under the flurry
-      // camera target, in the landmark's (or station's) local space
-      frame(eye, look) { s.camPose = { eye: group.localToWorld(new Vector3(...eye)), look: group.localToWorld(new Vector3(...look)) }; s.eyeDist = s.camPose.eye.distanceTo(s.camPose.look); if (station && !s.camAt) { s.camAt = { eye: s.camPose.eye.clone(), look: s.camPose.look.clone() }; } },
+      theme, group, persist, step, camPose: null, reduceMotion: this.reduceMotion, station, player: this.player, kick: 0, sound: (n, o) => wt.sound?.(n, o), scene, camera, set: null,
+      showAt: performance.now() + (this.reduceMotion ? 0 : 160), // the cut hides under the flurry
+      // the camera pose, in the station's space
+      frame(eye, look) { s.camPose = { eye: new Vector3(...eye), look: new Vector3(...look) }; s.eyeDist = s.camPose.eye.distanceTo(s.camPose.look); if (!s.camAt) s.camAt = { eye: s.camPose.eye.clone(), look: s.camPose.look.clone() }; },
       // pixels per metre at the look point once the camera has arrived (to size things to their labels)
-      pxPerMeter() { const fov = station ? camera.fov : 24; return innerHeight / (2 * (s.eyeDist || 10) * Math.tan(fov * Math.PI / 360)); },
-      get ready() { return station || wt.blend > 0.9; },
+      pxPerMeter() { return innerHeight / (2 * (s.eyeDist || 10) * Math.tan(camera.fov * Math.PI / 360)); },
       // an HTML label pinned to a 3D object (its local point at `at`), tappable
       label(html, { cls = '', obj = null, at = [0, 0, 0], onTap = null, persistent = false } = {}) {
         const el = document.createElement(onTap ? 'button' : 'div'); if (onTap) el.type = 'button';
@@ -60,7 +50,7 @@ export class WorldTasks {
       },
       unlabel(el) { for (const L of labels) if (L.el === el) { labels.delete(L); el.remove(); } },
       measure(el) { el.style.visibility = 'hidden'; el.style.left = '0px'; el.style.top = '0px'; const r = el.getBoundingClientRect(); el.style.visibility = ''; return { w: r.width, h: r.height }; },
-      puff(obj, n = 14, color = '#ffffff') { if (!wt.fx || wt.reduceMotion) return; const p = obj.getWorldPosition(new Vector3()); wt.fx.emit(p.x, p.y, p.z, n, color, 2.6, 0.5, 0.9); },
+      puff(obj, n = 14, color = '#ffffff') { s.set?.K?.burst(obj.getWorldPosition(new Vector3()), [color, '#e8f4ff'], n, 1.4); },
       say(text) { wt.caption.innerHTML = text; wt.caption.hidden = !text; wt.caption.classList.remove('show'); void wt.caption.offsetWidth; if (text) wt.caption.classList.add('show'); },
       // a step is over: its things and labels go; persistent ones stay
       onTick(fn) { s.stepTicks.push(fn); }, stepTicks: [],
@@ -79,8 +69,8 @@ export class WorldTasks {
       },
       labels,
     };
-    if (station) s.set = build(s); // the staged set (lights, sky, castle …) in s.persist
-    document.body.classList.add('worldtask'); document.body.classList.toggle('station', station); this.layer.hidden = false;
+    s.set = build(s); // the staged set (lights, sky, castle …) in s.persist
+    document.body.classList.add('worldtask', 'station'); this.layer.hidden = false;
     return s;
   }
   // a right answer: a star flies from what was tapped into the progress bar, and the camera nudges in
@@ -100,15 +90,15 @@ export class WorldTasks {
     this.stopTour(); s.say(`★ ${text} ★`); this.sound?.('fanfare');
     const K = s.set?.K, c = s.set?.colors || ['#ffd166', '#ffffff', '#7cc4f0', '#f3a6c8'];
     s.set?.A?.cheer(true); s.set?.ring?.(); s.set?.celebrate?.();
-    if (K && !this.reduceMotion && s.station) { // bursts just above what the camera looks at, in front of the set
-      const L = (s.camPose?.look || new Vector3(0, 2, 0)).clone().sub(s.group.position);
+    if (K && !this.reduceMotion) { // bursts just above what the camera looks at, in front of the set
+      const L = (s.camPose?.look || new Vector3(0, 2, 0)).clone();
       K.fireworks([[-2.4, 1.9], [2.3, 2.5], [0, 2.9], [-1.1, 1.4], [1.3, 1.7]].map(([x, y]) => [L.x + x, L.y + y, L.z - 0.6]), c);
     }
     return this.reduceMotion ? 1.0 : 1.8;
   }
   // the first time a station opens: a finger visits every option in turn, the same way, never hinting the answer
   tour() {
-    const s = this.session; if (!s?.station || this.toured.has(s.theme) || this.reduceMotion) return;
+    const s = this.session; if (!s || this.toured.has(s.theme) || this.reduceMotion) return;
     this.toured.add(s.theme);
     const targets = [...this.layer.querySelectorAll('button.wt-label:not(.wt-bell):not(.placed)')].slice(0, 6); if (!targets.length) return;
     let k = 0; const f = this.finger; f.hidden = false;
@@ -119,17 +109,16 @@ export class WorldTasks {
   close() {
     const s = this.session; if (!s) return; this.stopTour();
     for (const L of s.labels) L.el.remove();
-    this.scene.remove(s.group); s.group.traverse(o => { if (o.isMesh) { o.geometry.dispose(); } });
-    if (s.station) this.flurry();
+    s.group.traverse(o => { if (o.isMesh) o.geometry.dispose(); }); s.scene.clear();
+    this.flurry();
     this.session = null; this.caption.hidden = true;
     document.body.classList.remove('worldtask', 'station');
   }
 
-  // every frame, after the camera moved: animations, then pin the labels to their things
-  tick(dt, camera) {
+  // every frame: the station's camera, animations, then pin the labels to their things
+  tick(dt) {
     const s = this.session; if (!s) return;
-    if (s.station) { // the station's own camera: fit the screen, ease to the framed pose
-      camera = s.camera; if (Math.abs(camera.aspect - innerWidth / innerHeight) > 1e-3) { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+    { const camera = s.camera; // fit the screen, ease to the framed pose if (Math.abs(camera.aspect - innerWidth / innerHeight) > 1e-3) { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
       if (s.camPose && s.camAt) {
         const k = Math.min(1, dt * 3); s.camAt.eye.lerp(s.camPose.eye, k); s.camAt.look.lerp(s.camPose.look, k);
         s.kick = Math.max(0, s.kick - dt * 3); const push = this.reduceMotion ? 0 : Math.sin(s.kick * Math.PI) * 0.035; // a little nudge in on a right answer
@@ -139,7 +128,7 @@ export class WorldTasks {
     }
     for (const f of s.stepTicks) f(dt);
     for (const tw of [...s.tweens]) { tw.t += dt; const k = Math.min(1, tw.t / tw.T); tw.run(k); if (k >= 1) { s.tweens.splice(s.tweens.indexOf(tw), 1); tw.done?.(); } }
-    const v = new Vector3(), W = innerWidth, H = innerHeight, show = s.station ? performance.now() >= s.showAt : this.blend > 0.85;
+    const v = new Vector3(), W = innerWidth, H = innerHeight, show = performance.now() >= s.showAt, camera = s.camera;
     for (const L of s.labels) {
       if (L.obj) { v.copy(L.at); L.obj.localToWorld(v); } else { v.copy(L.at); s.group.localToWorld(v); }
       v.project(camera);

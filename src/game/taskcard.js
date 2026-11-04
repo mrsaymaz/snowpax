@@ -80,7 +80,7 @@ export class TaskCard {
     const body = this.$('.tc-body'); body.innerHTML = ''; body.className = 'tc-body k-' + step.kind;
     this.$('.tc-note').textContent = '';
     if (step.kind === 'order-pair') { this.showPair(step, theme); return; }
-    // a 3D action on the real landmark when there is one and the student is at it
+    // a task station (a staged 3D set) when this landmark has one for this kind of step
     const ws = this.world && worldSceneFor(step.kind, theme), session = ws ? this.world.open(theme) : null;
     if (session) {
       this.root.classList.add('world'); session.clearStep();

@@ -204,20 +204,61 @@ const DRESS = {
     { stall: 'chestnut', r: 9.8, at: [60, 75, 50] }, { stall: 'cay', r: 9.8, at: [300, 285, 315] }, { stall: 'salep', r: 10.2, at: [160, 175, 145] },
     { ch: 'T', r: 11.3, every: 30 },
   ],
+  // the Archers' Lodge: fenced shooting lanes, snow walls to shelter behind, a ring of spruces
+  archery: [
+    { ch: '#', r: 5.6, at: [45, 135, 225, 315], onlyOn: 'P' },
+    { ch: 'F', r: 8.0, at: [20, 160, 200, 340], run: 4 },
+    { ch: 'B', r: 8.6, at: [90, 270], run: 3 },
+    { ch: 'b', r: 7.4, at: [110, 290] },
+    { ch: 'l', r: 9.4, at: [0, 90, 180, 270] },
+    { stall: 'salep', r: 9.8, at: [60, 70, 50] }, { stall: 'chestnut', r: 9.8, at: [240, 250, 230] },
+    { ch: 'x', r: 11.2, every: 24 },
+  ],
+  // Kızılay Square: a busy square, benches round the fountain, plane trees, simit, çay and corn
+  kizilay: [
+    { ch: '#', r: 5.4, at: [0, 120, 240], onlyOn: 'P' },
+    { ch: 'b', r: 7.2, at: [30, 90, 150, 210, 270, 330] },
+    { ch: 'B', r: 8.8, at: [60, 240], run: 3 },
+    { ch: 'l', r: 9.0, at: [0, 60, 120, 180, 240, 300] },
+    { stall: 'simit', r: 9.8, at: [45, 35, 55] }, { stall: 'cay', r: 9.8, at: [165, 155, 175] }, { stall: 'corn', r: 10.0, at: [285, 275, 295] },
+    { ch: 'T', r: 11.4, every: 30 },
+  ],
+  // Sururi Park: a snowman park, snow forts, hedges, birches and rowans
+  sururi: [
+    { ch: '#', r: 5.6, at: [30, 150, 270], onlyOn: 'P', run: 2 },
+    { ch: 'n', r: 7.6, at: [10, 80, 130, 200, 250, 320] },
+    { ch: 'B', r: 8.8, at: [50, 170, 290], run: 3 },
+    { ch: 'b', r: 7.8, at: [100, 220] },
+    { ch: 'l', r: 9.6, at: [40, 160, 280] },
+    { stall: 'salep', r: 10.0, at: [340, 330, 350] }, { stall: 'corn', r: 10.0, at: [190, 180, 200] },
+    { ch: 'v', r: 11.0, every: 40 }, { ch: 'y', r: 11.6, every: 40, offset: 20 },
+  ],
+  // Waterfront Park: railings, benches facing the water, lamps, fish sandwiches, simit and çay
+  waterfront: [
+    { ch: '#', r: 5.4, at: [60, 180, 300], onlyOn: 'P' },
+    { ch: 'F', r: 8.2, at: [0, 90, 180, 270], run: 4 },
+    { ch: 'b', r: 7.4, at: [45, 135, 225, 315] },
+    { ch: 'l', r: 9.2, at: [20, 110, 200, 290] },
+    { stall: 'fish', r: 9.8, at: [70, 60, 80, 250, 240] }, { stall: 'simit', r: 9.8, at: [160, 150, 170] }, { stall: 'cay', r: 10.0, at: [340, 330, 350] },
+    { ch: 'x', r: 11.2, every: 36 },
+  ],
 };
+const dressLog = {};
 function dressStage(op) {
   const plan = DRESS[op.id]; if (!plan) return;
   const free = (i, j, onlyOn) => inB(i, j) && (onlyOn ? onlyOn.includes(get(i, j)) : '.RH'.includes(get(i, j)));
   const spot = (r, deg) => { const a = deg * Math.PI / 180; return [Math.floor(op.i + Math.cos(a) * r), Math.floor(op.j + Math.sin(a) * r)]; };
   for (const it of plan) {
     if (it.stall) { // a 2×1 stall, first angle that fits
-      for (const deg of it.at) { const [i, j] = spot(it.r, deg); if (free(i, j) && free(i + 1, j)) { set(i, j, 'G'); set(i + 1, j, 'G'); landmarks.push({ type: 'stall', kind: it.stall, i, j, w: 2, h: 1, outpost: op.id }); break; } }
+      const stalls = landmarks.filter(l => l.type === 'stall' && l.outpost === op.id), apart = (i, j) => stalls.every(l => Math.hypot(l.i - i, l.j - j) > 4);
+      const tries = [...it.at.map(d => [it.r, d]), ...[0, 1, -1].flatMap(dr => Array.from({ length: 36 }, (_, k) => [it.r + dr, it.at[0] + k * 10]))]; // the given angles, then the whole ring
+      for (const [r, deg] of tries) { const [i, j] = spot(r, deg); if (!apart(i, j)) continue; if (free(i, j) && free(i + 1, j)) { set(i, j, 'G'); set(i + 1, j, 'G'); landmarks.push({ type: 'stall', kind: it.stall, i, j, w: 2, h: 1, outpost: op.id }); (dressLog[op.id] ||= []).push(it.stall); break; } }
       continue;
     }
-    const angles = it.every ? Array.from({ length: Math.floor(360 / it.every) }, (_, k) => k * it.every) : it.at;
+    const angles = it.every ? Array.from({ length: Math.floor(360 / it.every) }, (_, k) => k * it.every + (it.offset || 0)) : it.at;
     for (const deg of angles) {
       const run = it.run || 1, a = deg * Math.PI / 180, ti = -Math.sin(a), tj = Math.cos(a); // along the ring
-      for (let k = 0; k < run; k++) { const [i, j] = spot(it.r, deg); const ii = Math.round(i + ti * (k - (run - 1) / 2)), jj = Math.round(j + tj * (k - (run - 1) / 2)); if (free(ii, jj, it.onlyOn)) set(ii, jj, it.ch); }
+      for (let k = 0; k < run; k++) { const [i, j] = spot(it.r, deg); const ii = Math.round(i + ti * (k - (run - 1) / 2)), jj = Math.round(j + tj * (k - (run - 1) / 2)); if (free(ii, jj, it.onlyOn)) { set(ii, jj, it.ch); dressLog[op.id] = dressLog[op.id] || []; dressLog[op.id].n = (dressLog[op.id].n || 0) + 1; } }
     }
   }
 }
@@ -226,6 +267,7 @@ function dressStage(op) {
 //     A few houses near the outposts and Our School still show their street front (H); elsewhere
 //     only the odd roof ridge or chimney pokes out of the drifts (R, low cover).
 for (const op of outposts) dressStage(op);
+console.log('stage dressing:', Object.entries(dressLog).map(([k, v]) => `${k} ${v.n || 0} pieces + ${v.join('/') || 'no stalls'}`).join(' · '));
 const near = (i, j, R) => outposts.some(o => Math.hypot(i - o.i, j - o.j) < R);
 const nearHome = (i, j, R) => { const [bx, bz] = toCell([0, 0]); return Math.hypot(i - bx, j - bz) < R; };
 const facesPath = (i, j) => [[0, 1], [0, -1]].some(([di, dj]) => '_=P'.includes(get(i + di, j + dj)));

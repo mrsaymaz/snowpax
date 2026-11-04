@@ -28,9 +28,14 @@ export const LIGHTING = { sky: '#9fb3db', fog: ['#aeb9df', 30, 62], hemi: ['#d3e
 // Arena 1 light: a late snowy afternoon that slides into dusk as the match goes on
 // (pink-orange low sun, long blue shadows, windows and lamps glowing brighter).
 export const DAYLIGHT = {
-  afternoon: { sky: '#b4bde6', fog: '#c3c6ea', hemi: ['#dae2ff', '#7d72b8', 1.12], sun: ['#fff0e0', 2.3], sunDir: [-11, 14, 7] },
-  morning: { sky: '#b9d3f0', fog: '#cfe0f4', hemi: ['#e6eeff', '#7d8cc4', 0.95], sun: ['#fff2de', 1.85], sunDir: [9, 14, 8] }, // the v2 sample: bright morning at Boulevard Park
+  afternoon: { sky: '#b4bde6', fog: '#c3c6ea', hemi: ['#dae2ff', '#7d72b8', 1.12], sun: ['#fff0e0', 2.3], sunDir: [-11, 14, 7], grade: { tint: '#fbf6ff', sat: 1.18 } },
+  morning: { sky: '#a8cdf2', fog: '#c6def6', hemi: ['#e2efff', '#86a8d6', 0.95], sun: ['#ffeccc', 1.9], sunDir: [12, 9, 8], grade: { tint: '#eef6ff', sat: 1.16 } }, // crisp, blue, long shadows from the east
   dusk: { sky: '#c3a3cc', fog: '#b9aad8', hemi: ['#c6c7f4', '#6556a8', 1.02], sun: ['#ffb68c', 2.0], sunDir: [-14, 8, 5] },
+  // the stages, each at its own time of day (morning → evening through Arena 1)
+  noon: { sky: '#9cc8f5', fog: '#d3e6f8', hemi: ['#ffffff', '#a6b6da', 1.05], sun: ['#ffffff', 2.15], sunDir: [2, 20, 4], grade: { tint: '#ffffff', sat: 1.24 } },          // bright, white, short shadows
+  golden: { sky: '#e6c7b4', fog: '#e8d2c2', hemi: ['#ffe6c8', '#9c7fb2', 0.9], sun: ['#ffbe78', 2.35], sunDir: [-13, 8, 6], grade: { tint: '#fff0d6', sat: 1.2 } }, // warm amber, low sun
+  sunset: { sky: '#d6a9c4', fog: '#cdb0d6', hemi: ['#d9cdf4', '#6a5aa8', 0.95], sun: ['#ffae7a', 2.0], sunDir: [-15, 7, 4], grade: { tint: '#ffe8e4', sat: 1.18 } },
+  evening: { sky: '#7b78b8', fog: '#8f8cc4', hemi: ['#aeb4ec', '#4c4590', 0.95], sun: ['#ffc59a', 1.35], sunDir: [-13, 9, 6], grade: { tint: '#e8e8ff', sat: 1.12 } },
 };
 
 const rnd = (a, b = 0) => { let h = Math.imul((a * 73856093) ^ (b * 19349663), 2654435761); h ^= h >>> 13; h = Math.imul(h, 1597334677); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };

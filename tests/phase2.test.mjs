@@ -89,6 +89,7 @@ test('the poyraz blows snowballs sideways; a blizzard hides far rivals; sunshine
   sim.weather.gustNext = sim.t;
   let ev = run(m, 2);
   assert.ok(ev.some(e => e.type === 'gust' && e.on)); assert.ok(sim.weather.wx < 0 && sim.weather.wz > 0, 'from the north-east');
+  for (let k = 0; k < 400; k++) { const x = m.base.x + (k % 20) - 10, z = m.base.z + Math.floor(k / 20) - 10; if ([0, 1, 2, 3, 4, 5].every(d => m.grid.freeCircle(x, z - d, 0.5))) { P.x = x; P.z = z; break; } } // open snow to throw over
   sim.balls.push({ kind: 'straight', side: 'home', owner: P.id, x: P.x, z: P.z - 1, y: 1, vx: 0, vz: -10, dmg: 10, r: 0.22, left: 6, d0: 6 });
   sim.stepBalls(0.3); assert.ok(sim.balls[0]?.vx < 0, 'pushed west');
 
