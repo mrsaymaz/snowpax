@@ -7,11 +7,12 @@ import { Nav } from './nav.mjs';
 import { GridNav } from './gridnav.mjs';
 import { Sim, makeCharacter, SIM } from './sim.mjs';
 import { Bot, MinionBot } from './bots.mjs';
+import { assignLooks } from './looks.mjs';
 
-export function defaultSeats(myTeam, rivalTeam, playerKit = 'thrower') {
+export function defaultSeats(myTeam, rivalTeam, playerKit = 'thrower', playerLook = null) {
   const mateKits = ['thrower', 'lobber', 'sprayer'].filter(k => k !== playerKit);
   return [
-    { id: 'p1', team: myTeam, side: 'home', role: 'player', controller: 'local', kit: playerKit },
+    { id: 'p1', team: myTeam, side: 'home', role: 'player', controller: 'local', kit: playerKit, look: playerLook },
     { id: 'm1', team: myTeam, side: 'home', role: 'mate', controller: 'bot', kit: mateKits[0] },
     { id: 'm2', team: myTeam, side: 'home', role: 'mate', controller: 'bot', kit: mateKits[1] },
     { id: 'r1', team: rivalTeam, side: 'rival', role: 'rival', controller: 'bot', kit: 'thrower' },
@@ -20,10 +21,10 @@ export function defaultSeats(myTeam, rivalTeam, playerKit = 'thrower') {
   ];
 }
 
-export function createMatch({ arena, myTeam, rivalTeam, pace = 'relaxed', rng = Math.random, seats = null, playerKit = 'thrower' }) {
+export function createMatch({ arena, myTeam, rivalTeam, pace = 'relaxed', rng = Math.random, seats = null, playerKit = 'thrower', playerLook = null }) {
   const grid = new Grid(arena);
   const nav = arena.kind === 'tiles' ? new GridNav(grid, SIM.radius, arena.sledRuns || []) : new Nav(arena, grid);
-  seats = seats || defaultSeats(myTeam, rivalTeam, playerKit);
+  seats = assignLooks(seats || defaultSeats(myTeam, rivalTeam, playerKit, playerLook), rng); // girls and boys on every team
   const sim = new Sim({ arena, grid, nav, seats, rng, pace });
   const base = arena.places.find(p => p.kind === 'base');
   const rv = arena.places.find(p => p.kind === 'rivalBase') || { x: base.x, z: base.z - 20 };
@@ -37,7 +38,7 @@ export function createMatch({ arena, myTeam, rivalTeam, pace = 'relaxed', rng = 
     const at = seat.side === 'home' ? base : rv, n = placed[seat.side]++;
     let x = at.x + (n - 1) * 1.4, z = at.z;
     if (!grid.freeCircle(x, z, SIM.radius)) { x = at.x; z = at.z; }
-    const c = sim.add(makeCharacter({ seat: seat.id, team: seat.team, side: seat.side, role: seat.role, kit: seat.kit || 'thrower', x, z }));
+    const c = sim.add(makeCharacter({ seat: seat.id, team: seat.team, side: seat.side, role: seat.role, kit: seat.kit || 'thrower', look: seat.look || null, x, z }));
     if (seat.role === 'player') player = c;
     if (seat.controller === 'bot') bots.set(seat.id, { seat, c });
   }

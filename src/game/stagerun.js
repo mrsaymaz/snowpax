@@ -53,7 +53,7 @@ export class StageRunner {
     const st = this.cur, words = flakeWords(this.unit, 6, this.up.missed, this.rng);
     const spellPool = this.unit.words.filter(w => /^[a-z]{3,7}$/i.test(w.en)), spell = st.ride.spell && spellPool.length ? spellPool[Math.floor(this.rng() * spellPool.length)] : null;
     this.sled?.dispose();
-    this.sled = new SledRun({ theme: st.ride.theme, seconds: st.ride.seconds, pace: this.pace, team: this.team, kit: this.kit, words, spell, lives: this.lives, rng: this.rng, first: this.ridesDone === 0, reduceMotion: this.reduceMotion,
+    this.sled = new SledRun({ theme: st.ride.theme, seconds: st.ride.seconds, pace: this.pace, team: this.team, kit: this.kit, look: this.match.player.look, words, spell, lives: this.lives, rng: this.rng, first: this.ridesDone === 0, reduceMotion: this.reduceMotion,
       on: {
         crash: lost => { this.ui.play('hit'); const left = this.lives.lose(); this.drawRunHud(); this.toast(lost ? `Ouch! −${lost} ❄` : 'Ouch!'); if (!left) this.outOfLives(); },
         flakes: () => this.drawRunHud(), sound: k => this.ui.play(k),

@@ -1,6 +1,7 @@
-// Bold, chunky kids for the arena view: team-coloured puffy jackets, a hat per kit
-// (beanie = Quick Thrower, earmuffs = Lobber, cap = Sprayer), a dark outline so they pop,
-// a warmth bar with number and team emblem, and your own snowball bar under yours.
+// The kids in the arena: the puffer-jacket model from kids2.js (girls and boys, glossy eyes, a hat
+// per kit: beanie = Quick Thrower, earmuffs = Lobber, cap = Sprayer) merged into a few meshes,
+// plus the frozen snowman, team ring, a warmth bar with number and team emblem, and your own
+// snowball bar under yours.
 import {
   Group, Mesh, MeshLambertMaterial, MeshBasicMaterial, SphereGeometry, CapsuleGeometry, CylinderGeometry, ConeGeometry, TorusGeometry,
   CircleGeometry, RingGeometry, BoxGeometry, CanvasTexture, SRGBColorSpace, Sprite, SpriteMaterial, BackSide, Color, BufferAttribute,
@@ -8,7 +9,8 @@ import {
 import { CONFIG } from '../../config.js';
 import { emblemSVG } from '../../emblems.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { LOOK, toon, addRim } from './look.js';
+import { buildKid, bakeKid } from './kids2.js';
+import { makeLook } from '../looks.mjs';
 
 // Merge meshes (in their parent's space, plus an optional extra matrix) into one geometry
 // with per-vertex colours, so a whole kid draws in a handful of calls.
@@ -48,36 +50,23 @@ export class Kid {
     this.c = c; this.isPlayer = isPlayer; this.team = CONFIG.teams[c.team];
     this.mats = [];
     const M = hex => { const m = new MeshLambertMaterial({ color: hex, transparent: true }); this.mats.push(m); return m; };
-    const team = M(this.team.color), dark = M(this.team.dark), skin = M(SKIN[(c.id * 3) % SKIN.length]), white = M('#ffffff'), ink = M('#1d2733');
-    this.jacket = team;
-    const root = this.root = new Group(), kid = this.kid = new Group(); root.add(kid);
+    const ink = M('#1d2733');
+    const root = this.root = new Group();
+    const s = c.captain ? 1.35 : 1;
+    // the kid model: its look comes from the seat (girls and boys on every team); old saves get one
+    const look = c.look || makeLook(c.id % 2 ? 'girl' : 'boy', () => ((c.id * 0.6180339) % 1));
+    const kid = this.kid = bakeKid(buildKid({ team: c.team, kit: c.kit, ...look })); root.add(kid);
+    kid.scale.setScalar(1.1 * s);
+    this.arms = kid.userData.arms; this.legs = kid.userData.legs;
+    this.vc = kid.userData.material; this.mats.push(this.vc);
+    kid.traverse(o => { if (o.isMesh && o.material !== this.vc) { o.material = o.material.clone(); this.mats.push(o.material); } }); // face and badge fade with the kid
     const add = (geo, m, x, y, z, parent = kid, outline = false) => { const o = new Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; parent.add(o); if (outline) this.outline(o, parent); return o; };
     this.outlineMat = new MeshBasicMaterial({ color: OUTLINE, side: BackSide, transparent: true }); this.mats.push(this.outlineMat);
-    const s = c.captain ? 1.35 : 1; kid.scale.setScalar(1.15 * s);
-    this.legs = [-0.16, 0.16].map(x => { const l = add(G.leg, M('#34405e'), x, 0.28, 0); add(G.boot, M('#4a3328'), 0, -0.16, 0.06, l).scale.set(1, 0.7, 1.3); return l; });
-    const body = add(G.body, team, 0, 0.78, 0, kid, true); body.scale.set(1.05, 1, 0.95);
-    this.arms = [-0.48, 0.48].map(x => { const a = add(G.arm, team, x, 0.86, 0, kid); a.rotation.z = x < 0 ? -0.35 : 0.35; add(G.mitten, white, 0, -0.27, 0, a); return a; });
-    const scarf = add(G.scarf, M(c.kit === 'lobber' ? '#ffd166' : c.kit === 'sprayer' ? '#7bdff2' : '#ffffff'), 0, 1.16, 0); scarf.rotation.x = Math.PI / 2;
-    const head = add(G.head, skin, 0, 1.55, 0, kid, true);
-    for (const x of [-0.15, 0.15]) { add(G.eyeW, white, x, 1.6, 0.36).scale.set(1, 1.25, 0.6); add(G.eyeP, ink, x, 1.59, 0.42).scale.set(1, 1.3, 0.6); add(G.cheek, M('#ff9aa2'), x * 1.55, 1.46, 0.34).scale.set(1, 0.7, 0.5); }
-    const smile = add(G.smile, ink, 0, 1.43, 0.4); smile.rotation.z = Math.PI;
-    // hats per kit
-    if (c.kit === 'lobber') {
-      add(G.hairband, dark, 0, 1.58, 0).rotation.y = Math.PI / 2;
-      for (const x of [-0.45, 0.45]) { const m = add(G.muff, M('#fff3e0'), x, 1.55, 0); m.rotation.z = Math.PI / 2; }
-    } else if (c.kit === 'sprayer') {
-      add(G.capTop, team, 0, 1.62, 0, kid, true).scale.set(1, 0.9, 1);
-      const br = add(G.brim, dark, 0, 1.66, 0.2); br.rotation.y = Math.PI;
-    } else {
-      add(G.beanie, team, 0, 1.63, 0, kid, true);
-      add(G.band, dark, 0, 1.66, 0).rotation.x = Math.PI / 2;
-      add(G.pom, white, 0, 2.08, 0);
-    }
     // snowman (frozen)
     const sm = this.snowman = new Group(); sm.visible = false; root.add(sm); sm.scale.setScalar(1.15 * s);
     const snowWhite = M('#fbfdff');
     add(G.snowB, snowWhite, 0, 0.5, 0, sm, true); add(G.snowM, snowWhite, 0, 1.12, 0, sm, true); add(G.snowT, snowWhite, 0, 1.62, 0, sm, true);
-    const ss = add(G.scarf, team, 0, 1.4, 0, sm); ss.rotation.x = Math.PI / 2;
+    const ss = add(G.scarf, M(this.team.color), 0, 1.4, 0, sm); ss.rotation.x = Math.PI / 2;
     const nose = add(G.nose, M('#f08a24'), 0, 1.62, 0.36, sm); nose.rotation.x = Math.PI / 2;
     for (const x of [-0.11, 0.11]) add(G.eyeP, ink, x, 1.72, 0.28, sm);
     // shadow + ring
@@ -88,7 +77,7 @@ export class Kid {
     this.bc = document.createElement('canvas'); this.bc.width = 160; this.bc.height = isPlayer ? 56 : 40;
     this.bt = new CanvasTexture(this.bc); this.bt.colorSpace = SRGBColorSpace;
     this.bar = new Sprite(new SpriteMaterial({ map: this.bt, depthTest: false, transparent: true }));
-    this.bar.scale.set(1.9, 1.9 * this.bc.height / 160, 1); this.bar.position.y = 2.75 * s; this.bar.renderOrder = 20; root.add(this.bar);
+    this.bar.scale.set(1.9, 1.9 * this.bc.height / 160, 1); this.bar.position.y = 2.95 * s; this.bar.renderOrder = 20; root.add(this.bar);
     this.bake();
     // a wooden sled with red runners, shown while riding a sled run
     const sled = this.sled = new Group(); sled.visible = false; root.add(sled);
@@ -98,26 +87,14 @@ export class Kid {
     this.last = ''; this.t = Math.random() * 6; this.throwT = 0; this.shakeT = 0;
     emblem(c.team).onload = () => { this.last = ''; };
   }
-  // Replace the many small parts with merged meshes: body+head+hat, outlines, each arm, each leg, the snowman.
+  // The kid comes merged from bakeKid(); merge the snowman's parts the same way.
   bake() {
-    const vc = this.vc = new MeshLambertMaterial({ vertexColors: true, transparent: true, emissive: new Color(0) }); // kids keep smooth 3D shading in every look
-    const isOutline = m => m.material === this.outlineMat;
-    const swapGroup = grp => {
-      const direct = grp.children.filter(m => m.isMesh && !this.arms.includes(m) && !this.legs.includes(m));
-      const colored = direct.filter(m => !isOutline(m)), lines = direct.filter(isOutline);
-      if (colored.length) { const m = new Mesh(bakeColored(colored), vc); m.castShadow = true; grp.add(m); }
-      if (lines.length) { const o = new Mesh(bakeColored(lines), this.outlineMat); grp.add(o); }
-      for (const m of direct) grp.remove(m);
-    };
-    swapGroup(this.kid); swapGroup(this.snowman);
-    const limb = part => { // the limb plus its child (mitten/boot) in the limb's own space
-      const kids = part.children.filter(c => c.isMesh);
-      const geo = bakeColored([Object.assign(new Mesh(part.geometry, part.material)), ...kids]);
-      const m = new Mesh(geo, vc); m.position.copy(part.position); m.rotation.copy(part.rotation); m.scale.copy(part.scale); m.castShadow = true;
-      this.kid.add(m); this.kid.remove(part); return m;
-    };
-    this.arms = this.arms.map(limb); this.legs = this.legs.map(limb);
-    this.jacket = vc; this.mats = [vc, this.outlineMat];
+    const sm = this.snowman, isOutline = m => m.material === this.outlineMat;
+    const direct = sm.children.filter(m => m.isMesh), colored = direct.filter(m => !isOutline(m)), lines = direct.filter(isOutline);
+    const snowMat = new MeshLambertMaterial({ vertexColors: true, transparent: true }); this.mats.push(snowMat);
+    if (colored.length) { const m = new Mesh(bakeColored(colored), snowMat); m.castShadow = true; sm.add(m); }
+    if (lines.length) sm.add(new Mesh(bakeColored(lines), this.outlineMat));
+    for (const m of direct) sm.remove(m);
   }
   outline(mesh, parent) { const o = new Mesh(mesh.geometry, this.outlineMat); o.position.copy(mesh.position); o.rotation.copy(mesh.rotation); o.scale.copy(mesh.scale).multiplyScalar(1.09); parent.add(o); }
 

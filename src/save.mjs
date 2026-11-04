@@ -13,6 +13,7 @@ export function defaultSave(now = Date.now()) {
     created: now,
     updated: now,
     team: null,               // chosen on first launch
+    look: null,               // your kid: { gender, skin, hair, style } (src/game/looks.mjs)
     pace: 'relaxed',
     welcomed: false,
     tutorialDone: false,

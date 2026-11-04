@@ -6,6 +6,7 @@ import { CONFIG, TEAM_IDS } from '../config.js';
 import { emblemSVG } from '../emblems.js';
 import { loadSave, writeSave } from '../save.mjs';
 import { createMatch } from './match.mjs';
+import { playerLook } from './looks.mjs';
 import { buildTileArena } from './tilemap.mjs';
 import { SCHOOLYARD } from './arenas/schoolyard.mjs';
 import { GRID } from './grid.mjs';
@@ -36,25 +37,27 @@ const KIT_TEXT = { thrower: 'Fast, straight throws', lobber: 'Throws over walls'
 
 // ---------- start screen ----------
 function startScreen() {
-  let team = save.team || null, kit = save.kit || 'thrower', pace = save.pace || 'relaxed';
+  let team = save.team || null, kit = save.kit || 'thrower', pace = save.pace || 'relaxed', gender = save.look?.gender || (Math.random() < 0.5 ? 'girl' : 'boy');
   $('#teams').innerHTML = TEAM_IDS.map(id => `<button type="button" class="pick team-btn" data-team="${id}" style="--c:${CONFIG.teams[id].color}">${emblemSVG(id, 48)}<b>${CONFIG.teams[id].name}</b></button>`).join('');
   $('#kits').innerHTML = Object.entries(KITS).map(([id, k]) => `<button type="button" class="pick kit-btn" data-kit="${id}"><span class="ico">${KIT_ICON[id]}</span><b>${k.name}</b><small>${KIT_TEXT[id]}</small></button>`).join('');
   const refresh = () => {
     document.querySelectorAll('.team-btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.team === team)));
     document.querySelectorAll('.kit-btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kit === kit)));
     document.querySelectorAll('.pace-btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pace === pace)));
+    document.querySelectorAll('.who-btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.who === gender)));
     $('#play').disabled = !team; $('#play').textContent = team ? 'PLAY!' : 'Pick your team';
   };
   $('#teams').onclick = e => { const b = e.target.closest('.team-btn'); if (b) { team = b.dataset.team; refresh(); } };
   $('#kits').onclick = e => { const b = e.target.closest('.kit-btn'); if (b) { kit = b.dataset.kit; refresh(); } };
   document.querySelectorAll('.pace-btn').forEach(b => { b.onclick = () => { pace = b.dataset.pace; refresh(); }; });
+  document.querySelectorAll('.who-btn').forEach(b => { b.onclick = () => { gender = b.dataset.who; refresh(); }; });
   $('#play').onclick = async () => {
-    unlockAudio(); save.team = team; save.kit = kit; save.pace = pace; writeSave(save);
+    unlockAudio(); save.team = team; save.kit = kit; save.pace = pace; if (save.look?.gender !== gender) save.look = { gender }; writeSave(save);
     $('#start').hidden = true;
     try { await startGame(team, kit, pace); } catch (err) { $('#loading').hidden = false; $('#loading').textContent = 'Sorry, the game could not start: ' + err.message; throw err; }
   };
   refresh();
-  if (params.has('autostart')) { team = params.get('team') || team || 'hufflepuff'; kit = params.get('kit') || kit; pace = params.get('pace') || pace; refresh(); $('#play').click(); }
+  if (params.has('autostart')) { team = params.get('team') || team || 'hufflepuff'; kit = params.get('kit') || kit; pace = params.get('pace') || pace; gender = params.get('who') || gender; refresh(); $('#play').click(); }
 }
 
 // ---------- the game ----------
@@ -65,7 +68,8 @@ async function startGame(myTeam, kit, pace) {
   const others = TEAM_IDS.filter(t => t !== myTeam);
   const rivalTeam = others.includes(params.get('rival')) ? params.get('rival') : others[Math.floor(Math.random() * others.length)];
   let s = Number(params.get('seed')) || (Date.now() % 100000); const rng = () => (s = (s * 16807) % 2147483647) / 2147483647;
-  const match = createMatch({ arena, myTeam, rivalTeam, pace, rng, playerKit: kit });
+  save.look = playerLook(save.look); writeSave(save); // the player's kid; teammates and rivals mix girls and boys around it
+  const match = createMatch({ arena, myTeam, rivalTeam, pace, rng, playerKit: kit, playerLook: save.look });
   const { sim, player } = match;
   const myCol = CONFIG.teams[myTeam].color, rivCol = CONFIG.teams[rivalTeam].color;
   // test helper: ?at=<outpost id> starts the student and teammates beside that outpost

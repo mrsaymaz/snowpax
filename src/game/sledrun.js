@@ -82,7 +82,7 @@ const letterTex = (ch, col) => { const c = document.createElement('canvas'); c.w
 
 export class SledRun {
   // words: [{en, tr}] for golden word flakes; spell: {en, tr} or null; lives: Lives
-  constructor({ theme = 'boulevard', seconds = 50, pace = 'relaxed', team = 'hufflepuff', kit = 'thrower', words = [], spell = null, lives, rng = Math.random, first = false, reduceMotion = false, on = {} }) {
+  constructor({ theme = 'boulevard', seconds = 50, pace = 'relaxed', team = 'hufflepuff', kit = 'thrower', look = null, words = [], spell = null, lives, rng = Math.random, first = false, reduceMotion = false, on = {} }) {
     Object.assign(this, { theme, seconds, pace, words, spell, lives, rng, first, reduceMotion, on });
     const T = this.T = THEMES[theme] || THEMES.boulevard;
     this.vmax = pace === 'challenge' ? 12.5 : 10.2; this.v = 6; this.dist = 0;
@@ -107,7 +107,7 @@ export class SledRun {
 
     this.geo = {}; this.pool = new Map(); this.items = []; this.props = [];
     // the student on a sled
-    this.fakeC = { id: 1, team, kit, x: 0, z: 0, face: Math.PI, moving: 6, sled: true, frozen: 0, thaw: 0, flash: 0, hidden: false, revealT: 0, shield: 0, warmth: 100, maxWarmth: 100, ammo: 3, super: 0, captain: false, side: 'home', role: 'player' };
+    this.fakeC = { id: 1, team, kit, look, x: 0, z: 0, face: Math.PI, moving: 6, sled: true, frozen: 0, thaw: 0, flash: 0, hidden: false, revealT: 0, shield: 0, warmth: 100, maxWarmth: 100, ammo: 3, super: 0, captain: false, side: 'home', role: 'player' };
     this.kid = new Kid(this.fakeC, { isPlayer: true }); this.kid.bar.visible = false; this.kid.ring.visible = false; if (this.kid.innerRing) this.kid.innerRing.visible = false; scene.add(this.kid.root);
     // sparkle particles for pickups and crashes
     this.sparks = []; const sg = new SphereGeometry(0.06, 5, 4);

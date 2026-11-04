@@ -43,10 +43,10 @@ export const WORLD = {
 
 let nextId = 1;
 
-export function makeCharacter({ seat, team, side, role, x, z, kit = 'thrower', captain = false }) {
+export function makeCharacter({ seat, team, side, role, x, z, kit = 'thrower', captain = false, look = null }) {
   const warmth = F.warmth * (captain ? 1.8 : 1);
   return {
-    id: nextId++, seat, team, side, role, captain, kit,
+    id: nextId++, seat, team, side, role, captain, kit, look,
     x, z, vx: 0, vz: 0, face: side === 'rival' ? 0 : Math.PI, moving: 0,
     warmth, maxWarmth: warmth, ammo: F.ammoMax, super: 0,
     frozen: 0, thaw: 0, shield: 0, dodge: 0, dodgeCd: 0, attackCd: 0,
