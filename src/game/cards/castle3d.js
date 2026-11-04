@@ -199,7 +199,7 @@ export function castleStation(s, { color = '#f5b616' } = {}) {
     base, top: base, courses: 0, flag, flagLow: 7.4, flagTop: 8.45,
     // the wall is taller: the towers stay, the wall's top course shows a fresh snow line
     raise() {},
-    A,
+    A, K, colors: [color, '#ffffff', '#ffd166', '#7cc4f0'],
     tick(dt) {
       t += dt; K.tick(dt); A?.tick(dt); if (s.reduceMotion) return;
       flagsG.children.forEach((f, i) => { f.rotation.x = Math.sin(t * 2.2 + i) * 0.25; });

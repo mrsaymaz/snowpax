@@ -17,8 +17,8 @@ import { Group, Vector3, Scene, PerspectiveCamera } from 'three';
 const EASE = t => t * t * (3 - 2 * t);
 
 export class WorldTasks {
-  constructor({ scene, layer, groundH = () => 0, fx = null, zones = () => [], player = null, reduceMotion = false, mode = 'station', stations = {} }) {
-    Object.assign(this, { scene, layer, groundH, fx, zones, player, reduceMotion, mode, stations });
+  constructor({ scene, layer, groundH = () => 0, fx = null, zones = () => [], player = null, reduceMotion = false, mode = 'station', stations = {}, sound = null }) {
+    Object.assign(this, { scene, layer, groundH, fx, zones, player, reduceMotion, mode, stations, sound });
     this.wipe = document.createElement('div'); this.wipe.className = 'wt-wipe'; document.body.appendChild(this.wipe);
     this.finger = document.createElement('div'); this.finger.className = 'wt-finger'; this.finger.textContent = '👆'; this.finger.hidden = true; layer.appendChild(this.finger);
     this.toured = new Set(); this.lastTap = null;
@@ -44,7 +44,7 @@ export class WorldTasks {
     const persist = new Group(), step = new Group(); group.add(persist, step);
     const labels = new Set(), wt = this;
     const s = this.session = {
-      theme, zone: z, group, persist, step, camPose: null, reduceMotion: this.reduceMotion, station, player: this.player, kick: 0, showAt: performance.now() + (station && !this.reduceMotion ? 160 : 0), scene: station ? scene : null, camera, set: null, // showAt: the cut hides under the flurry
+      theme, zone: z, group, persist, step, camPose: null, reduceMotion: this.reduceMotion, station, player: this.player, kick: 0, sound: (n, o) => wt.sound?.(n, o), showAt: performance.now() + (station && !this.reduceMotion ? 160 : 0), scene: station ? scene : null, camera, set: null, // showAt: the cut hides under the flurry
       // camera target, in the landmark's (or station's) local space
       frame(eye, look) { s.camPose = { eye: group.localToWorld(new Vector3(...eye)), look: group.localToWorld(new Vector3(...look)) }; s.eyeDist = s.camPose.eye.distanceTo(s.camPose.look); if (station && !s.camAt) { s.camAt = { eye: s.camPose.eye.clone(), look: s.camPose.look.clone() }; } },
       // pixels per metre at the look point once the camera has arrived (to size things to their labels)
@@ -92,6 +92,19 @@ export class WorldTasks {
     const st = document.createElement('div'); st.className = 'wt-star'; st.textContent = '★'; document.body.appendChild(st);
     const x0 = from.left + from.width / 2, y0 = from.top + from.height / 2, x1 = bar.left + bar.width * (0.2 + Math.random() * 0.6), y1 = bar.top + bar.height / 2;
     st.animate([{ transform: `translate(${x0}px, ${y0}px) translate(-50%, -50%) scale(0.6)`, opacity: 1 }, { transform: `translate(${(x0 + x1) / 2}px, ${Math.min(y0, y1) - 60}px) translate(-50%, -50%) scale(1.4)`, opacity: 1, offset: 0.5 }, { transform: `translate(${x1}px, ${y1}px) translate(-50%, -50%) scale(0.5)`, opacity: 0.2 }], { duration: 650, easing: 'cubic-bezier(.4,.1,.3,1)' }).onfinish = () => st.remove();
+  }
+  // the round at this station is done: fireworks over the landmark, the kid cheers, a fanfare.
+  // Returns how long to stay in the station before going back to the fight.
+  celebrate(text = 'Well done!') {
+    const s = this.session; if (!s) return 0;
+    this.stopTour(); s.say(`★ ${text} ★`); this.sound?.('fanfare');
+    const K = s.set?.K, c = s.set?.colors || ['#ffd166', '#ffffff', '#7cc4f0', '#f3a6c8'];
+    s.set?.A?.cheer(true); s.set?.ring?.(); s.set?.celebrate?.();
+    if (K && !this.reduceMotion && s.station) { // bursts just above what the camera looks at, in front of the set
+      const L = (s.camPose?.look || new Vector3(0, 2, 0)).clone().sub(s.group.position);
+      K.fireworks([[-2.4, 1.9], [2.3, 2.5], [0, 2.9], [-1.1, 1.4], [1.3, 1.7]].map(([x, y]) => [L.x + x, L.y + y, L.z - 0.6]), c);
+    }
+    return this.reduceMotion ? 1.0 : 1.8;
   }
   // the first time a station opens: a finger visits every option in turn, the same way, never hinting the answer
   tour() {

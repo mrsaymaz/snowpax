@@ -19,7 +19,8 @@ const HAIR = ['#3b2a20', '#6a3f22', '#c98a3c', '#1f1a1a', '#8a4b2a'];
 const texCache = new Map();
 function canvas(key, w, h, draw) { if (texCache.has(key)) return texCache.get(key); const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; t.anisotropy = 4; texCache.set(key, t); return t; }
 
-// faces: drawn crisp on a patch over the front of the head
+// faces: drawn crisp on a patch over the front of the head. Moods: 'happy' (default), 'joy' (eyes
+// squeezed into smiles, a big open smile), 'surprised' (wide eyes, raised brows, an O mouth)
 function faceTex(style, mood = 'happy', lashes = false) {
   return canvas('face' + style + mood + lashes, 256, 256, (g, W) => {
     const eye = (x, y, big) => {
@@ -32,12 +33,16 @@ function faceTex(style, mood = 'happy', lashes = false) {
       g.strokeStyle = '#1c2340'; g.lineWidth = 5; g.beginPath(); g.ellipse(x, y, big * 0.8, big, 0, 0, 7); g.stroke();
     };
     const big = style === 'vinyl' ? 30 : style === 'plush' ? 16 : 26, ey = style === 'vinyl' ? 118 : 116, ex = style === 'vinyl' ? 52 : 44;
-    eye(W / 2 - ex, ey, big); eye(W / 2 + ex, ey, big);
-    if (lashes) { g.strokeStyle = '#141826'; g.lineWidth = 6; g.lineCap = 'round'; for (const s of [-1, 1]) for (const [a, l] of [[0.25, 16], [0.62, 14]]) { const x0 = W / 2 + s * (ex + Math.sin(a) * big * 0.78), y0 = ey - Math.cos(a) * big; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x0 + s * l * Math.sin(a + 0.5), y0 - l * Math.cos(a + 0.5)); g.stroke(); } }
-    if (style !== 'plush') { g.strokeStyle = '#3b2a20'; g.lineWidth = 7; g.lineCap = 'round'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(W / 2 + s * (ex - 18), ey - big - 16); g.quadraticCurveTo(W / 2 + s * ex, ey - big - 24, W / 2 + s * (ex + 18), ey - big - 12); g.stroke(); } }
+    const joy = mood === 'joy', wow = mood === 'surprised', browUp = wow ? 14 : joy ? 4 : 0;
+    if (joy && style !== 'plush') { g.strokeStyle = '#141826'; g.lineWidth = 10; g.lineCap = 'round'; for (const s of [-1, 1]) { g.beginPath(); g.arc(W / 2 + s * ex, ey + 10, big * 0.72, Math.PI * 1.15, Math.PI * 1.85); g.stroke(); } }
+    else { eye(W / 2 - ex, ey, wow ? big * 1.14 : big); eye(W / 2 + ex, ey, wow ? big * 1.14 : big); }
+    if (lashes && !joy) { g.strokeStyle = '#141826'; g.lineWidth = 6; g.lineCap = 'round'; for (const s of [-1, 1]) for (const [a, l] of [[0.25, 16], [0.62, 14]]) { const x0 = W / 2 + s * (ex + Math.sin(a) * big * 0.78), y0 = ey - Math.cos(a) * big; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x0 + s * l * Math.sin(a + 0.5), y0 - l * Math.cos(a + 0.5)); g.stroke(); } }
+    if (style !== 'plush') { g.strokeStyle = '#3b2a20'; g.lineWidth = 7; g.lineCap = 'round'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(W / 2 + s * (ex - 18), ey - big - 16 - browUp); g.quadraticCurveTo(W / 2 + s * ex, ey - big - 24 - browUp * 1.3, W / 2 + s * (ex + 18), ey - big - 12 - browUp); g.stroke(); } }
     g.fillStyle = 'rgba(255,120,130,0.45)'; for (const s of [-1, 1]) { g.beginPath(); g.ellipse(W / 2 + s * (ex + 26), ey + 44, 22, 13, 0, 0, 7); g.fill(); }
     g.strokeStyle = '#1c2340'; g.lineWidth = style === 'plush' ? 4 : 6; g.lineCap = 'round';
     if (style === 'plush') { g.setLineDash([7, 6]); g.beginPath(); g.arc(W / 2, ey + 34, 22, 0.25 * Math.PI, 0.75 * Math.PI); g.stroke(); g.setLineDash([]); }
+    else if (joy) { g.fillStyle = '#7a2a2a'; g.beginPath(); g.moveTo(W / 2 - 32, ey + 38); g.quadraticCurveTo(W / 2, ey + 92, W / 2 + 32, ey + 38); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#ff8a8a'; g.beginPath(); g.ellipse(W / 2, ey + 63, 13, 7, 0, 0, 7); g.fill(); }
+    else if (wow) { g.fillStyle = '#7a2a2a'; g.beginPath(); g.ellipse(W / 2, ey + 54, 11, 15, 0, 0, 7); g.fill(); g.stroke(); }
     else if (mood === 'happy') { g.fillStyle = '#7a2a2a'; g.beginPath(); g.moveTo(W / 2 - 22, ey + 40); g.quadraticCurveTo(W / 2, ey + 70, W / 2 + 22, ey + 40); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#ff8a8a'; g.beginPath(); g.ellipse(W / 2, ey + 55, 9, 5, 0, 0, 7); g.fill(); }
   });
 }
@@ -93,7 +98,7 @@ export function buildKid({ design = 'puffer', team = 'hufflepuff', kit = 'throwe
   });
   // head, face, ears, hair. Eyes sit on the head's equator; every hat stops above the brows.
   add(S(hr, 32, 24), skinM, 0, hy, 0, 0, 0, 0, 1.04, 0.98, 1);
-  const face = add(new SphereGeometry(hr * 1.008, 32, 16, Math.PI / 2 - 1.0, 2.0, Math.PI / 2 - 0.7, 1.55), new MeshBasicMaterial({ map: faceTex(design === 'plush' ? 'plush' : 'vinyl', mood, girl), transparent: true }), 0, hy, 0, 0, 0, 0, 1.04, 0.98, 1); face.castShadow = false;
+  const face = add(new SphereGeometry(hr * 1.008, 32, 16, Math.PI / 2 - 1.0, 2.0, Math.PI / 2 - 0.7, 1.55), new MeshBasicMaterial({ map: faceTex(design === 'plush' ? 'plush' : 'vinyl', mood, girl), transparent: true }), 0, hy, 0, 0, 0, 0, 1.04, 0.98, 1); face.castShadow = false; face.userData.isFace = true;
   if (design === 'plush') { const btn = new MeshStandardMaterial({ color: '#1c2340', roughness: 0.25 }); for (const s of [-1, 1]) { add(S(0.065, 14, 10), btn, s * hr * 0.35, hy + 0.01, hr * 0.92, 0, 0, 0, 1, 1, 0.45); add(new TorusGeometry(0.035, 0.008, 4, 12), fab('#ffffff'), s * hr * 0.35, hy + 0.01, hr * 0.92 + 0.03); } }
   for (const s of [-1, 1]) add(S(0.09, 12, 10), skinM, s * hr * 1.0, hy - 0.04, 0, 0, 0, 0, 0.6, 1, 1);
   const capY = hy + hr * 0.47, capR = hr * 0.93;               // where every hat's edge sits
@@ -141,7 +146,7 @@ export function buildKid({ design = 'puffer', team = 'hufflepuff', kit = 'throwe
   // hats are pushed back on the head so the eyes stay clear from the high game camera
   const tilt = kit === 'lobber' ? 0 : kit === 'sprayer' ? 0.42 : 0.36;
   if (tilt) { const pivot = new Group(); pivot.position.y = hy; pivot.rotation.x = -tilt; for (const o of root.children.slice(nBefore)) { o.position.y -= hy; pivot.add(o); } root.add(pivot); }
-  root.userData = { design, team, kit, gender, style, arms, legs };
+  root.userData = { design, team, kit, gender, style, arms, legs, face: { style: design === 'plush' ? 'plush' : 'vinyl', lashes: girl } };
   return root;
 }
 
@@ -171,4 +176,10 @@ export function bakeKid(root, material = new MeshStandardMaterial({ vertexColors
   collapse(root, [...arms, ...legs]);
   root.userData.material = material;
   return root;
+}
+
+// change a kid's expression: 'happy', 'joy' or 'surprised' (works on built and baked kids)
+export function setKidMood(root, mood = 'happy') {
+  const f = root.userData.face; if (!f || root.userData.mood === mood) return; root.userData.mood = mood;
+  root.traverse(o => { if (o.isMesh && o.userData.isFace) { o.material.map = faceTex(f.style, mood, f.lashes); o.material.needsUpdate = true; } });
 }

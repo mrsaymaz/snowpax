@@ -32,6 +32,16 @@ shared pieces in `cards/stationkit.js`):
   snow that sparkles, a warm sun with a cool rim light, falling snow.
 - **Right answers:** a gold star flies from what you tapped into the progress bar, and the camera
   nudges in a little.
+- **Faces:** the kid turns round to look at you with a joyful face (eyes squeezed into smiles,
+  a big open smile) when they cheer, and a surprised one (wide eyes, raised brows, an O mouth)
+  on a miss, then turns back. `setKidMood(kid, 'happy' | 'joy' | 'surprised')` in `kids2.js`.
+- **Sounds:** a swish on every throw or toss, a splat when a snowball lands, a thunk when an
+  arrow sticks, gull calls now and then on the pier and when the right gull flies, a fanfare and
+  firework pops at the end. All synthesized in `audio.js`, so nothing is downloaded.
+- **The round is done:** fireworks in the team's colours burst over the landmark, the kid does a
+  long cheer, the bell rings at the Waterfront, and the caption says "Outpost seized!" (or "All
+  five banners are up!" in the Showdown). It lasts 1.8 s before the camera goes back to the fight.
+  The arena time model counts it, and comes to 12.0 minutes.
 - **First time at a station:** a finger visits every option in turn, the same way for each,
   so it shows how to answer, never which answer. It stops as soon as you tap.
 

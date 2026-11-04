@@ -406,3 +406,4 @@ body.station #newrival, body.station #coach { display: none !important; } /* the
 .wt-finger[hidden] { display: none; }
 .wt-finger.tap { animation: wt-tap 0.5s ease-in-out; }
 @keyframes wt-tap { 0%, 100% { scale: 1; } 50% { scale: 0.82; } }
+body.station #banner { display: none; } /* the fight's banners wait; the station caption carries the news */

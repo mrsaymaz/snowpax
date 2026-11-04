@@ -39,6 +39,11 @@ export function play(type, { near = 1, freq = 660 } = {}) {
     case 'dodge': noise(0.2, 3000, 800, 0.18 * v, 'highpass'); break;
     case 'poof': noise(0.25, 2400, 3600, 0.12 * v, 'highpass'); break;
     case 'tap': tone(660, 0.06, 0.1, 'sine'); break;
+    case 'swish': noise(0.22, 700, 3200, 0.2, 'bandpass'); break; // a throw in a task station
+    case 'thunk': tone(150, 0.12, 0.3, 'triangle', 0.6); noise(0.08, 1800, 400, 0.3, 'lowpass'); break; // an arrow sticks
+    case 'gull': [0, 230].forEach(d => setTimeout(() => tone(1500, 0.18, 0.06, 'sawtooth', 0.62), d)); break;
+    case 'pop': noise(0.3, 3000, 600, 0.3, 'lowpass'); setTimeout(() => noise(0.6, 5000, 2500, 0.06, 'highpass'), 60); break; // a firework
+    case 'fanfare': [523, 659, 784, 1047, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, i > 3 ? 0.4 : 0.16, 0.13, 'triangle'), [0, 110, 220, 330, 520, 640][i])); break;
     case 'note': tone(freq, 0.5, 0.13, 'triangle', 1); tone(freq * 2, 0.35, 0.04, 'sine', 1); break; // a bell note (task scenes)
     case 'super': noise(0.5, 300, 1200, 0.5 * v, 'lowpass'); tone(110, 0.45, 0.3 * v, 'sawtooth', 0.5); break;
     case 'superReady': [523, 659, 784].forEach((f, i) => setTimeout(() => tone(f, 0.16, 0.14, 'triangle'), i * 70)); break;

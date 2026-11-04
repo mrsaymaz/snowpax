@@ -20,7 +20,7 @@ const seats = assignLooks(TEAM_IDS.flatMap(team => KITS.map(kit => ({ team, side
 const close = view === 'close', GAP = view === 'game' ? 3.0 : 4.2, kids = [];
 const rows = close ? [TEAM_IDS[+(params.get('t') || 0)]] : TEAM_IDS;
 rows.forEach((team, r) => seats.filter(s => s.team === team).forEach((s, c) => {
-  let m = buildKid({ design, team, kit: s.kit, ...s.look }); if (params.has('baked')) m = bakeKid(m);
+  let m = buildKid({ design, team, kit: s.kit, ...s.look, mood: params.get('mood') || 'happy' }); if (params.has('baked')) m = bakeKid(m);
   m.position.set((c - 1) * (close ? 2.1 : 2.3), 0, close ? 0 : (r - (rows.length - 1) / 2) * GAP);
   if (view === 'game') { const ring = new Mesh(new CircleGeometry(0.55, 24), new MeshBasicMaterial({ color: '#4a6182', transparent: true, opacity: 0.25 })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; m.add(ring); }
   m.rotation.y = view === 'front' ? 0.3 : 0; scene.add(m); kids.push(m);

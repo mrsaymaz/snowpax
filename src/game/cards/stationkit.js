@@ -5,7 +5,7 @@ import {
   Mesh, MeshLambertMaterial, MeshBasicMaterial, PlaneGeometry, SphereGeometry, ConeGeometry, CylinderGeometry, HemisphereLight, DirectionalLight, CanvasTexture,
   SRGBColorSpace, RepeatWrapping, Fog, Points, PointsMaterial, BufferGeometry, Float32BufferAttribute, Group, Shape, ShapeGeometry, DoubleSide, BackSide, Vector3, Color,
 } from 'three';
-import { buildKid, bakeKid } from '../render/kids2.js';
+import { buildKid, bakeKid, setKidMood } from '../render/kids2.js';
 
 // the painted distance behind every station: layered snowy hills, pines and the Istanbul skyline
 let backdropTex = null;
@@ -59,21 +59,28 @@ export function stage(s, { top = '#7fb6ea', mid = '#cfe6fb', bottom = '#f4f9ff',
     P.add(new Points(pg, new PointsMaterial({ color: '#ffffff', size: 0.07, transparent: true, opacity: 0.9, depthWrite: false })));
     let t = 0; ticks.push(dt => { t += dt; if (s.reduceMotion) return; const a = pg.attributes.position; for (let i = 0; i < N; i++) { let y = a.array[i * 3 + 1] - dt * (0.5 + (i % 5) * 0.08); if (y < 0) y += 9; a.array[i * 3 + 1] = y; a.array[i * 3] += Math.sin(t + i) * dt * 0.08; } a.needsUpdate = true; });
   }
-  // a burst of confetti (or snow) at a local point
-  const bursts = [];
-  const burst = (at, colors = ['#ffd166', '#ffffff', '#7cc4f0', '#f3a6c8'], n = 26, power = 2.4) => {
+  // a burst of confetti (or snow) at a local point; round soft sparks
+  const bursts = [], dot = canvasTex(32, 32, (g2, w) => { const gr = g2.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.55, 'rgba(255,255,255,0.95)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g2.fillStyle = gr; g2.fillRect(0, 0, w, w); });
+  const burst = (at, colors = ['#ffd166', '#ffffff', '#7cc4f0', '#f3a6c8'], n = 26, power = 2.4, size = 0.11, life = 0.9) => {
     if (s.reduceMotion) return;
     const pos = new Float32Array(n * 3), vel = [], col = new Float32Array(n * 3), c = new Color();
     for (let i = 0; i < n; i++) { pos.set([at.x, at.y, at.z], i * 3); const a = Math.random() * Math.PI * 2, u = Math.random() * 2 - 1, r = Math.sqrt(1 - u * u); vel.push(new Vector3(Math.cos(a) * r, Math.abs(u) + 0.4, Math.sin(a) * r).multiplyScalar(power * (0.5 + Math.random() * 0.6))); c.set(colors[i % colors.length]); col.set([c.r, c.g, c.b], i * 3); }
     const geo = new BufferGeometry(); geo.setAttribute('position', new Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new Float32BufferAttribute(col, 3));
-    const pts = new Points(geo, new PointsMaterial({ size: 0.11, vertexColors: true, transparent: true, depthWrite: false })); s.step.add(pts);
-    bursts.push({ pts, vel, t: 0 });
+    const pts = new Points(geo, new PointsMaterial({ size, vertexColors: true, transparent: true, depthWrite: false, map: dot, alphaTest: 0.05 })); s.step.add(pts);
+    bursts.push({ pts, vel, t: 0, life });
   };
-  ticks.push(dt => { for (const b of [...bursts]) { b.t += dt; const a = b.pts.geometry.attributes.position; b.vel.forEach((v, i) => { v.y -= 5 * dt; a.array[i * 3] += v.x * dt; a.array[i * 3 + 1] += v.y * dt; a.array[i * 3 + 2] += v.z * dt; }); a.needsUpdate = true; b.pts.material.opacity = Math.max(0, 1 - b.t / 0.9); if (b.t > 0.9) { b.pts.parent?.remove(b.pts); bursts.splice(bursts.indexOf(b), 1); } } });
+  ticks.push(dt => { for (const b of [...bursts]) { b.t += dt; const a = b.pts.geometry.attributes.position; b.vel.forEach((v, i) => { v.y -= 5 * dt; a.array[i * 3] += v.x * dt; a.array[i * 3 + 1] += v.y * dt; a.array[i * 3 + 2] += v.z * dt; }); a.needsUpdate = true; b.pts.material.opacity = Math.max(0, 1 - b.t / b.life); if (b.t > b.life) { b.pts.parent?.remove(b.pts); bursts.splice(bursts.indexOf(b), 1); } } });
   // a snowball thrown from the bottom of the screen to a local point
   const ballGeo = new SphereGeometry(0.16, 14, 10);
-  const snowball = (to, done, from = [0, 0.6, 7]) => { const b = new Mesh(ballGeo, snowM); b.position.set(...from); b.castShadow = true; s.step.add(b); s.fly(b, [to.x, to.y, to.z], { T: 0.42, lift: 1.4, done: () => { b.parent?.remove(b); burst(to, ['#ffffff', '#e8f4ff'], 14, 1.6); done?.(); } }); };
-  return { P, snowM, ticks, burst, snowball, tick: dt => ticks.forEach(f => f(dt)) };
+  const snowball = (to, done, from = [0, 0.6, 7]) => { const b = new Mesh(ballGeo, snowM); b.position.set(...from); b.castShadow = true; s.step.add(b); s.fly(b, [to.x, to.y, to.z], { T: 0.42, lift: 1.4, done: () => { b.parent?.remove(b); burst(to, ['#ffffff', '#e8f4ff'], 14, 1.6); s.sound?.('splat'); done?.(); } }); };
+  // fireworks: rockets rise and burst in the team's colours (the round is done)
+  const rocketGeo = new SphereGeometry(0.07, 8, 6);
+  const fireworks = (spots, colors) => spots.forEach(([x, y, z], k) => setTimeout(() => {
+    if (!s.group.parent) return; // the station has closed
+    const r = new Mesh(rocketGeo, new MeshBasicMaterial({ color: '#fff4c2' })); r.position.set(x * 0.8, Math.max(0.4, y - 3.5), z + 0.6); s.step.add(r); s.sound?.('swish');
+    s.fly(r, [x, y, z], { T: 0.55, lift: 0, done: () => { r.parent?.remove(r); burst(new Vector3(x, y, z), colors, 54, 2.6, 0.26, 1.4); burst(new Vector3(x, y, z), ['#ffffff'], 18, 1.2, 0.16, 0.8); s.sound?.('pop'); } });
+  }, k * 260));
+  return { P, snowM, ticks, burst, snowball, fireworks, tick: dt => ticks.forEach(f => f(dt)) };
 }
 
 export function pines(P, list, snowM) {
@@ -98,16 +105,19 @@ export function actor(s, P, { at = [-3.4, 0, 3.4], face = Math.PI - 0.6, scale =
   kid.scale.setScalar(scale); kid.position.set(...at); kid.rotation.y = face; kid.traverse(o => { if (o.isMesh) o.castShadow = true; }); P.add(kid);
   const shadow = new Mesh(new CylinderGeometry(0.5, 0.5, 0.01, 20), new MeshBasicMaterial({ color: '#4a6182', transparent: true, opacity: 0.22, depthWrite: false })); shadow.position.set(at[0], at[1] + 0.01, at[2]); P.add(shadow);
   const [armL, armR] = kid.userData.arms, y0 = at[1];
-  let t = 0, act = null;
+  let t = 0, act = null, moodT = 0;
   const run = (name, T, f) => { act = { name, T, t: 0, f }; };
+  const mood = (m, sec) => { setKidMood(kid, m); moodT = sec; }; // a face for a moment, then back to happy
+  const look = at[0] < 0 ? 0.5 : -0.5; // facing the camera (a little toward the middle), so the face shows
+  const turn = (k, amt = 1) => { const e = k < 0.22 ? k / 0.22 : k > 0.78 ? (1 - k) / 0.22 : 1, u = e * e * (3 - 2 * e); kid.rotation.y = face + (look - face) * u * amt; };
   return {
     kid,
     hand() { return armR.localToWorld(new Vector3(0, -0.42, 0)).sub(s.group.position); }, // where things leave from
-    throw() { if (s.reduceMotion) return; run('throw', 0.36, k => { armR.rotation.x = -2.8 * Math.sin(k * Math.PI); }); },
-    cheer() { if (s.reduceMotion) return; run('cheer', 0.7, k => { const u = Math.sin(k * Math.PI); armL.rotation.x = armR.rotation.x = -2.6 * u; kid.position.y = y0 + Math.abs(Math.sin(k * Math.PI * 2)) * 0.28; }); },
-    oops() { if (s.reduceMotion) return; run('oops', 0.6, k => { kid.rotation.y = face + Math.sin(k * Math.PI * 4) * 0.22 * (1 - k); armL.rotation.z = -0.35 - Math.sin(k * Math.PI) * 0.6; armR.rotation.z = 0.35 + Math.sin(k * Math.PI) * 0.6; }); },
+    throw() { s.sound?.('swish'); if (s.reduceMotion) return; run('throw', 0.36, k => { armR.rotation.x = -2.8 * Math.sin(k * Math.PI); }); },
+    cheer(long = false) { mood('joy', long ? 2.2 : 1.2); if (s.reduceMotion) return; run('cheer', long ? 2.0 : 1.1, k => { turn(k); const u = Math.sin(Math.min(1, k * 1.3) * Math.PI); armL.rotation.x = armR.rotation.x = -2.6 * u; kid.position.y = y0 + Math.abs(Math.sin(k * Math.PI * (long ? 4 : 2))) * 0.28; }); },
+    oops() { mood('surprised', 1.1); if (s.reduceMotion) return; run('oops', 1.0, k => { turn(k, 0.8); armL.rotation.z = -0.35 - Math.sin(k * Math.PI) * 0.6; armR.rotation.z = 0.35 + Math.sin(k * Math.PI) * 0.6; }); },
     tick(dt) {
-      t += dt;
+      t += dt; if (moodT > 0 && (moodT -= dt) <= 0) setKidMood(kid, 'happy');
       if (act) { act.t += dt; const k = Math.min(1, act.t / act.T); act.f(k); if (k >= 1) { armL.rotation.x = armR.rotation.x = 0; armL.rotation.z = -0.35; armR.rotation.z = 0.35; kid.rotation.y = face; kid.position.y = y0; act = null; } }
       else if (!s.reduceMotion) kid.position.y = y0 + Math.abs(Math.sin(t * 2.2)) * 0.03;
     },

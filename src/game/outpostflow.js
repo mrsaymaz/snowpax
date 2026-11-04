@@ -95,7 +95,7 @@ export class OutpostFlow {
     if (this.mode === 'cocoa') return this.finishCocoa();
     const v = this.mode === 'defend' ? this.defendVisit : this.visits.get(this.zone.id);
     if (!v.finished && !empty) return this.showNext();
-    if (this.mode === 'seize') { this.card.setCoach('Great work! Hold on…'); this.mode = 'seize-fill'; } // the bar catches up, then the outpost is yours
+    if (this.mode === 'seize') { this.card.setCoach('Great work! Hold on…'); this.mode = 'seize-fill'; if (this.card.inWorld) this.celebrateT = this.card.world.celebrate(this.zone.showdown ? 'All five banners are up!' : 'Outpost seized!'); } // fireworks in the station first // the bar catches up, then the outpost is yours
     else if (this.mode === 'defend') this.finishDefend();
   }
 
@@ -153,7 +153,8 @@ export class OutpostFlow {
       const v = this.visits.get(this.zone.id);
       if (this.chillT <= 0) this.shown = Math.min(v.progress, this.shown + dt * 0.6);
       sim.seizeProgress(this.zone, this.shown);
-      if (this.mode === 'seize-fill' && this.shown >= v.progress - 1e-6 && v.finished) { const z = this.zone; sim.capture(z, 'home'); this.startDefend(z); }
+      if (this.celebrateT > 0) this.celebrateT -= dt;
+      if (this.mode === 'seize-fill' && this.shown >= v.progress - 1e-6 && v.finished && !(this.celebrateT > 0)) { const z = this.zone; sim.capture(z, 'home'); this.startDefend(z); }
     }
     // defend wave countdown, then the refill round
     if (this.waveZone && !this.mode) {
