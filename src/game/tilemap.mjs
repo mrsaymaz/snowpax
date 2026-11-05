@@ -45,9 +45,11 @@ export function buildTileArena(def) {
       { id: 'base', kind: 'base', label: 'Our School', x: home[0], z: home[1] },
       { id: 'rival-base', kind: 'rivalBase', label: 'Snow Camp', x: rival[0], z: rival[1] },
       ...(def.outposts
-        ? def.outposts.map(o => ({ id: o.id, kind: 'zone', family: o.family, label: o.label, landmark: o.landmark, yard: o.yard ?? null, battlefield: o.arena || null, stage: o.stage ? { x: x0 + o.stage.i, z: z0 + o.stage.j } : null, x: x0 + o.i, z: z0 + o.j, r: o.r || 3.4 }))
+        ? def.outposts.map(o => ({ id: o.id, kind: 'zone', family: o.family, label: o.label, landmark: o.landmark, yard: o.yard ?? null, battlefield: o.arena || null, x: x0 + o.i, z: z0 + o.j, r: o.r || 3.4 }))
         : [{ id: 'zone', kind: 'zone', label: 'Street Outpost', x: zc[0], z: zc[1], r: def.zoneRadius || 2.3 }]),
     ],
+    // the Showdown's field (Arena 1): Our School behind its circle
+    schoolyard: def.schoolyard ? { x: x0 + def.schoolyard.i, z: z0 + def.schoolyard.j, r: def.schoolyard.r, battlefield: def.schoolyard.arena } : null,
     world: !!def.world, landmarks: def.landmarks || [], scenery: def.scenery || [],
     // sled hills, one-way sled runs and pickups (cell coordinates → world)
     hills: (def.hills || []).map(hl => ({ x: x0 + hl.i, z: z0 + hl.j, r: hl.r, h: hl.h })),

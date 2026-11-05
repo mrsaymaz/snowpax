@@ -1,7 +1,7 @@
 # Arena 1 as stages (M3)
 
 Inspired by Growbloom's garden path, solMaxima's gates and Tower Swarm's waves. Arena 1 is six
-stages played in order, nearest outpost first:
+stages played in order:
 
 | # | Stage | Sled ride | Task family | New rival |
 |---|---|---|---|---|
@@ -14,26 +14,31 @@ stages played in order, nearest outpost first:
 
 ## Look, time of day and dressing
 
-The bold look (cartoon shading, outlines, glow, a build of only the stage area with a painted
-backdrop beyond the snowbanks) is the default. `?look=v1` brings back the old diorama look, and
-`?free` the free-roaming world.
+There is no real map and there are no real streets. Arena 1 is six purpose-built fields
+(`tools/build-world.mjs`), one per stage, and only the look of the neighbourhood is kept round each
+one: a cobbled lane with old lamps, snowed-in houses with lit windows and tea on the sills, buried
+roofs, the stage's own trees and street stalls (and the frozen Golden Horn with a ferry and a pier
+by the waterfront). Beyond that is a painted backdrop.
+
+The bold look (cartoon shading, outlines, glow, a build of only the stage's field) is the
+default. `?look=v1` brings back the old diorama look.
 
 Each stage has its own time of day (`STAGE_LIGHT` in `brawl.js`, presets in `DAYLIGHT` in
 `render/village.js`, each with its own colour grade), so Arena 1 runs from morning to evening:
 
-| Stage | Time of day | Dressing round the plaza (`DRESS` in `tools/build-world.mjs`) |
+| Stage | Time of day | Field and frame (`ARENAS` and `PLACES` in `tools/build-world.mjs`) |
 |---|---|---|
-| Boulevard Park | crisp blue morning, long shadows | hedges, snow walls, benches, snowmen, lamps, plane trees; chestnut, çay and salep stalls |
-| Archery Ground | bright white noon | fenced shooting lanes, snow walls, hedges, benches, a ring of spruces; salep and chestnut stalls |
-| Kızılay Square | lavender afternoon | benches round the fountain, lamps, hedges, plane trees; simit, çay and roasted-corn stalls |
-| Sururi Park | warm golden hour | a snowman park, snow forts, hedges, birches and rowans; salep and roasted-corn stalls |
-| Waterfront Park | pink sunset, lamps coming on | railings, benches, lamps, spruces; fish-sandwich, simit and çay stalls |
-| Schoolyard Showdown | evening, lamps and windows lit | the schoolyard with its five banners and the bell |
+| Boulevard Park | crisp blue morning, long shadows | park hedges down the sides and in the middle lane, L-shaped snow walls; plane trees; chestnut, çay and salep stalls |
+| Archery Ground | bright white noon | a wooden practice ground: long barricades and crates, a long open middle; spruces and birches; salep and chestnut stalls |
+| Kızılay Square | lavender afternoon | a town square: snow-wall corners, wall stubs from the edges, a wide bush in the middle; birches and plane trees; simit, çay and roasted-corn stalls |
+| Sururi Park | warm golden hour | snow ramparts, a pillar in the middle lane, an icy middle; rowans and spruces; salep and roasted-corn stalls |
+| Waterfront Park | pink sunset, lamps coming on | the quay: cargo crates and wide ice; the frozen Golden Horn behind the outpost; fish-sandwich, simit and çay stalls |
+| Schoolyard Showdown | evening, lamps and windows lit | the playground: low walls, benches, a snowman; Our School behind the circle, five banners and the bell |
 
 ## Battlefields (Brawl-style principles, from the second play-test)
 
-A battlefield is a purpose-built field (`ARENAS` in `tools/build-world.mjs`, step 10). Boulevard
-Park is the first; the other outposts follow.
+Every stage is played on a purpose-built field (`ARENAS` in `tools/build-world.mjs`), each with
+its own layout.
 - **The rivals hold the outpost.** Its landmark stands at the north end of the field, behind the
   rival team; our team spawns at the south end. The team has to beat the rival team in the open
   field first (frozen rivals go back to their camp; after 45 s the ones still standing run back
@@ -45,15 +50,13 @@ Park is the first; the other outposts follow.
   with the outpost in the middle: 377 tiles to move in; the field has 642). About 6 s from
   spawn to the first fight, room to dodge sideways, cover every 4–6 tiles, about 12% of the
   field covered (walls, barricades, crates, bushes).
-- **Layout:** the long axis runs up the screen (portrait-first). Three lanes: the middle lane
-  past crates and a bush (so nobody throws spawn to spawn), two side lanes along bushes, with
-  L-shaped snow walls between. An eyebrow wall shields the home spawn; the rival line has
-  barricades to fight from. Mirrored left–right, so neither flank is the better route.
-- **A pocket of its own:** the real streets round Boulevard Park are too tight for a field this
-  size (it has mosques on three sides, and those are never fought near). So each field is built
-  in a band below the town, with a copy of the outpost's landmark and stalls, and the stage moves
-  the outpost there while it is played. The town keeps its outpost where it really is. The build
-  stops with an error if a field would ever reach a place of worship or a cemetery.
+- **Layout:** the long axis runs up the screen (portrait-first). Three lanes, cover between them
+  (something in the middle lane, so nobody throws spawn to spawn), a wall or barricade shielding
+  the home spawn, cover on the rival line to fight from. Mirrored left–right, so neither flank is
+  the better route. The test checks every field: the fence closes it, both teams can walk from
+  their end to the outpost, and the spots the waves use are open.
+- **Six fields, apart:** the fields sit side by side in the world file with nothing between them;
+  a stage builds and shows only its own field and frame.
 - **Rival team AI:** the defenders hold their line in front of the outpost and come out to meet
   anyone within 11 m of it; the snowmen walk out to the middle of the field.
 - **Camera:** on a battlefield the camera pulls back 10% and looks a little ahead, up the field;
@@ -85,15 +88,14 @@ Park is the first; the other outposts follow.
    - **Crashes:** a crash costs a life and drops 3 snowflakes.
    - **First ride:** the first ride says "JUMP!" or "DUCK!" before each new kind of obstacle.
 3. **Stand at the outpost** (since the play-test: a fight comes first)
-   - **The fight yard:** every outpost has an open wedge of snow on its most open side, with two
-     low snow walls for cover (`tools/build-world.mjs`, step 9). The team arrives at its far end.
-   - **The opening fight:** the first wave walks into the yard and the team fights it there. When it is (nearly)
-     cleared, after at least 6 s, or after 14 s at most, "SEIZE IT!": walk into the glowing circle (or tap ▶ Seize; after 8 s the kid walks in) and the
-     station opens.
+   - **The field:** the team arrives at the south end; the rival team holds the north end, in front
+     of the outpost.
+   - **The opening fight:** beat the rival team (see Battlefields above). Then "SEIZE IT!": run up
+     to the glowing circle (or tap ▶ Seize; after 8 s the kid walks in) and the station opens.
    - **Controls:** move with the stick on the left; tap a rival to throw at it, tap your own kid
      to throw at the nearest rival, or use the throw button (tap = nearest, drag = aim). (`stagerun.js`, `waves.mjs`).
-   - **Arrival:** the team skids into the circle and the task card opens. A ring of snowbanks
-     closes the stage, and the waves walk in from up to three entry points.
+   - **Arrival:** snowbanks close the field all round. Later waves come round the outpost from
+     the rivals' camp behind it.
    - **Waves:**
      - Wave 1 comes on arrival.
      - Wave 2 comes after three answers, once wave 1 is nearly cleared (or after 30 s).
@@ -109,9 +111,10 @@ Park is the first; the other outposts follow.
 ## The Schoolyard Showdown (stage 6)
 
 1. **The ride home** to Our School (spelling letters on the way).
-2. **The schoolyard circle:** the most open spot near Our School (`schoolyardSpot` in `waves.mjs`),
-   closed by snowbanks like the outposts. Five banner poles stand behind it, one per outpost won,
-   and the school bell hangs on its frame.
+2. **The schoolyard field:** the rivals have taken the schoolyard. Our School stands at the north
+   end behind the circle; the team arrives at the south end and has to beat the rival team first,
+   like at the outposts. Five banner poles stand behind the circle, one per outpost won, and the
+   school bell hangs on its frame.
 3. **Raise the banners:** one mixed task card takes about two items from each family in turn:
    Boulevard (answer), Archery (sorting), Kızılay (matching), Sururi (builder), Waterfront
    (listening). Each family done raises its banner, and the banner fires a volley at the rivals.
@@ -157,13 +160,12 @@ celebration, results). Arena 1 comes to about **11.9 minutes** for every Grade 5
 | Showdown | 24 s | 98 s (12) | 31 s | 2:33 |
 
 After the first play-test the rides became 45 s and wind (curves, banked turns, gentle hills), and
-every stand opens with a fight in the outpost's fight yard (about 10 s, plus about 3 s to walk
-into the circle); a battlefield adds about 11 s (the run up the field and a whole rival team).
-That brings Arena 1 to about **14.1 minutes**, over the brief's 10–12; the
+every stand opens with a fight. Since the second play-test that fight is on a full field against
+the whole rival team (about 21 s: the run up the field and the fight, plus about 3 s to walk into
+the circle). That brings Arena 1 to about **15 minutes**, over the brief's 10–12; the
 class play-test should decide what to trim. The table above is from before these changes. The test checks 10
 seeds. Real play with students should confirm the per-item seconds.
 
 **Test links:**
-- `?free` brings back the free-roaming world.
 - `?family=` changes the task type at every outpost.
 - `?pace=challenge` turns on the timer.

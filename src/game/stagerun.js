@@ -86,7 +86,6 @@ export class StageRunner {
   arrive() {
     const st = this.cur, sim = this.sim, z = st.final ? this.schoolyard() : sim.zones.find(q => q.id === st.outpost), grid = this.match.grid;
     this.save.snowflakes = (this.save.snowflakes || 0) + this.runFlakes; this.writeSave(this.save);
-    if (z.battlefield && z.stage && !z.town) { z.town = { x: z.x, z: z.z }; z.x = z.stage.x; z.z = z.stage.z; } // a battlefield is played in its own pocket of the map
     this.ui.rebuildWorld?.(z); // v2 look: build only this stage's area
     this.mode = 'outpost'; document.body.classList.remove('sledding'); $('#runhud').hidden = true; $('#hud').hidden = false;
     this.zone = z; this.tStand = 0; this.waveIdx = 0; this.waves = []; this.finalT = null;
@@ -128,11 +127,11 @@ export class StageRunner {
     this.ui.snapCamera?.();
     this.flow.setStage(z); this.drawLives();
     this.ui.banner(st.title.toUpperCase(), 'go', 1.6);
-    if (st.final) { this.bannersUp = 0; this.giant = null; this.ui.showdown?.start(z, BANNERS); this.ui.coach('Home at last! The rivals want Our School. Raise all five banners with English, then roll the giant snowball!', 6); }
+    if (st.final) { this.bannersUp = 0; this.giant = null; this.ui.showdown?.start(z, BANNERS); this.ui.coach(z.battlefield ? 'Home at last! The rivals have taken the schoolyard. Beat them, raise all five banners with English, then roll the giant snowball!' : 'Home at last! The rivals want Our School. Raise all five banners with English, then roll the giant snowball!', 6); }
     if (st.newRival && RIVAL_INFO[st.newRival]) this.newRival(st.newRival);
     // first a fight: clear the first wave of snowmen, then seize the outpost with English
     this.phase = 'fight'; this.tFight = 0; this.flow.stageHold = true;
-    if (z.battlefield) { this.ui.markRival?.(z); setTimeout(() => { if (this.phase === 'fight') this.ui.coach(`The rival team holds ${z.label}! Beat them in a snowball fight, then seize it with English.`, 6); }, 1700); }
+    if (z.battlefield && !st.final) { this.ui.markRival?.(z); setTimeout(() => { if (this.phase === 'fight') this.ui.coach(`The rival team holds ${z.label}! Beat them in a snowball fight, then seize it with English.`, 6); }, 1700); }
     if (!this.toldTap) { this.toldTap = true; setTimeout(() => { if (this.phase === 'fight') this.ui.coach('Snowmen! Tap a rival to throw a snowball at it, or tap yourself to throw at the nearest one.', 6); }, 1800); }
   }
   // A battlefield (a 22 × 34 field with the rivals' outpost at the north end): the team starts
@@ -201,14 +200,13 @@ export class StageRunner {
     for (const c of this.sim.chars) if (c.side === 'rival') this.bench(c);
     this.sim.balls = [];
     if (lost && z && z.owner !== 'home') { z.owner = null; z.progress = 0; z.seizing = false; }
-    if (z?.town) { z.x = z.town.x; z.z = z.town.z; z.town = null; } // back where it really is in the town
     if (this.yard) { const i = this.sim.zones.indexOf(this.yard); if (i >= 0) this.sim.zones.splice(i, 1); this.ui.showdown?.stop(); clearTimeout(this.giantT); this.giant = null; }
     this.zone = null;
   }
   // ---------- the Schoolyard Showdown ----------
   // The circle in the schoolyard, in the sim's zones only while the Showdown is on.
   schoolyard() {
-    if (!this.yard) { const spot = schoolyardSpot(this.match.grid, this.match.base); this.yard = { id: 'schoolyard', label: 'Our School', family: 'mixed', showdown: true, x: spot.x, z: spot.z, r: spot.r }; }
+    if (!this.yard) { const f = this.match.arena?.schoolyard, spot = f || schoolyardSpot(this.match.grid, this.match.base); this.yard = { id: 'schoolyard', label: 'Our School', family: 'mixed', showdown: true, x: spot.x, z: spot.z, r: spot.r, battlefield: f?.battlefield || null }; }
     Object.assign(this.yard, { progress: 0, owner: null, home: 0, rival: 0, seizing: false, contested: false });
     if (!this.sim.zones.includes(this.yard)) this.sim.zones.push(this.yard);
     return this.yard;

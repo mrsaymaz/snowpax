@@ -45,7 +45,7 @@ export function createMatch({ arena, myTeam, rivalTeam, pace = 'relaxed', rng = 
   for (const [id, b] of bots) bots.set(id, new Bot(sim, b.c, { style: CONFIG.teams[b.seat.team]?.style, leader: b.seat.side === 'home' ? player : null, rng }));
 
   return {
-    sim, grid, nav, bots, player, seats, base, rivalBase: rv,
+    arena, sim, grid, nav, bots, player, seats, base, rivalBase: rv,
     // a rival snowman joins the fight, walking toward `goal` (an outpost)
     addMinion(type, x, z, goal) {
       const c = sim.spawnMinion(type, x, z, rivalTeam);

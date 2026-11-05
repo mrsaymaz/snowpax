@@ -12,9 +12,19 @@ const world = () => createMatch({ arena: buildTileArena(def), myTeam: 'hufflepuf
 const run = (m, sec, inputs = () => ({})) => { const ev = []; for (let t = 0; t < sec; t += 0.05) { m.sim.step(0.05, new Map([['p1', inputs()]])); ev.push(...m.sim.drainEvents()); } return ev; };
 const park = m => { for (const c of m.sim.chars) if (c !== m.player) { c.x = m.base.x; c.z = m.base.z; c.frozen = 999; } }; // keep the bots out of the way
 
-test('three sled runs start on hills; the ground rises on a hill and is flat elsewhere', () => {
-  const a = buildTileArena(def);
-  assert.equal(a.sledRuns.length, 3);
+// Sled runs and hills are engine features; the stage fields are flat, so they are checked on a
+// small slope made for the test: a hill in the north-west, one run straight down its south side.
+const SLOPE = {
+  id: 'slope', name: 'Test slope', kind: 'tiles', world: true,
+  rows: Array.from({ length: 40 }, (_, j) => Array.from({ length: 40 }, (_, i) => (i === 4 && j === 36 ? 'h' : i === 36 && j === 3 ? 'r' : '.')).join('')),
+  outposts: [], hills: [{ i: 10, j: 8, r: 7, h: 3 }],
+  sledRuns: [{ id: 'test-run', label: 'Test run', pts: [[10, 8], [10, 18], [11, 30]], len: 22 }],
+};
+const slope = () => createMatch({ arena: buildTileArena(SLOPE), myTeam: 'hufflepuff', rivalTeam: 'gryffindor', pace: 'relaxed', rng: makeRng(3) });
+
+test('a sled run starts on a hill; the ground rises on a hill and is flat elsewhere', () => {
+  const a = buildTileArena(SLOPE);
+  assert.equal(a.sledRuns.length, 1);
   const ground = makeGround(a.hills);
   for (const r of a.sledRuns) {
     const [x, z] = r.pts[0], [ex, ez] = r.pts[r.pts.length - 1];
@@ -25,7 +35,7 @@ test('three sled runs start on hills; the ground rises on a hill and is flat els
 });
 
 test('a kid on the start pad heading downhill rides the whole run, fast, then gets off', () => {
-  const m = world(); park(m); const P = m.player, r = m.sim.runs[0];
+  const m = slope(); park(m); const P = m.player, r = m.sim.runs[0];
   P.x = r.pts[0][0]; P.z = r.pts[0][1]; P.padT = 1;
   const ev = run(m, 12);
   assert.ok(ev.some(e => e.type === 'sledStart' && e.id === P.id));
@@ -37,7 +47,7 @@ test('a kid on the start pad heading downhill rides the whole run, fast, then ge
 });
 
 test('getting frozen on a sled knocks you off', () => {
-  const m = world(); park(m); const P = m.player, r = m.sim.runs[0];
+  const m = slope(); park(m); const P = m.player, r = m.sim.runs[0];
   P.x = r.pts[0][0]; P.z = r.pts[0][1]; P.padT = 1; run(m, 0.3);
   assert.ok(P.sled);
   P.warmth = 1; m.sim.hit(P, { dmg: 10, owner: -1, kind: 'straight', vx: 1, vz: 0, x: P.x, z: P.z });
@@ -45,7 +55,7 @@ test('getting frozen on a sled knocks you off', () => {
 });
 
 test('far journeys can ride a sled run: the path goes to the start pad, then the bottom', () => {
-  const m = world(), r = m.sim.runs.find(x => x.id === 'boulevard-run');
+  const m = slope(), r = m.sim.runs[0];
   const from = [r.pts[0][0] + 3, r.pts[0][1] - 3], to = r.pts.at(-1);
   const path = m.nav.path(from[0], from[1], to[0] + 1, to[1] + 1);
   assert.ok(path && path.sled, 'the path uses the sled');

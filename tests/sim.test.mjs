@@ -188,11 +188,3 @@ test('any seat can be a remote player without a bot (ready for multiplayer later
   assert.notEqual(r.x, x0);
 });
 
-test('the street arena from M1 still loads and routes (kept for reference)', () => {
-  const street = JSON.parse(readFileSync(new URL('../public/arenas/arena1-block.json', import.meta.url), 'utf8'));
-  const g = new Grid(street), nav = new Nav(street, g);
-  const base = street.places.find(p => p.kind === 'base'), park = street.places.find(p => p.id === 'boulevard-park');
-  assert.ok(nav.path(base.x, base.z, park.x, park.z));
-  const text = JSON.stringify({ ...street, grid: '' });
-  for (const name of ['İmam Hatip', 'Camii', 'Mezarlığı']) assert.ok(!text.includes(name));
-});

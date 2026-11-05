@@ -2,94 +2,68 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { buildTileArena } from '../src/game/tilemap.mjs';
-import { createMatch } from '../src/game/match.mjs';
-import { makeRng } from '../src/tasks/subtasks.mjs';
 
+// Arena 1 is six purpose-built stage fields (no real map, no real streets), each framed by the
+// look of the neighbourhood: a cobbled lane, snowed-in houses, buried roofs, lamps, trees, stalls.
 const def = JSON.parse(readFileSync(new URL('../public/arenas/arena1.json', import.meta.url), 'utf8'));
-const OUTPOSTS = { boulevard: 'answer', archery: 'sort', kizilay: 'match', waterfront: 'listen', sururi: 'build' };
+const OUTPOSTS = { boulevard: 'answer', archery: 'sort', kizilay: 'match', sururi: 'build', waterfront: 'listen' };
+const fields = () => [...def.outposts.map(o => ({ id: o.id, i: o.i, j: o.j, ...o.arena })), { id: 'schoolyard', i: def.schoolyard.i, j: def.schoolyard.j, ...def.schoolyard.arena }];
+const at = (f, d, v) => def.rows[f.j + d][f.i + v].replace(/[hr]/, 'a'); // the home spawn and rival camp marks are open snow; d rows south of the outpost centre, v columns east (cells d and v start at the centre's corner)
 
-test('Arena 1 world: five outposts (one per task family), Our School and the rivals\' camp', () => {
+test('Arena 1: five outposts (one per task family), Our School and the rivals\' camp; no real map', () => {
   const a = buildTileArena(def);
   assert.equal(a.world, true);
-  const zones = a.places.filter(p => p.kind === 'zone');
-  assert.deepEqual(Object.fromEntries(zones.map(z => [z.id, z.family])), OUTPOSTS);
+  assert.deepEqual(Object.fromEntries(a.places.filter(p => p.kind === 'zone').map(z => [z.id, z.family])), OUTPOSTS);
   assert.ok(a.places.find(p => p.kind === 'base' && p.label === 'Our School'));
   assert.ok(a.places.find(p => p.kind === 'rivalBase'));
-  assert.equal(def.credit, '© OpenStreetMap contributors');
+  assert.ok(a.schoolyard && a.schoolyard.battlefield, 'the Showdown has its field');
+  assert.equal(def.credit, undefined, 'no map data, so no map credit');
+  assert.equal(def.sledRuns.length + def.hills.length + def.signposts.length + def.scenery.length, 0);
 });
 
-test('every outpost has its landmark next to it', () => {
-  for (const o of def.outposts) {
-    const lm = def.landmarks.find(l => l.type === o.landmark && l.outpost === o.id);
-    assert.ok(lm, `${o.id} has a ${o.landmark}`);
+test('six fields of 22 × 34 (the schoolyard 37, Our School behind its circle), mirrored left–right, with open ground and some cover', () => {
+  const fs = fields(); assert.equal(fs.length, 6);
+  for (const f of fs) {
+    assert.equal(f.hw * 2, 22); assert.equal(f.front, 28); assert.ok(f.back === 6 || (f.id === 'schoolyard' && f.back === 9));
+    for (let d = -f.back; d < f.front; d++) for (let v = 0; v < f.hw; v++) assert.equal(at(f, d, v), at(f, d, -1 - v), `${f.id}: mirrored at ${d},${v}`);
+    for (const d of [f.front - 2, f.front - 3, 11]) assert.ok([...def.rows[f.j + d].slice(f.i - f.hw, f.i + f.hw)].filter(c => c === 'a').length >= 14, `${f.id}: row ${d} is open`);
+    const cells = []; for (let d = -f.back; d < f.front; d++) for (let v = -f.hw; v < f.hw; v++) cells.push(at(f, d, v));
+    const cover = cells.filter(c => '#wzBnb'.includes(c)).length / cells.length;
+    assert.ok(cover > 0.06 && cover < 0.3, `${f.id}: cover ${cover.toFixed(2)}`);
   }
+  // each field has its own layout
+  const sig = fs.map(f => { let s = ''; for (let d = 0; d < f.front; d++) for (let v = 0; v < f.hw; v++) s += at(f, d, v); return s; });
+  assert.equal(new Set(sig).size, 6);
 });
 
-test('every outpost and the rivals\' camp can be walked to from Our School', () => {
-  const m = createMatch({ arena: buildTileArena(def), myTeam: 'hufflepuff', rivalTeam: 'gryffindor', pace: 'relaxed', rng: makeRng(1) });
-  const home = m.base;
-  for (const p of m.sim.zones.concat([m.rivalBase])) {
-    const path = m.nav.path(home.x, home.z, p.x, p.z + 4);
-    assert.ok(path && path.length, `path to ${p.id || 'rival camp'}`);
-  }
-});
-
-test('the town is mostly under the snow: open snow and paths, only a few houses and roofs showing', () => {
-  const cells = def.rows.slice(0, def.town?.h ?? def.h).join(''); // the town (the battlefield pockets below it are not town)
-  const count = s => [...cells].filter(c => s.includes(c)).length;
-  const land = cells.length - count('W');
-  assert.ok(count('H') < 200, `visible house cells: ${count('H')}`);
-  assert.ok(count('R') < 300, `buried roofs: ${count('R')}`);
-  assert.ok(count('._=+dcqusBPa') / land > 0.75, 'open snow, paths and squares cover most of the land');
-});
-
-test('places of worship and the cemetery are quiet scenery: no outpost near them', () => {
-  const a = buildTileArena(def);
-  for (const z of a.places.filter(p => p.kind === 'zone')) {
-    const i = Math.floor(z.x - a.x0), j = Math.floor(z.z - a.z0);
-    for (let dj = -3; dj <= 3; dj++) for (let di = -3; di <= 3; di++) assert.ok(!'QCq+'.includes(def.rows[j + dj]?.[i + di] ?? '.'), `${z.id} is clear of quiet zones`);
-  }
-});
-
-test('street lamps line the paths, a simit cart stands at Kızılay Square, the pier reaches the ice', () => {
-  const cells = def.rows.join('');
-  const lamps = [...cells].filter(c => c === 'l').length;
-  assert.ok(lamps >= 30 && lamps <= 120, `street lamps: ${lamps}`);
-  assert.ok(def.landmarks.find(l => l.type === 'simit-cart' && l.outpost === 'kizilay'));
-  const pier = def.landmarks.find(l => l.type === 'pier');
-  const at = (i, j) => def.rows[j]?.[i] ?? 'X';
-  let touchesPlaza = false, overIce = false;
-  for (let j = pier.j - 1; j <= pier.j + pier.h; j++) for (let i = pier.i - 1; i <= pier.i + pier.w; i++) { if (at(i, j) === 'P') touchesPlaza = true; if (at(i, j) === 'W') overIce = true; }
-  assert.ok(touchesPlaza && overIce, 'the pier runs from the plaza out over the frozen sea');
-});
-
-test('each outpost is its landmark: a solid 4×4 centrepiece in a round plaza; fingerposts point the way', () => {
+test('each outpost is its landmark: a solid 4×4 centrepiece in a round plaza, at the north end of its field', () => {
   for (const o of def.outposts) {
     for (let j = o.j - 2; j < o.j + 2; j++) for (let i = o.i - 2; i < o.i + 2; i++) assert.equal(def.rows[j][i], 'O', `${o.id} core`);
     assert.ok(def.landmarks.find(l => l.outpost === o.id && l.centre && l.type === o.landmark));
+    assert.equal(def.rows[o.j + 3][o.i], 'P', `${o.id}: plaza`);
+    assert.ok(o.arena.back < o.arena.front / 3, `${o.id}: the outpost is at the rivals' end`);
   }
-  assert.ok(def.signposts.length >= 8);
-  for (const sp of def.signposts) { assert.equal(def.rows[sp.j][sp.i], 'k'); assert.ok(sp.arrows.length >= 1 && sp.arrows.every(a => typeof a.label === 'string' && Number.isFinite(a.ang))); }
-  const trees = [...def.rows.join('')].filter(c => 'tTvyx'.includes(c)).length;
-  assert.ok(trees > 100, `trees: ${trees}`);
+  assert.ok(def.rows[def.schoolyard.j - 7].includes('S'), 'Our School behind the Showdown circle');
 });
 
-test('battlefields: a 22 × 34 field in its own pocket, the rivals\' outpost at the north end, the home spawn at the south end, mirrored left–right', () => {
-  const ops = def.outposts.filter(o => o.arena);
-  assert.ok(ops.length >= 1);
-  for (const o of ops) {
-    const { back, front, hw } = o.arena, { i: pi, j: pj } = o.stage;
-    assert.equal(hw * 2, 22); assert.equal(back + front, 34);
-    assert.ok(pj - back >= def.town.h, `${o.id}: the pocket is below the town`);
-    const at = (d, v) => def.rows[pj + d][pi + v];
-    for (let d = -back; d < front; d++) for (let v = 0; v < hw; v++) assert.equal(at(d, v), at(d, -1 - v), `${o.id}: mirrored at ${d},${v}`);
-    assert.equal(at(-1, -1), 'O', `${o.id}: the outpost core at the centre`);
-    assert.ok(def.landmarks.some(l => l.stage === o.id && l.centre), `${o.id}: the landmark is copied into the pocket`);
-    // open ground: the spawn rows and a row of the middle are free across most of the width
-    for (const d of [front - 2, front - 3, 11]) assert.ok([...def.rows[pj + d].slice(pi - hw, pi + hw)].filter(c => c === 'a').length >= 16, `${o.id}: row ${d} is open`);
-    const cells = []; for (let d = -back; d < front; d++) for (let v = -hw; v < hw; v++) cells.push(at(d, v));
-    const cover = cells.filter(c => '#wzB'.includes(c)).length / cells.length;
-    assert.ok(cover > 0.08 && cover < 0.3, `${o.id}: cover ${cover.toFixed(2)}`);
-    for (const c of cells) assert.ok(!'QqCM'.includes(c), 'no place of worship or cemetery in a field');
+test('the neighbourhood round each field: a lane with lamps, snowed-in houses, buried roofs and trees; stalls behind the home spawn; the frozen sea by the waterfront', () => {
+  for (const f of fields()) {
+    const lane = at(f, -f.back - 3, 0), side = at(f, 5, f.hw + 2);
+    assert.ok('_l'.includes(lane) || f.id === 'waterfront', `${f.id}: a lane along the north`);
+    assert.ok('_l'.includes(side), `${f.id}: a lane along the side`);
+    assert.ok(['H', '.', 'T', 'v', 'y', 'x'].includes(at(f, 5, f.hw + 3)));
+    let houses = 0, roofs = 0, lamps = 0;
+    for (let d = -f.back - 7; d < f.front + 7; d++) for (let v = -f.hw - 7; v < f.hw + 7; v++) { const c = at(f, d, v); if (c === 'H') houses++; if (c === 'R') roofs++; if (c === 'l') lamps++; }
+    assert.ok(houses > 60 && roofs > 30 && lamps >= 12, `${f.id}: houses ${houses}, roofs ${roofs}, lamps ${lamps}`);
+    assert.ok(def.landmarks.filter(l => l.type === 'stall' && l.outpost === f.id).every(l => l.j > f.j + f.front), `${f.id}: stalls on the south lane`);
+  }
+  const wf = def.outposts.find(o => o.id === 'waterfront');
+  assert.equal(def.rows[wf.j - wf.arena.back - 5][wf.i], 'W', 'the frozen Golden Horn north of the waterfront');
+  assert.ok(def.landmarks.some(l => l.type === 'ferry') && def.landmarks.some(l => l.type === 'pier'));
+});
+
+test('nothing reaches a field from outside: the fields are apart, with nothing between them', () => {
+  for (const f of fields()) {
+    for (let d = -f.back - 7; d < f.front + 7; d++) for (const v of [-f.hw - 8, f.hw + 7]) assert.equal(at(f, d, v), '~', `${f.id}: a gap at ${d},${v}`);
   }
 });

@@ -114,22 +114,20 @@ async function startGame(myTeam, kit, pace) {
   Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 60 }); sun.shadow.bias = -0.0006; scene.add(sun, sun.target);
 
   // the bold look (cartoon shading, outlines, glow, a build of only the stage area) is the default;
-  // ?look=v1 brings back the old diorama look, and ?free the free-roaming world
-  const V2 = params.get('look') !== 'v1' && arena.world && !params.has('free');
+  // ?look=v1 brings back the old diorama look
+  const V2 = params.get('look') !== 'v1' && arena.world;
   // each stage at its own time of day; dusk = how far the lamps and windows are lit
   const STAGE_LIGHT = { boulevard: ['morning', 0], archery: ['noon', 0], kizilay: ['afternoon', 0.1], sururi: ['golden', 0.35], waterfront: ['sunset', 0.7], schoolyard: ['evening', 1] };
   let stageLight = STAGE_LIGHT.boulevard;
-  // what a stage build shows: a circle round the outpost, or a battlefield's rectangle and its cleared band
+  // what a stage build shows: a circle round the outpost, or a battlefield's field and the street frame round it
   const fieldBox = (z, pad = 0) => { const b = z.battlefield; return { x0: z.x - b.hw - pad, x1: z.x + b.hw + pad, z0: z.z - b.back - pad, z1: z.z + b.front + pad }; };
-  const stageClip = z => (z.battlefield ? { x: z.x, z: z.z, r: 40, rect: fieldBox(z, 3) } : { x: z.x, z: z.z, r: 16.5 });
+  const stageClip = z => (z.battlefield ? { x: z.x, z: z.z, r: 40, rect: fieldBox(z, 7) } : { x: z.x, z: z.z, r: 16.5 });
   const stageBackdrop = z => {
     if (!z.battlefield) return buildBackdrop(z.x, z.z, { rIn: 17, seed: z.id.length * 7 });
-    const b = fieldBox(z, 2.5), cz = (b.z0 + b.z1) / 2;
-    // nothing right behind the south fence, where it would stand between the camera and the team
-    return buildBackdrop(z.x, cz, { rIn: z.battlefield.hw + 2, rOut: 46, seed: z.id.length * 7, avoid: (x, zz) => x > b.x0 && x < b.x1 && zz > b.z0 && zz < b.z1 + 9 });
+    const b = fieldBox(z, 7.5), cz = (b.z0 + b.z1) / 2;
+    // beyond the street frame; nothing just south of it, where it would stand between the camera and the team
+    return buildBackdrop(z.x, cz, { rIn: z.battlefield.hw + 7, rOut: 50, seed: z.id.length * 7, avoid: (x, zz) => x > b.x0 && x < b.x1 && zz > b.z0 && zz < b.z1 + 9 });
   };
-  // a battlefield is played in a pocket of the map: the outpost's place moves there with it
-  const arenaFor = z => (z.town ? { ...arena, places: arena.places.map(p => (p.kind === 'zone' && p.id === z.id ? { ...p, x: z.x, z: z.z } : p)) } : arena);
   const firstZone = sim.zones.find(q => q.id === 'boulevard') || sim.zones[0];
   let world = buildVillage(arena, { rivalTeam, homeTeam: myTeam, quality: LEVELS[level].name, look: V2 ? 'v2' : 'v1', clip: V2 ? stageClip(firstZone) : null }); scene.add(world.group);
   let life = arena.world ? new WorldLife(scene, world.life, { low: LEVELS[level].name === 'low', ground: groundH, pickups: sim.pickups }) : null;
@@ -138,7 +136,7 @@ async function startGame(myTeam, kit, pace) {
   const rebuildWorld = z => {
     if (!V2) return;
     scene.remove(world.group); world.group.traverse(o => { if (o.geometry) o.geometry.dispose(); });
-    world = buildVillage(arenaFor(z), { rivalTeam, homeTeam: myTeam, quality: LEVELS[level].name, look: 'v2', clip: stageClip(z) }); scene.add(world.group);
+    world = buildVillage(arena, { rivalTeam, homeTeam: myTeam, quality: LEVELS[level].name, look: 'v2', clip: stageClip(z) }); scene.add(world.group);
     if (life) scene.remove(life.g); life = new WorldLife(scene, world.life, { low: LEVELS[level].name === 'low', ground: groundH, pickups: sim.pickups });
     if (backdrop) scene.remove(backdrop); backdrop = stageBackdrop(z); scene.add(backdrop);
     for (const zz of sim.zones) { if (zz.owner === 'home') world.setOwner(zz.id, myCol); delete zoneKeys[zz.id]; }
@@ -204,7 +202,7 @@ async function startGame(myTeam, kit, pace) {
       return null;
     },
   });
-  $('#hud').hidden = !!(arena.world && !params.has('free'));
+  $('#hud').hidden = !!arena.world;
   $('#zone-bar .home').style.background = myCol; $('#zone-bar .rival').style.background = rivCol;
   $('#score .home').innerHTML = emblemSVG(myTeam, 22); $('#score .rival').innerHTML = emblemSVG(rivalTeam, 22);
   $('#super').style.setProperty('--c', '#ffd23f');
@@ -219,10 +217,10 @@ async function startGame(myTeam, kit, pace) {
     sim, player, unit, unitProgress, save, writeSave, pace, rng, root: $('#taskcard'), familyOverride: params.get('family'), world: worldTasks, worldColor: myCol,
     ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play, fx, fireworks: z => { if (reduceMotion) return; for (const col of [myCol, '#ffffff', '#ffd166', '#7cc4f0']) fx.emit(z.x, 3.5, z.z, 40, col, 6, 1.4, 1.2); } },
   }) : null;
-  // Arena 1 plays as stages (?free for the old free-roaming world)
+  // Arena 1 plays as stages
   const showdownView = new ShowdownView(scene, { color: myCol, dark: CONFIG.teams[myTeam].dark, groundY: (x, z) => groundH(x, z), reduceMotion });
   const fireworks = z => { if (reduceMotion) return; for (const col of [myCol, '#ffffff', '#ffd166', '#7cc4f0']) fx.emit(z.x, 3.5, z.z, 40, col, 6, 1.4, 1.2); };
-  stages = flow && !params.has('free') ? new StageRunner({
+  stages = flow ? new StageRunner({
     match, flow, unit, unitProgress, save, writeSave, pace, rng, team: myTeam, kit, reduceMotion,
     ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play,
       snapCamera: () => { focus.set(player.x, 0, player.z - 1.2); camShift = 0; },

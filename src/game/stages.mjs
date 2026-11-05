@@ -10,7 +10,7 @@ export const LIVES = 3;
 // ride: the themed sled track; spell: the run has letters to spell a word (practice only).
 // newRival: the rival type this stage introduces ("New rivals!" card).
 export const STAGES = [
-  { id: 'boulevard', outpost: 'boulevard', family: 'answer', title: 'Boulevard Park', ride: { theme: 'boulevard', seconds: 45, spell: false }, newRival: 'waddler', field: true }, // field: a full battlefield (beat the rival team first)
+  { id: 'boulevard', outpost: 'boulevard', family: 'answer', title: 'Boulevard Park', ride: { theme: 'boulevard', seconds: 45, spell: false }, newRival: 'waddler' },
   { id: 'archery', outpost: 'archery', family: 'sort', title: 'Archery Ground', ride: { theme: 'archery', seconds: 45, spell: true }, newRival: 'shield' },
   { id: 'kizilay', outpost: 'kizilay', family: 'match', title: 'Kızılay Square', ride: { theme: 'kizilay', seconds: 45, spell: false }, newRival: 'sledder' },
   { id: 'sururi', outpost: 'sururi', family: 'build', title: 'Sururi Park', ride: { theme: 'sururi', seconds: 45, spell: true }, newRival: 'lobber' },

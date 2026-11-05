@@ -11,10 +11,9 @@ import { makeRng } from '../src/tasks/subtasks.mjs';
 
 const def = JSON.parse(readFileSync(new URL('../public/arenas/arena1.json', import.meta.url), 'utf8'));
 
-test('Arena 1 stages go from the nearest outpost to the furthest, then home for the Showdown', () => {
-  const home = def.home, dist = id => { const o = def.outposts.find(q => q.id === id); return Math.hypot(o.i - home[0], o.j - home[1]); };
+test('Arena 1 stages: the five outposts, one per task family, then home for the Showdown', () => {
   const outs = STAGES.filter(s => s.outpost).map(s => s.outpost);
-  assert.deepEqual(outs.slice().sort((a, b) => dist(a) - dist(b)), outs);
+  assert.deepEqual(outs.slice().sort(), def.outposts.map(o => o.id).sort());
   assert.equal(STAGES.at(-1).id, 'showdown'); assert.ok(STAGES.at(-1).final);
   for (const s of STAGES.filter(q => q.outpost)) assert.equal(s.family, def.outposts.find(o => o.id === s.outpost).family);
 });
@@ -33,13 +32,14 @@ test('stages unlock one by one; stars come from first-try accuracy and the best 
 });
 
 // The brief asked for 10–12 minutes. After the first play-test the rides became 45 s (asked for:
-// longer, winding rides) and every stand opens with a fight, so the arena now plans at about 14
-// minutes; this checks it stays under 14.5 until the class play-test settles it.
-test('three lives; the whole arena, timed from the real tasks it deals, stays under 14.5 minutes', async () => {
+// longer, winding rides), and after the second every stage opens with a real fight on a full
+// field (asked for: room for a real snow fight), so the arena now plans at about 15 minutes; this
+// checks it stays under 15.5 until the class play-test settles it.
+test('three lives; the whole arena, timed from the real tasks it deals, stays under 15.5 minutes', async () => {
   const l = new Lives(); assert.equal(l.left, 3); l.lose(); l.lose(); assert.ok(!l.out); l.lose(); assert.ok(l.out); l.reset(); assert.equal(l.left, 3);
   const { arenaTime } = await import('../src/game/timing.mjs');
   const unit = JSON.parse(readFileSync(new URL('../content/grade5.json', import.meta.url), 'utf8')).units.find(u => u.id === 'g5u1');
-  for (let seed = 1; seed <= 10; seed++) { const r = arenaTime(unit, { rng: makeRng(seed) }); assert.ok(r.minutes >= 10 && r.minutes <= 14.5, `seed ${seed}: ${r.minutes.toFixed(1)} min ${JSON.stringify(r.parts)}`); }
+  for (let seed = 1; seed <= 10; seed++) { const r = arenaTime(unit, { rng: makeRng(seed) }); assert.ok(r.minutes >= 10 && r.minutes <= 15.5, `seed ${seed}: ${r.minutes.toFixed(1)} min ${JSON.stringify(r.parts)}`); }
 });
 
 test('every outpost stage has two waves and a final one; each brings in its new rival type', () => {
@@ -50,31 +50,25 @@ test('every outpost stage has two waves and a final one; each brings in its new 
   }
 });
 
-test('stage walls close a ring round the outpost without blocking the circle; waves enter inside the wall', () => {
+test('every field: the fence closes it all round, both teams can walk from their end to the outpost, the spots the waves use are open', () => {
   const m = createMatch({ arena: buildTileArena(def), myTeam: 'hufflepuff', rivalTeam: 'gryffindor', rng: makeRng(2) });
-  for (const z of m.sim.zones.filter(q => !q.battlefield)) {
-    const cells = stageWall(m.grid, z); assert.ok(cells.length > 20, `${z.id} wall`);
+  const fields = [...m.sim.zones, { id: 'schoolyard', ...m.arena.schoolyard }];
+  assert.equal(fields.length, 6);
+  for (const z of fields) {
+    assert.ok(z.battlefield, `${z.id} is a battlefield`);
+    const { back, front, hw } = z.battlefield;
+    const cells = stageWall(m.grid, z); assert.ok(cells.length > 2 * (front + back + 2 * hw), `${z.id}: a fence all round`);
     setWall(m.grid, cells, true);
-    for (const [, , x, zz] of cells) assert.ok(m.grid.blocked(x, zz));
-    const e = entryPoints(m.grid, z); assert.ok(e.length >= 1);
-    for (const p of e) { assert.ok(Math.hypot(p.x - z.x, p.z - z.z) < 13); const path = m.nav.path(p.x, p.z, z.x, z.z + z.r - 0.3); assert.ok(path, `${z.id}: the wave can walk in`); }
+    for (const [, , x, zz] of cells) { const d = zz - z.z, v = Math.abs(x - z.x); assert.ok(!(d > -back && d < front && v < hw), 'the fence is outside the field'); }
+    const home = { x: z.x, z: z.z + front - 2.5 }, circle = { x: z.x, z: z.z + z.r - 0.3 };
+    for (const o of [0, -1.6, 1.6]) assert.ok(m.grid.freeCircle(home.x + o, home.z, 0.4), `${z.id}: the home spawn is open`);
+    assert.ok(m.nav.path(home.x, home.z, circle.x, circle.z), `${z.id}: the team can walk up the field to the outpost`);
+    for (const [v, d] of [[-8, -3.5], [8, -3.5], [-9.5, 4], [9.5, 4], [-3, 7.5], [0, 8], [3, 7.5]]) {
+      assert.ok(m.grid.freeCircle(z.x + v, z.z + d, 0.45), `${z.id}: ${v},${d} is open`);
+      assert.ok(m.nav.path(z.x + v, z.z + d, circle.x, circle.z), `${z.id}: rivals from ${v},${d}`);
+    }
     setWall(m.grid, cells, false);
-    for (const [, , x, zz] of cells) assert.ok(!m.grid.blocked(x, zz));
   }
-});
-
-test('a battlefield: the outpost moves to its pocket, the fence closes the field, both teams can walk from their end to the outpost', () => {
-  const m = createMatch({ arena: buildTileArena(def), myTeam: 'hufflepuff', rivalTeam: 'gryffindor', rng: makeRng(2) });
-  const z = m.sim.zones.find(q => q.battlefield); assert.ok(z && z.stage, 'Boulevard Park has a battlefield');
-  const { back, front, hw } = z.battlefield; z.x = z.stage.x; z.z = z.stage.z;
-  const cells = stageWall(m.grid, z); assert.ok(cells.length > 2 * (front + back + 2 * hw), 'a fence all round');
-  setWall(m.grid, cells, true);
-  for (const [, , x, zz] of cells) { const d = zz - z.z, v = Math.abs(x - z.x); assert.ok(!(d > -back && d < front && v < hw), 'the fence is outside the field'); }
-  const home = { x: z.x, z: z.z + front - 2.5 }, circle = { x: z.x, z: z.z + z.r - 0.3 };
-  assert.ok(m.grid.freeCircle(home.x, home.z, 0.45), 'the home spawn is open');
-  assert.ok(m.nav.path(home.x, home.z, circle.x, circle.z), 'the team can walk up the field to the outpost');
-  for (const [v, d] of [[-8, -3.5], [8, -3.5], [-9.5, 4], [9.5, 4], [-3, 7.5], [0, 8], [3, 7.5]]) assert.ok(m.nav.path(z.x + v, z.z + d, circle.x, circle.z), `rivals from ${v},${d}`);
-  setWall(m.grid, cells, false);
 });
 
 test('snowmen: spawn, walk toward the outpost, a lid blocks shots from the front, frozen snowmen melt away', () => {
@@ -123,13 +117,12 @@ test('the Showdown: five banners, one per task family, each raised by its share 
   assert.ok(v.done >= 10 && v.done <= 14, `${v.done} items`);
 });
 
-test('the Showdown circle sits in the open near Our School; its waves bring the captain', async () => {
-  const { schoolyardSpot } = await import('../src/game/waves.mjs');
+test('the Showdown field: Our School behind the circle at the north end, the team at the south end; its waves bring the captain', () => {
   const m = createMatch({ arena: buildTileArena(def), myTeam: 'hufflepuff', rivalTeam: 'gryffindor', rng: makeRng(6) });
-  const z = { id: 'schoolyard', ...schoolyardSpot(m.grid, m.base) };
-  assert.ok(Math.hypot(z.x - m.base.x, z.z - m.base.z) <= 12); assert.ok(m.grid.freeCircle(z.x, z.z, z.r));
-  const cells = stageWall(m.grid, z); assert.ok(cells.length > 20); setWall(m.grid, cells, true);
-  for (const p of entryPoints(m.grid, z)) assert.ok(m.nav.path(p.x, p.z, z.x, z.z + z.r - 0.3), 'waves can walk in');
-  setWall(m.grid, cells, false);
+  const z = m.arena.schoolyard; assert.ok(z && z.battlefield);
+  assert.ok(m.grid.freeCircle(z.x, z.z, z.r - 0.4), 'the circle is open (no landmark in it)');
+  const sj = def.rows.findIndex(r => r.includes('S')); assert.ok(sj >= 0, 'Our School is there');
+  assert.ok(m.arena.z0 + sj + 0.5 < z.z - z.r, 'Our School stands north of the circle');
+  assert.ok(Math.abs(m.base.z - (z.z + z.battlefield.front - 2.5)) < 1.5, 'the team starts at the south end');
   const w = WAVES.showdown; assert.equal(w.length, 3); assert.ok(w[1].m.captain === 1 && w[2].final);
 });
