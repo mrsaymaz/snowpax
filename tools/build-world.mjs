@@ -483,6 +483,41 @@ for (const op of outposts) {
   op.yard = best.deg; console.log(`fight yard: ${op.id} at ${best.deg}°, ${cleared} cells cleared`);
 }
 
+// 10. purpose-built battlefields (Brawl-style principles: two spawn sides, a central objective,
+//     three lanes round cover). Inside the stage ring the town is replaced by an arena laid out
+//     from the environment kit: rounded snow walls #, wooden barricades w, crates z, frosted
+//     bushes B (hide in them), ice patches i (slippery), on tinted arena snow a. The layout is
+//     symmetric about the centre, so neither side has the better routes. Home spawns on the fight
+//     yard's side, the rivals opposite.
+const ARENA_R = 12.6, ARENAS = {
+  // pieces for the home half [kind, u0, u1, v0, v1] in metres (u: home -> rival, v: across);
+  // each is mirrored through the centre for the rival half, and across the lane axis
+  boulevard: [
+    ['w', -8.6, -8.0, 2.0, 3.6],           // barricades flanking the spawn exit
+    ['z', -6.4, -5.6, -0.4, 0.4],          // a crate in the middle lane
+    ['#', -6.0, -6.0, 4.4, 7.4], ['#', -5.5, -3.6, 7.2, 7.2], // an L of snow wall on each side lane, one block thick
+    ['B', -3.2, -1.2, 8.0, 9.6],           // bushes on the side routes
+    ['z', -2.2, -1.4, 4.6, 5.4],           // crates at the edge of the plaza
+    ['i', -0.9, 0.9, 7.6, 9.4],            // an ice patch across each side route, in the middle
+    ['w', -10.2, -9.6, -1.2, 1.2],         // a low barricade behind the spawn
+  ],
+};
+for (const op of outposts) {
+  const plan = ARENAS[op.id]; if (!plan) continue;
+  op.yard = Math.round((op.yard ?? 0) / 90) * 90 % 360; // square to the grid, so walls run straight
+  const a = op.yard * Math.PI / 180, ux = Math.round(Math.cos(a)), uz = Math.round(Math.sin(a)), vx = -uz, vz = ux;
+  // clear the ring: everything but the outpost core becomes arena snow; the plaza stays
+  for (let j = Math.floor(op.j - ARENA_R); j <= op.j + ARENA_R; j++) for (let i = Math.floor(op.i - ARENA_R); i <= op.i + ARENA_R; i++) {
+    const d = Math.hypot(i - op.i, j - op.j); if (d > ARENA_R || !inB(i, j) || 'OW'.includes(get(i, j))) continue;
+    g[j][i] = d <= RING_R + 0.4 ? 'P' : 'a';
+  }
+  for (let k = landmarks.length - 1; k >= 0; k--) { const l = landmarks[k]; if (!l.centre && Math.hypot(l.i + (l.w || 1) / 2 - op.i, l.j + (l.h || 1) / 2 - op.j) < ARENA_R) landmarks.splice(k, 1); }
+  for (let k = signposts.length - 1; k >= 0; k--) if (Math.hypot(signposts[k].i - op.i, signposts[k].j - op.j) < ARENA_R) signposts.splice(k, 1);
+  const stamp = (ch, u0, u1, v0, v1) => { for (let u = u0; u <= u1 + 1e-6; u += 0.5) for (let v = v0; v <= v1 + 1e-6; v += 0.5) { const i = Math.round(op.i + u * ux + v * vx), j = Math.round(op.j + u * uz + v * vz); if (inB(i, j) && 'aP'.includes(get(i, j))) g[j][i] = ch; } };
+  for (const [ch, u0, u1, v0, v1] of plan) for (const [su, sv] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) stamp(ch, su > 0 ? u0 : -u1, su > 0 ? u1 : -u0, sv > 0 ? v0 : -v1, sv > 0 ? v1 : -v0);
+  op.arena = true; console.log(`battlefield: ${op.id}, spawn axis ${op.yard}°`);
+}
+
 const rows = g.map(r => r.join(''));
 const out = {
   v: 3, id: 'arena1', name: 'Home Turf', kind: 'tiles', world: true, tile: TILE, w: W, h: H,

@@ -167,9 +167,9 @@ async function startGame(myTeam, kit, pace) {
     // portrait (phones held upright): a wider lens and a little further back, so the narrow screen
     // still shows the fight round you; the extra height shows more of the street ahead
     camera.fov = a < 1 ? 24 + (1 - a) * 37 : 24;
-    zoom = Math.min(1.35, Math.max(1, Math.min(w, h) / 390)) * (a < 1.5 ? 1.12 : 1) * (a < 1 ? 1 + (1 - a) * 0.5 : 1) * (Number(params.get('zoom')) || 1) * (V2 ? 0.86 : 1); // v2: closer, bigger characters
+    zoom = Math.min(1.35, Math.max(1, Math.min(w, h) / 390)) * (a < 1.5 ? 1.12 : 1) * (a < 1 ? 1 + (1 - a) * 0.5 : 1) * (Number(params.get('zoom')) || 1) * (V2 ? 0.78 : 1); // v2: closer, bigger heroes (rivals out of view get edge arrows)
     camera.updateProjectionMatrix(); renderer.setSize(w, h, false); stages?.sled?.resize(w, h); post?.setSize(w, h);
-    const dist = off.length() * zoom; scene.fog.near = base.fogNear = dist * 1.25; scene.fog.far = base.fogFar = dist * 2.9; // haze only beyond the arena
+    const dist = off.length() * zoom; scene.fog.near = base.fogNear = dist * (V2 ? 2.2 : 1.25); scene.fog.far = base.fogFar = dist * (V2 ? 4.6 : 2.9); // v2: only a light haze, the battlefield stays clear // haze only beyond the arena
   }
   const quality = new AutoQuality(level, L => { renderer.setPixelRatio(Math.min(devicePixelRatio || 1, L.maxDpr)); renderer.shadowMap.enabled = L.name !== 'low'; sun.castShadow = L.name !== 'low'; resize(); scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); }, { forced: params.has('quality') ? level : null });
   addEventListener('resize', resize); resize();
@@ -448,6 +448,7 @@ async function startGame(myTeam, kit, pace) {
     camera.lookAt(focus.x, camY, focus.z); camera.updateMatrixWorld();
     sun.position.set(focus.x + sunDir[0], sunDir[1], focus.z + sunDir[2]); sun.target.position.set(focus.x, 0, focus.z - 2); sun.target.updateMatrixWorld();
     world.tick(dt, focus, reduceMotion, camera); showdownView.tick(dt); worldTasks?.tick(rdt);
+    edgeMarks();
     if (arena.world) {
       const k = V2 ? 0 : forcedDusk ?? Math.min(1, sim.t / 300); // the v2 sample: a fixed time of day per stage
       if (Math.abs(k - dayK) > 0.01) { dayK = k; applyDay(k); }
@@ -484,6 +485,22 @@ async function startGame(myTeam, kit, pace) {
     const wts = worldTasks?.session, inStation = wts && now >= wts.showAt; draw(inStation ? wts.scene : scene, inStation ? wts.camera : camera); // a station shows its own set
   }
   requestAnimationFrame(frame);
+  // rivals just out of view: an arrow at the screen edge pointing to each (within 22 m)
+  const edgeLayer = document.createElement('div'); edgeLayer.id = 'edge-marks'; document.body.appendChild(edgeLayer);
+  const marks = Array.from({ length: 6 }, () => { const m = document.createElement('div'); m.className = 'edge-mark'; m.style.setProperty('--c', rivCol); m.hidden = true; edgeLayer.appendChild(m); return m; });
+  const ev = new Vector3();
+  function edgeMarks() {
+    const show = stages ? stages.mode === 'outpost' && !worldTasks?.active : true; let k = 0;
+    if (show) for (const c of sim.enemiesOf(player)) {
+      if (k >= marks.length) break; if (c.gone || Math.hypot(c.x - player.x, c.z - player.z) > 22) continue;
+      ev.set(c.x, groundH(c.x, c.z) + 0.9, c.z).project(camera);
+      const sx = (ev.x + 1) / 2 * innerWidth, sy = (1 - ev.y) / 2 * innerHeight, M = 34, top = 96;
+      if (ev.z < 1 && sx > M && sx < innerWidth - M && sy > top && sy < innerHeight - M) continue; // on screen
+      const cx = innerWidth / 2, cy = innerHeight / 2, dx = sx - cx, dy = sy - cy, f = Math.min(Math.abs((innerWidth / 2 - M) / (dx || 1e-6)), Math.abs((innerHeight / 2 - M - (dy < 0 ? top / 2 : 0)) / (dy || 1e-6)));
+      const m = marks[k++]; m.hidden = false; m.style.transform = `translate(${cx + dx * f}px, ${cy + dy * f}px) translate(-50%, -50%) rotate(${Math.atan2(dy, dx)}rad)`;
+    }
+    for (; k < marks.length; k++) marks[k].hidden = true;
+  }
   const screenOf = c => { const v = new Vector3(c.x, groundH(c.x, c.z) + (c.role === 'minion' ? 0.9 : 1.0), c.z).project(camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight }; };
   globalThis.__snowpax = { match, sim, player, quality, renderer, world, life, flow, stages, scene, snowmen, screenOf };
   if (stages) stages.showMap();

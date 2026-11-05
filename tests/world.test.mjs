@@ -40,7 +40,7 @@ test('the town is mostly under the snow: open snow and paths, only a few houses 
   const land = cells.length - count('W');
   assert.ok(count('H') < 200, `visible house cells: ${count('H')}`);
   assert.ok(count('R') < 300, `buried roofs: ${count('R')}`);
-  assert.ok(count('._=+dcqusBP') / land > 0.75, 'open snow, paths and squares cover most of the land');
+  assert.ok(count('._=+dcqusBPa') / land > 0.75, 'open snow, paths and squares cover most of the land');
 });
 
 test('places of worship and the cemetery are quiet scenery: no outpost near them', () => {

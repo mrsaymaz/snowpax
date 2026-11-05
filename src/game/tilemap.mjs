@@ -2,11 +2,11 @@
 // navigation and renderer use. One tile = one world unit; x = east (columns), z = south (rows).
 import { GRID } from './grid.mjs';
 
-const SOLID = 'HSKMFctLb#nOfQCWGRDlTvyxk'; // tiles you cannot walk through (G = landmark, R = buried roof, D = edge snowbank, l = street lamp, T v y x = trees, k = signpost)
+const SOLID = 'HSKMFctLb#nOfQCWGRDlTvyxkwz'; // + battlefield kit: w barricade, z crate // tiles you cannot walk through (G = landmark, R = buried roof, D = edge snowbank, l = street lamp, T v y x = trees, k = signpost)
 const TALL = 'HSKM';                      // edge buildings
 export const TILE = {
   '.': 'snow', '_': 'street', Y: 'yard', '#': 'wall', b: 'bench', c: 'car', n: 'snowman', t: 'tree', L: 'lamp', F: 'fence',
-  B: 'bush', H: 'house', S: 'school', K: 'fort', M: 'mosque', d: 'drift', i: 'ice', o: 'zone', O: 'outpost', f: 'fire', h: 'home', r: 'rival',
+  B: 'bush', w: 'barricade', z: 'crate', a: 'arena', H: 'house', S: 'school', K: 'fort', M: 'mosque', d: 'drift', i: 'ice', o: 'zone', O: 'outpost', f: 'fire', h: 'home', r: 'rival',
 };
 
 export function buildTileArena(def) {
@@ -45,7 +45,7 @@ export function buildTileArena(def) {
       { id: 'base', kind: 'base', label: 'Our School', x: home[0], z: home[1] },
       { id: 'rival-base', kind: 'rivalBase', label: 'Snow Camp', x: rival[0], z: rival[1] },
       ...(def.outposts
-        ? def.outposts.map(o => ({ id: o.id, kind: 'zone', family: o.family, label: o.label, landmark: o.landmark, yard: o.yard ?? null, x: x0 + o.i, z: z0 + o.j, r: o.r || 3.4 }))
+        ? def.outposts.map(o => ({ id: o.id, kind: 'zone', family: o.family, label: o.label, landmark: o.landmark, yard: o.yard ?? null, battlefield: !!o.arena, x: x0 + o.i, z: z0 + o.j, r: o.r || 3.4 }))
         : [{ id: 'zone', kind: 'zone', label: 'Street Outpost', x: zc[0], z: zc[1], r: def.zoneRadius || 2.3 }]),
     ],
     world: !!def.world, landmarks: def.landmarks || [], scenery: def.scenery || [],

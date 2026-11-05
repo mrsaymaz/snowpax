@@ -35,12 +35,16 @@ export function buildSnowtown(ctx) {
       g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 1.5;
       for (let k = 0; k < 10; k++) wrap((ox, oy) => { g.beginPath(); let x = rnd(k, 14) * S + ox, y = rnd(k, 15) * S + oy; g.moveTo(x, y); for (let s = 0; s < 4; s++) { x += (rnd(k, s) - 0.5) * 60; y += (rnd(s, k) - 0.5) * 60; g.lineTo(x, y); } g.stroke(); });
     }),
+    // the battlefield floor: packed snow tinted lilac-blue, so playable ground never reads as plain white
+    arena: paint(256, (g, S) => { g.fillStyle = '#c9cdee'; g.fillRect(0, 0, S, S); for (let k = 0; k < 26; k++) blot(g, rnd(k, 31) * S, rnd(k, 32) * S, 20 + rnd(k, 33) * 40, k % 2 ? '235,238,255' : '170,176,226', 0.25); for (let k = 0; k < 90; k++) { g.fillStyle = 'rgba(255,255,255,0.7)'; g.fillRect(rnd(k, 34) * S, rnd(k, 35) * S, 2, 2); } }),
+    // ice patches on the battlefield: glassy blue, you slide on them
+    icepatch: paint(256, (g, S) => { g.fillStyle = '#8fc6ee'; g.fillRect(0, 0, S, S); for (let k = 0; k < 10; k++) blot(g, rnd(k, 41) * S, rnd(k, 42) * S, 30 + rnd(k, 43) * 40, '230,248,255', 0.35); g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 2; for (let k = 0; k < 6; k++) { g.beginPath(); g.moveTo(rnd(k, 44) * S, rnd(k, 45) * S); g.lineTo(rnd(k, 46) * S, rnd(k, 47) * S); g.stroke(); } }),
   };
   // Open snow, footpaths and the boulevard share one mesh: trodden lanes are a vertex tint that
   // fades into the snow, so the paths read as soft trampled tracks, not tiles.
-  const cat = c => (c === 'W' ? 'ice' : 'POf#j'.includes(c) ? 'plaza' : 'YShrK'.includes(c) ? 'yard' : 'snow');
+  const cat = c => (c === 'W' ? 'ice' : c === 'i' ? 'icepatch' : 'awz'.includes(c) ? 'arena' : 'POf#j'.includes(c) ? 'plaza' : 'YShrK'.includes(c) ? 'yard' : 'snow');
   const trod = c => ('_+ds'.includes(c) ? 1 : '=c'.includes(c) ? 0.8 : 'POf#jYhr'.includes(c) ? 0.9 : 0);
-  const quads = { snow: [], plaza: [], yard: [], ice: [] };
+  const quads = { snow: [], plaza: [], yard: [], ice: [], arena: [], icepatch: [] };
   const corner = (i, j) => { let n = 0; for (const [a, b] of [[i - 1, j - 1], [i, j - 1], [i - 1, j], [i, j]]) if ('HSKQCGR'.includes(ch(a, b))) n++; return n; };
   const wear = (i, j) => (trod(ch(i - 1, j - 1)) + trod(ch(i, j - 1)) + trod(ch(i - 1, j)) + trod(ch(i, j))) / 4;
   const TRODDEN = look === 'v2' ? [0.52, 0.58, 0.86] : [0.6, 0.62, 0.85]; // v2: cooler, deeper lanes for contrast
@@ -53,12 +57,13 @@ export function buildSnowtown(ctx) {
   for (const [name, list] of Object.entries(quads)) {
     if (!list.length) continue;
     const P = [], N = [], U = [], Cc = [];
-    const uvs = name === 'ice' ? 0.16 : 0.5;
+    const uvs = name === 'ice' ? 0.16 : name === 'arena' ? 0.25 : 0.5;
     const SUN = (() => { const v = [-11, 14, 7], l = Math.hypot(...v); return v.map(c => c / l); })();
     const vert = (x, z, ao, w) => {
       let y = 0, n = [0, 1, 0];
       if (name === 'snow') { y = snowH(x, z); n = snowNormal(x, z); const d = n[0] * SUN[0] + n[1] * SUN[1] + n[2] * SUN[2]; ao *= (0.78 + 0.3 * Math.max(0, d)) / 0.9975 + (y > 1.6 ? 0.04 : 0); } // slopes facing away from the sun read darker
       if (name === 'snow') { const ww = wearAt(x, z); ao *= 1 + 0.1 * 4 * ww * (1 - ww) * (ww < 0.5 ? 1 : 0); } // a bright lip of snow along the lane edge
+      if (name === 'icepatch') y = 0.015; // just above the floor
       P.push(x, y, z); N.push(...n); U.push(x * uvs, -z * uvs); const s = 1 - w; Cc.push(ao * (0.97 * s + TRODDEN[0] * w), ao * (0.97 * s + TRODDEN[1] * w), Math.min(1, ao * (1.02 * s + TRODDEN[2] * w))); };
     for (const [i, j] of list) {
       const [x0, z0] = at(i, j).map(v => v - 0.5);
@@ -89,7 +94,7 @@ export function buildSnowtown(ctx) {
       }
     }
     const geo = new BufferGeometry(); geo.setAttribute('position', new Float32BufferAttribute(P, 3)); geo.setAttribute('normal', new Float32BufferAttribute(N, 3)); geo.setAttribute('uv', new Float32BufferAttribute(U, 2)); geo.setAttribute('color', new Float32BufferAttribute(Cc, 3));
-    const tmat = new MeshLambertMaterial({ map: TEX[name], vertexColors: true }); if (look === 'v2' && name === 'snow') addSparkle(tmat);
+    const tmat = new MeshLambertMaterial({ map: TEX[name], vertexColors: true }); if (name === 'icepatch') { tmat.transparent = true; tmat.opacity = 0.92; } if (look === 'v2' && name === 'snow') addSparkle(tmat);
     const mesh = new Mesh(geo, tmat); mesh.receiveShadow = true; group.add(mesh);
   }
 

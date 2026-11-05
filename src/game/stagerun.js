@@ -94,6 +94,7 @@ export class StageRunner {
     sim.held.rival = this.entries.map(e => ({ x: e.x, z: e.z })); sim.spawns.rival = sim.held.rival.slice();
     if (z.owner !== 'home') { z.owner = null; z.progress = 0; }
     z.stand = true;
+    if (sim.weather) { sim.weather.kind = 'clear'; sim.weather.next = Infinity; } // no blizzards or sun bursts in a stand: the light stays steady
     // the team arrives on the circle, facing the landmark
     const far = this.entries.reduce((s, e) => s + e.a, 0) / this.entries.length + Math.PI; // away from where the rivals come in
     const tries = [far, far + 0.6, far - 0.6, far + 1.4, far - 1.4, 0, Math.PI / 2, -Math.PI / 2, Math.PI];
@@ -119,6 +120,12 @@ export class StageRunner {
       this.yardGoal = { id: z.id + '-yard', x: z.x + yd[0] * 6.8, z: z.z + yd[1] * 6.8, r: 2.6 };
       // the first wave walks in from the far side, not from the yard itself
       this.firstEntries = this.entries.filter(e => Math.sin(e.a) * yd[0] + Math.cos(e.a) * yd[1] < 0.5);
+      if (z.battlefield) { // a battlefield: every wave comes from the rivals' spawn side, opposite the team
+        const far = this.entries.filter(e => Math.sin(e.a) * yd[0] + Math.cos(e.a) * yd[1] < -0.2);
+        const spawn = [-1, 0, 1].map(o => ({ x: z.x - yd[0] * 10.4 + yd[1] * o * 1.6, z: z.z - yd[1] * 10.4 - yd[0] * o * 1.6, a: Math.atan2(-yd[0], -yd[1]) })).filter(e => grid.freeCircle(e.x, e.z, 0.45));
+        this.entries = spawn.length ? spawn : far.length ? far : this.entries; this.firstEntries = this.entries;
+        sim.held.rival = this.entries.map(e => ({ x: e.x, z: e.z })); sim.spawns.rival = sim.held.rival.slice();
+      }
     }
     sim.held.home = [{ x: home[0].x, z: home[0].z }]; sim.spawns.home = sim.held.home.slice();
     this.ui.snapCamera?.();

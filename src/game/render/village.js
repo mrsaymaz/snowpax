@@ -518,7 +518,31 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   for (const zp of zonePlaces) flags.set(zp.id, centreFlags.get(zp.id) || lodge(zp.x, zp.z));
 
   // ---------- cover pieces ----------
-  for (const [i, j] of tiles('#')) { const [x, z] = at(i, j); K.add(rbox(1.0, 1.0, 0.45, 0.06), mStone, x, 0, z); K.add(rbox(0.96, 0.94, 0.85, 0.26, 3), M('snow', '#dfe6f7'), x, 0.35, z); K.put('wallCap', GEO.snowCap, mSnow, x, 1.12, z, rnd(i, j) * 3, 0.42, 0.18, 0.42); }
+  // the battlefield kit: one family of rounded pieces, the same proportions, bevelled edges and
+  // thick snow caps (rounded snow walls #, wooden barricades w, crates z, frosted bushes B)
+  const mWallSnow = M('snow', '#cbd6f2'), mWarm = M('wood', '#c07a45'), mWarmDark = M('wood', '#8a5232'), mCap = M('snow', '#ffffff');
+  const capAt = (x, y, z, sx, sz, k) => K.put('kitCap' + k, GEO.snowCap, mCap, x, y, z, 0, sx, 0.34, sz);
+  for (const [i, j] of tiles('#')) { // a rounded snow wall: packed, blue-shaded blocks that join up, with a fat white cap along the top
+    const [x, z] = at(i, j), W = c => rows[c[1]]?.[c[0]] === '#';
+    K.put('kitWall', rbox(1.0, 1.0, 0.92, 0.12, 2), mWallSnow, x, 0, z);
+    K.put('kitWallCap', rbox(1.08, 1.08, 0.22, 0.1, 3), mCap, x, 0.86, z);
+    for (const [di, dj] of [[1, 0], [0, 1]]) if (W([i + di, j + dj])) { K.put('kitWallJoin', rbox(di ? 0.5 : 0.98, dj ? 0.5 : 0.98, 0.92, 0.04), mWallSnow, x + di * 0.5, 0, z + dj * 0.5); } // no seam between blocks
+    if (!W([i - 1, j]) && !W([i + 1, j]) && !W([i, j - 1]) && !W([i, j + 1])) capAt(x, 1.04, z, 0.55, 0.55, 'W'); // a lone block gets a rounder top
+  }
+  for (const [i, j] of tiles('w')) { // a wooden barricade: two posts, three warm planks, an X brace, snow along the top
+    const [x, z] = at(i, j), along = rows[j]?.[i - 1] === 'w' || rows[j]?.[i + 1] === 'w', ry = along ? 0 : Math.PI / 2;
+    const off = (dx, dz) => (along ? [x + dx, z + dz] : [x + dz, z + dx]);
+    for (const d of [-0.42, 0.42]) { const [px, pz] = off(d, 0); K.put('kitPost', rbox(0.16, 0.16, 1.05, 0.05), mWarmDark, px, 0, pz); }
+    for (const y of [0.18, 0.46, 0.74]) { const [px, pz] = off(0, 0.02); K.put('kitPlank', rbox(1.0, 0.1, 0.2, 0.04), mWarm, px, y, pz, ry); }
+    for (const sgn of [-1, 1]) { const [px, pz] = off(0, -0.06); K.put('kitBrace', rbox(1.1, 0.06, 0.1, 0.02), mWarmDark, px, 0.42, pz, ry, 1, 1, 1, sgn * 0.62 * (along ? 0 : 1), sgn * 0.62 * (along ? 1 : 0)); }
+    const [cx, cz] = off(0, 0.02); K.put('kitPlankCap', rbox(1.06, 0.2, 0.16, 0.08, 3), mCap, cx, 0.94, cz, ry);
+  }
+  for (const [i, j] of tiles('z')) { // a crate: a bevelled box with a darker frame and a thick cap of snow
+    const [x, z] = at(i, j), ry = rnd(i, j) * 0.3;
+    K.put('kitCrate', rbox(0.84, 0.84, 0.8, 0.07), mWarm, x, 0, z, ry);
+    for (const y of [0.04, 0.68]) K.put('kitCrateBand', rbox(0.88, 0.88, 0.1, 0.04), mWarmDark, x, y, z, ry);
+    K.put('kitCrateCap', rbox(0.86, 0.86, 0.2, 0.09, 3), mCap, x, 0.78, z, ry);
+  }
   for (const [i, j] of tiles('b')) { const [x, z] = at(i, j); K.add(rbox(0.95, 0.46, 0.14, 0.04), mWood, x, 0.4, z); K.add(rbox(0.95, 0.12, 0.42, 0.04), mWood, x, 0.55, z - 0.2); for (const dx of [-0.38, 0.38]) K.add(rbox(0.08, 0.4, 0.42, 0.02), mMetal, x + dx, 0, z); K.add(rbox(0.92, 0.48, 0.16, 0.08), mSnow, x, 0.54, z + 0.02); }
   if (!arena.world) for (const [i, j] of tiles('c')) { // a loaded cargo sled with a tarp and snow
     const [x, z] = at(i, j), ry = rnd(i, j) < 0.5 ? 0 : Math.PI;
@@ -530,7 +554,11 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   for (const [i, j] of tiles('t')) { const [x, z] = at(i, j); pine(x, z, 0.9); }
   if (!arena.world) for (const [i, j] of tiles('L')) { const [x, z] = at(i, j); K.put('lampPost', GEO.post, mMetal, x, 1.0, z, 0, 1, 2.0, 1); K.add(rbox(0.3, 0.3, 0.08, 0.03), mMetal, x, 0.0, z); lantern(x, 2.0, z); }
   for (const [i, j] of tiles('F')) { const [x, z] = at(i, j); const v = rows[j][i - 1] !== 'F' && rows[j][i + 1] !== 'F'; for (const d of [-0.4, 0.4]) K.put('fpost', rbox(0.14, 0.14, 0.85, 0.03), mWood, x + (v ? 0 : d), 0, z + (v ? d : 0)); for (const y of [0.3, 0.62]) K.add(rbox(v ? 0.08 : 1.0, v ? 1.0 : 0.08, 0.1, 0.02), mWood, x, y, z); K.add(rbox(v ? 0.16 : 1.0, v ? 1.0 : 0.16, 0.1, 0.05), mSnow, x, 0.72, z); for (const d of [-0.4, 0.4]) K.put('fcap', GEO.snowCap, mSnow, x + (v ? 0 : d), 0.84, z + (v ? d : 0), 0, 0.11, 0.08, 0.11); }
-  for (const [i, j] of tiles('B')) { const [x, z] = at(i, j); for (let k = 0; k < 3; k++) { const a = rnd(i * 3 + k, j) * 6.28, r = 0.15 + rnd(j, i * 5 + k) * 0.12, s = 0.42 + rnd(i, j + k) * 0.1; K.put('shrub' + (k % 2), new IcosahedronGeometry(1, 1), M('plaster', k % 2 ? PAL.pine : PAL.pine2), x + Math.cos(a) * r, s * 0.9, z + Math.sin(a) * r, a, s); } K.put('shrubSnow', GEO.snowCap, mSnow, x, 0.82, z, 0, 0.52, 0.32, 0.52); }
+  for (const [i, j] of tiles('B')) { // a frosted bush you can hide in: rounded clumps, frosted tips, a snow cap
+    const [x, z] = at(i, j);
+    for (let k = 0; k < 4; k++) { const a = rnd(i * 3 + k, j) * 6.28, r = k ? 0.24 : 0, s2 = (k ? 0.36 : 0.46) + rnd(i, j + k) * 0.06; K.put('bush' + (k % 2), new IcosahedronGeometry(1, 2), M('plaster', k % 2 ? '#3f8a5f' : '#2f7552'), x + Math.cos(a) * r, s2 * 0.95, z + Math.sin(a) * r, a, s2); }
+    K.put('bushFrost', new IcosahedronGeometry(1, 2), M('snow', '#e8f4ff'), x, 0.82, z, 0, 0.38, 0.2, 0.38); capAt(x, 0.88, z, 0.5, 0.5, 'B');
+  }
   for (const [i, j] of tiles('f')) { const [x, z] = at(i, j); fireBarrel(x, z); }
 
   // snowdrifts (refill mounds) — instanced so they can shrink while refilling

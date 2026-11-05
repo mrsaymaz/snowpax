@@ -30,6 +30,24 @@ Each stage has its own time of day (`STAGE_LIGHT` in `brawl.js`, presets in `DAY
 | Waterfront Park | pink sunset, lamps coming on | railings, benches, lamps, spruces; fish-sandwich, simit and çay stalls |
 | Schoolyard Showdown | evening, lamps and windows lit | the schoolyard with its five banners and the bell |
 
+## Battlefields (Brawl-style principles, from the second play-test)
+
+Inside the stage ring the town is replaced by a purpose-built battlefield (`ARENAS` in
+`tools/build-world.mjs`, step 10). Boulevard Park is the first; the other outposts follow.
+- **Layout:** two spawn sides (the team's on the fight-yard side, the rivals' opposite), the
+  outpost in the middle, three lanes: the middle lane past crates, two side routes with L-shaped
+  snow walls, bushes to hide in and an ice patch. It is symmetric, so neither side has better
+  routes, and squared to the grid so walls run straight.
+- **Environment kit** (`render/village.js`): rounded snow walls with a fat white cap, wooden
+  barricades with snow along the top, bevelled crates, frosted bushes, glassy ice patches. All
+  the same proportions, bevelled, with thick snow caps.
+- **Colour:** the battlefield floor is lilac-tinted packed snow, so plain white means wall or out
+  of bounds; ice is glassy blue.
+- **Waves** come from the rivals' spawn. During a stand there are no blizzards or sun bursts, so
+  the light stays steady; each stage keeps its own time of day.
+- **Camera:** closer (bigger heroes), fixed angle and zoom, only a light haze; rivals just out of
+  view show as arrows at the screen edge.
+
 ## A stage
 
 1. **Stage map.** Six stops showing locked, open or done with stars, plus the first-try score

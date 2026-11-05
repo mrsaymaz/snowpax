@@ -479,3 +479,11 @@ body.station #banner { display: none; } /* the fight's banners wait; the station
 @keyframes seize-pulse { to { box-shadow: 0 4px 0 var(--ink), 0 0 0 10px rgba(255, 209, 102, 0.35); } }
 @media (prefers-reduced-motion: reduce) { #seizebtn { animation: none; } }
 body.reading #seizebtn, body.sledding #seizebtn { display: none; }
+/* rivals just out of view: arrows at the screen edge */
+#edge-marks { position: fixed; inset: 0; pointer-events: none; z-index: 25; }
+.edge-mark { position: fixed; left: 0; top: 0; width: 30px; height: 30px; }
+.edge-mark[hidden] { display: none; }
+.edge-mark::before { content: ''; position: absolute; inset: 4px; background: var(--c, #e5383b); clip-path: polygon(100% 50%, 15% 0, 32% 50%, 15% 100%); filter: drop-shadow(0 0 2px #1c2340); }
+body.reading .edge-mark, body.sledding .edge-mark { display: none; }
+/* compact panels: the battlefield gets the screen */
+@media (orientation: portrait) and (max-width: 600px) { #coach, #minimap:not([hidden]) ~ #coach { font-size: 12px; padding: 4px 8px; max-width: 64vw; line-height: 1.2; } #coach b { font-size: 10px; } }
