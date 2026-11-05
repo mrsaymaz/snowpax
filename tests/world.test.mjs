@@ -35,7 +35,7 @@ test('every outpost and the rivals\' camp can be walked to from Our School', () 
 });
 
 test('the town is mostly under the snow: open snow and paths, only a few houses and roofs showing', () => {
-  const cells = def.rows.join('');
+  const cells = def.rows.slice(0, def.town?.h ?? def.h).join(''); // the town (the battlefield pockets below it are not town)
   const count = s => [...cells].filter(c => s.includes(c)).length;
   const land = cells.length - count('W');
   assert.ok(count('H') < 200, `visible house cells: ${count('H')}`);
@@ -72,4 +72,24 @@ test('each outpost is its landmark: a solid 4×4 centrepiece in a round plaza; f
   for (const sp of def.signposts) { assert.equal(def.rows[sp.j][sp.i], 'k'); assert.ok(sp.arrows.length >= 1 && sp.arrows.every(a => typeof a.label === 'string' && Number.isFinite(a.ang))); }
   const trees = [...def.rows.join('')].filter(c => 'tTvyx'.includes(c)).length;
   assert.ok(trees > 100, `trees: ${trees}`);
+});
+
+test('battlefields: a 22 × 34 field in its own pocket, the rivals\' outpost at the north end, the home spawn at the south end, mirrored left–right', () => {
+  const ops = def.outposts.filter(o => o.arena);
+  assert.ok(ops.length >= 1);
+  for (const o of ops) {
+    const { back, front, hw } = o.arena, { i: pi, j: pj } = o.stage;
+    assert.equal(hw * 2, 22); assert.equal(back + front, 34);
+    assert.ok(pj - back >= def.town.h, `${o.id}: the pocket is below the town`);
+    const at = (d, v) => def.rows[pj + d][pi + v];
+    for (let d = -back; d < front; d++) for (let v = 0; v < hw; v++) assert.equal(at(d, v), at(d, -1 - v), `${o.id}: mirrored at ${d},${v}`);
+    assert.equal(at(-1, -1), 'O', `${o.id}: the outpost core at the centre`);
+    assert.ok(def.landmarks.some(l => l.stage === o.id && l.centre), `${o.id}: the landmark is copied into the pocket`);
+    // open ground: the spawn rows and a row of the middle are free across most of the width
+    for (const d of [front - 2, front - 3, 11]) assert.ok([...def.rows[pj + d].slice(pi - hw, pi + hw)].filter(c => c === 'a').length >= 16, `${o.id}: row ${d} is open`);
+    const cells = []; for (let d = -back; d < front; d++) for (let v = -hw; v < hw; v++) cells.push(at(d, v));
+    const cover = cells.filter(c => '#wzB'.includes(c)).length / cells.length;
+    assert.ok(cover > 0.08 && cover < 0.3, `${o.id}: cover ${cover.toFixed(2)}`);
+    for (const c of cells) assert.ok(!'QqCM'.includes(c), 'no place of worship or cemetery in a field');
+  }
 });

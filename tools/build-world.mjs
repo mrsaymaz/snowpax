@@ -20,7 +20,8 @@ import { CONFIG } from '../src/config.js';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const TILE = 15;                                // metres per tile
 const BOUNDS = { x0: -620, x1: 760, z0: -520, z1: 1260 }; // metres around Our School (x east, z south)
-const W = Math.ceil((BOUNDS.x1 - BOUNDS.x0) / TILE), H = Math.ceil((BOUNDS.z1 - BOUNDS.z0) / TILE);
+const W = Math.ceil((BOUNDS.x1 - BOUNDS.x0) / TILE), TOWN_H = Math.ceil((BOUNDS.z1 - BOUNDS.z0) / TILE);
+let H = TOWN_H; // grows when the battlefield pockets are added below the town (step 10)
 const base = CONFIG.arenas[0].base;
 
 // Outposts (confirmed with Mr. Saymaz) and their landmarks.
@@ -483,44 +484,80 @@ for (const op of outposts) {
   op.yard = best.deg; console.log(`fight yard: ${op.id} at ${best.deg}°, ${cleared} cells cleared`);
 }
 
-// 10. purpose-built battlefields (Brawl-style principles: two spawn sides, a central objective,
-//     three lanes round cover). Inside the stage ring the town is replaced by an arena laid out
-//     from the environment kit: rounded snow walls #, wooden barricades w, crates z, frosted
-//     bushes B (hide in them), ice patches i (slippery), on tinted arena snow a. The layout is
-//     symmetric about the centre, so neither side has the better routes. Home spawns on the fight
-//     yard's side, the rivals opposite.
-const ARENA_R = 12.6, ARENAS = {
-  // pieces for the home half [kind, u0, u1, v0, v1] in metres (u: home -> rival, v: across);
-  // each is mirrored through the centre for the rival half, and across the lane axis
+// 10. purpose-built battlefields, sized like a 3v3 brawler map (22 × 34 tiles). The rivals
+//     hold the outpost: its landmark stands at the north end of the field, behind the rival
+//     team, and our team spawns at the south end. The team has to beat the rival team in the
+//     open field first; only then can it walk up and seize the outpost with English.
+//     Our kids run 3.4 tiles/s and throw 5–7.5 tiles, close to those games' 2.5 tiles/s and
+//     3–10 tile ranges, so the same footprint gives the same rhythm: a few seconds from spawn to
+//     the first fight, room to dodge sideways, cover every 4–6 tiles. The field is laid out from
+//     the environment kit: rounded snow walls #, wooden barricades w, crates z, frosted bushes B
+//     (hide in them), ice patches i (slippery), on tinted arena snow a. It is mirrored left–right,
+//     so neither flank is the better route. The long axis runs north–south, up the screen.
+//     The real streets round an outpost are too tight for a field this size (Boulevard Park has
+//     mosques on three sides, and those are never fought near), so each field is its own pocket
+//     in a band below the town, with a copy of the outpost's landmark and stalls; the stage moves
+//     the outpost there while it is played. The town keeps its outpost where it really is.
+const FIELD = { back: 6, front: 28, hw: 11, margin: 3 }; // rows behind / in front of the outpost centre, half width, cleared band outside
+const ARENAS = {
+  // pieces [kind, d0, d1, v0, v1]: cell centres with d0 ≤ d ≤ d1 (rows south of the outpost
+  // centre, so the home spawn is near d 26 and the rival line near d 8) and v0 ≤ |v| ≤ v1
+  // (across, mirrored left–right); centres sit on .5
   boulevard: [
-    ['w', -8.6, -8.0, 2.0, 3.6],           // barricades flanking the spawn exit
-    ['z', -6.4, -5.6, -0.4, 0.4],          // a crate in the middle lane
-    ['#', -6.0, -6.0, 4.4, 7.4], ['#', -5.5, -3.6, 7.2, 7.2], // an L of snow wall on each side lane, one block thick
-    ['B', -3.2, -1.2, 8.0, 9.6],           // bushes on the side routes
-    ['z', -2.2, -1.4, 4.6, 5.4],           // crates at the edge of the plaza
-    ['i', -0.9, 0.9, 7.6, 9.4],            // an ice patch across each side route, in the middle
-    ['w', -10.2, -9.6, -1.2, 1.2],         // a low barricade behind the spawn
+    // home end: an eyebrow wall shielding the spawn (the middle exit stays open), corner bushes
+    ['#', 23.5, 23.5, 2.5, 4.5], ['B', 25.5, 27.5, 9.5, 10.5],
+    ['w', 21.5, 21.5, 7.5, 8.5],          // a barricade at the head of each side lane
+    ['z', 19.5, 19.5, 0.5, 0.5],          // a crate pair splitting the middle lane
+    ['i', 18.5, 19.5, 8.5, 10.5],         // ice on the flanks
+    // the open middle: an L of snow wall each side, a long bush along each edge
+    ['#', 15.5, 17.5, 4.5, 4.5], ['#', 17.5, 17.5, 3.5, 3.5],
+    ['B', 12.5, 16.5, 9.5, 10.5], ['B', 16.5, 17.5, 0.5, 1.5], // and a bush in the middle lane, so nobody snipes spawn to spawn
+    ['z', 13.5, 13.5, 0.5, 0.5],          // a crate in the middle lane, the last cover before the rival line
+    // the rival line in front of their outpost: barricades they fight from, walls on the flanks
+    ['w', 9.5, 9.5, 2.5, 4.5], ['#', 7.5, 8.5, 7.5, 7.5], ['B', 5.5, 7.5, 9.5, 10.5],
+    ['z', 5.5, 5.5, 4.5, 4.5],            // crates at the corners of the plaza
   ],
 };
-for (const op of outposts) {
-  const plan = ARENAS[op.id]; if (!plan) continue;
-  op.yard = Math.round((op.yard ?? 0) / 90) * 90 % 360; // square to the grid, so walls run straight
-  const a = op.yard * Math.PI / 180, ux = Math.round(Math.cos(a)), uz = Math.round(Math.sin(a)), vx = -uz, vz = ux;
-  // clear the ring: everything but the outpost core becomes arena snow; the plaza stays
-  for (let j = Math.floor(op.j - ARENA_R); j <= op.j + ARENA_R; j++) for (let i = Math.floor(op.i - ARENA_R); i <= op.i + ARENA_R; i++) {
-    const d = Math.hypot(i - op.i, j - op.j); if (d > ARENA_R || !inB(i, j) || 'OW'.includes(get(i, j))) continue;
-    g[j][i] = d <= RING_R + 0.4 ? 'P' : 'a';
+{
+  const plans = outposts.filter(op => ARENAS[op.id]), { back, front, hw, margin } = FIELD;
+  const PW = (hw + margin) * 2 + 2, PH = back + front + margin * 2 + 2, perRow = Math.floor(W / PW);
+  if (plans.length) {
+    const bandH = Math.ceil(plans.length / perRow) * PH;
+    for (let k = 0; k < bandH; k++) g.push(Array(W).fill('~')); // void: nothing there, nothing walks there
+    H = TOWN_H + bandH;
   }
-  for (let k = landmarks.length - 1; k >= 0; k--) { const l = landmarks[k]; if (!l.centre && Math.hypot(l.i + (l.w || 1) / 2 - op.i, l.j + (l.h || 1) / 2 - op.j) < ARENA_R) landmarks.splice(k, 1); }
-  for (let k = signposts.length - 1; k >= 0; k--) if (Math.hypot(signposts[k].i - op.i, signposts[k].j - op.j) < ARENA_R) signposts.splice(k, 1);
-  const stamp = (ch, u0, u1, v0, v1) => { for (let u = u0; u <= u1 + 1e-6; u += 0.5) for (let v = v0; v <= v1 + 1e-6; v += 0.5) { const i = Math.round(op.i + u * ux + v * vx), j = Math.round(op.j + u * uz + v * vz); if (inB(i, j) && 'aP'.includes(get(i, j))) g[j][i] = ch; } };
-  for (const [ch, u0, u1, v0, v1] of plan) for (const [su, sv] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) stamp(ch, su > 0 ? u0 : -u1, su > 0 ? u1 : -u0, sv > 0 ? v0 : -v1, sv > 0 ? v1 : -v0);
-  op.arena = true; console.log(`battlefield: ${op.id}, spawn axis ${op.yard}°`);
+  plans.forEach((op, k) => {
+    const pi = Math.floor(W / perRow * (k % perRow + 0.5)), pj = TOWN_H + Math.floor(k / perRow) * PH + margin + 1 + back;
+    const dvOf = (i, j) => [j + 0.5 - pj, i + 0.5 - pi]; // d along +j (south), v along +i
+    const inField = (d, v, pad = 0) => d > -back - pad && d < front + pad && Math.abs(v) < hw + pad;
+    for (let j = pj - back - margin; j < pj + front + margin; j++) for (let i = pi - hw - margin; i < pi + hw + margin; i++) {
+      const [d, v] = dvOf(i, j);
+      g[j][i] = !inField(d, v) ? '.' : Math.hypot(d, v) <= RING_R + 0.4 ? 'P' : 'a';
+    }
+    // the outpost core and its landmark, copied from the town
+    for (let dj = -CORE; dj < CORE; dj++) for (let di = -CORE; di < CORE; di++) g[pj + dj][pi + di] = 'O';
+    const centre = landmarks.find(l => l.centre && l.outpost === op.id);
+    if (centre) landmarks.push({ ...centre, i: pi - CORE, j: pj - CORE, stage: op.id });
+    // the outpost's stalls stand behind it, at the back of the rival camp
+    landmarks.filter(l => l.type === 'stall' && l.outpost === op.id && !l.stage).slice(0, 2).forEach((l, n) => {
+      const i = pi + (n ? 5 : -7), j = pj - back + 1; g[j][i] = g[j][i + 1] = 'G'; landmarks.push({ ...l, i, j, stage: op.id });
+    });
+    for (let j = pj - back; j < pj + front; j++) for (let i = pi - hw; i < pi + hw; i++) {
+      if (!'aP'.includes(g[j][i])) continue;
+      const [d, v] = dvOf(i, j), av = Math.abs(v);
+      for (const [ch, d0, d1, v0, v1] of ARENAS[op.id]) if (d >= d0 - 1e-6 && d <= d1 + 1e-6 && av >= v0 - 1e-6 && av <= v1 + 1e-6) g[j][i] = ch;
+    }
+    op.yard = 90; // home at the south end (the camera looks north, up the field at the rival outpost)
+    op.stage = { i: pi, j: pj };
+    op.arena = { back, front, hw };
+    console.log(`battlefield: ${op.id}, ${hw * 2} × ${back + front} tiles in a pocket at ${pi},${pj}; the rivals hold the north end`);
+    if (process.env.SHOW_FIELD) for (let j = pj - back; j < pj + front; j++) console.log('  ' + g[j].slice(pi - hw, pi + hw).join(''));
+  });
 }
 
 const rows = g.map(r => r.join(''));
 const out = {
-  v: 3, id: 'arena1', name: 'Home Turf', kind: 'tiles', world: true, tile: TILE, w: W, h: H,
+  v: 3, id: 'arena1', name: 'Home Turf', kind: 'tiles', world: true, tile: TILE, w: W, h: H, town: { w: W, h: TOWN_H },
   credit: '© OpenStreetMap contributors',
   rows, outposts: outposts.map(({ lat, lng, ...o }) => o), landmarks, scenery,
   home, rival, hills, sledRuns, pickups, signposts,

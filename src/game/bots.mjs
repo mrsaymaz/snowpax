@@ -68,7 +68,9 @@ export class Bot {
     if (c.frozen || c.thaw) return {};
     this.throwT -= dt; this.wallT -= dt;
     const inp = { mx: 0, mz: 0 };
-    const t = this.target = this.pickTarget();
+    // a guard (a defender on a battlefield) fights only near its post and goes back to it after
+    const G = c.guard, pick = this.pickTarget();
+    const t = this.target = G && pick && Math.hypot(pick.x - G.x, pick.z - G.z) > G.leash ? null : pick;
     const kit = KITS[c.kit] || KITS.thrower;
     const want = (PREF[c.kit] || 5) + (this.style === 'sniper' ? 1.2 : this.style === 'rusher' ? -1 : 0);
     const low = c.warmth < c.maxWarmth * 0.35 && this.style !== 'rusher';
@@ -78,7 +80,9 @@ export class Bot {
     // the outpost that matters is the one nearest the student (where the fight is)
     const P = this.leader || sim.chars.find(o => o.role === 'player') || c;
     const z = sim.nearestZone ? sim.nearestZone(P.x, P.z) : sim.zone;
-    if (c.side === 'home' && this.leader) {
+    if (G) {
+      const a = this.slot + sim.t * 0.3; goal = [G.x + Math.sin(a) * G.r, G.z + Math.cos(a) * G.r * 0.5];
+    } else if (c.side === 'home' && this.leader) {
       const L = this.leader, inZone = z && Math.hypot(L.x - z.x, L.z - z.z) < z.r + 1;
       this.slot += dt * (inZone || L.guarding ? 0.5 : 0.1);
       const r = inZone || L.guarding ? 2.6 : 2.2;

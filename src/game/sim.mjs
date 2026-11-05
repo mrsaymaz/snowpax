@@ -67,7 +67,7 @@ export class Sim {
     this.spawns = { home: [], rival: [] };
     this.held = { home: [], rival: [] };
     // capture zones (outposts): one in a feel-test arena, five in a world
-    this.zones = arena.places.filter(p => p.kind === 'zone').map(zp => ({ id: zp.id, label: zp.label, family: zp.family || null, yard: zp.yard ?? null, battlefield: !!zp.battlefield, x: zp.x, z: zp.z, r: zp.r || 2.3, progress: 0, owner: null, home: 0, rival: 0 }));
+    this.zones = arena.places.filter(p => p.kind === 'zone').map(zp => ({ id: zp.id, label: zp.label, family: zp.family || null, yard: zp.yard ?? null, battlefield: zp.battlefield || null, stage: zp.stage || null, x: zp.x, z: zp.z, r: zp.r || 2.3, progress: 0, owner: null, home: 0, rival: 0 }));
     this.zone = this.zones[0] || null;
     this.ground = makeGround(arena.hills || []);
     this.runs = (arena.sledRuns || []).map(r => { const cum = [0]; for (let k = 1; k < r.pts.length; k++) cum.push(cum[k - 1] + Math.hypot(r.pts[k][0] - r.pts[k - 1][0], r.pts[k][1] - r.pts[k - 1][1])); return { ...r, cum, len: cum[cum.length - 1] }; });

@@ -8,7 +8,7 @@ import { Visit, stepItems } from './visit.mjs';
 // seconds a student needs per item on the Relaxed pace (reading, thinking, tapping), and the
 // feedback moment after each step
 export const STUDENT_SECONDS = { choice: 7, listen: 9, spell: 12, order: 12, matchPair: 5, sortCard: 5, feedback: 1.5 };
-export const OVERHEAD = { map: 10, arrive: 3, fight: 10, walkIn: 3, celebrate: 1.8, finalWave: 8, results: 6, giantSnowball: 5, bell: 3, arenaResults: 8 };
+export const OVERHEAD = { map: 10, arrive: 3, fight: 10, field: 11, walkIn: 3, celebrate: 1.8, finalWave: 8, results: 6, giantSnowball: 5, bell: 3, arenaResults: 8 };
 
 export const stepTime = (st, S = STUDENT_SECONDS) => (st.kind === 'match' ? S.matchPair * stepItems(st) : st.kind === 'sort' ? S.sortCard * stepItems(st) : S[st.kind] || S.choice) + S.feedback;
 
@@ -20,7 +20,7 @@ export function arenaTime(unit, { rng = Math.random, O = OVERHEAD } = {}) {
     const v = st.final
       ? new Visit({ unit, family: 'mixed', rng, families: BANNERS.map(b => b.family), perFamily: 2 })
       : new Visit({ unit, family: st.family, rng });
-    const tasks = visitTime(v), extra = O.fight + O.walkIn + O.celebrate + (st.final ? O.arrive + O.giantSnowball + O.bell + O.arenaResults : O.arrive + O.finalWave + O.results);
+    const tasks = visitTime(v), extra = O.fight + (st.field ? O.field : 0) + O.walkIn + O.celebrate + (st.final ? O.arrive + O.giantSnowball + O.bell + O.arenaResults : O.arrive + O.finalWave + O.results);
     parts.push({ id: st.id, ride: st.ride.seconds, tasks: Math.round(tasks.t), items: tasks.items, extra, total: Math.round(st.ride.seconds + tasks.t + extra) });
   }
   const seconds = O.map + parts.reduce((s, p) => s + p.total, 0);

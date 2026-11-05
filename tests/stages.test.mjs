@@ -45,14 +45,14 @@ test('three lives; the whole arena, timed from the real tasks it deals, stays un
 test('every outpost stage has two waves and a final one; each brings in its new rival type', () => {
   for (const s of STAGES.filter(q => q.outpost)) {
     const w = WAVES[s.id]; assert.equal(w.length, 3); assert.ok(w[2].final && !w[0].final && !w[1].final);
-    for (const wave of w) assert.ok(minionList(wave).length >= 3);
+    for (const wave of w) assert.ok(minionList(wave).length + (wave.kids || 0) >= 3);
     if (s.newRival) { assert.ok(RIVAL_INFO[s.newRival]); assert.ok(w.some(wave => wave.m[s.newRival]), `${s.id} uses its new rival`); }
   }
 });
 
 test('stage walls close a ring round the outpost without blocking the circle; waves enter inside the wall', () => {
   const m = createMatch({ arena: buildTileArena(def), myTeam: 'hufflepuff', rivalTeam: 'gryffindor', rng: makeRng(2) });
-  for (const z of m.sim.zones) {
+  for (const z of m.sim.zones.filter(q => !q.battlefield)) {
     const cells = stageWall(m.grid, z); assert.ok(cells.length > 20, `${z.id} wall`);
     setWall(m.grid, cells, true);
     for (const [, , x, zz] of cells) assert.ok(m.grid.blocked(x, zz));
@@ -61,6 +61,20 @@ test('stage walls close a ring round the outpost without blocking the circle; wa
     setWall(m.grid, cells, false);
     for (const [, , x, zz] of cells) assert.ok(!m.grid.blocked(x, zz));
   }
+});
+
+test('a battlefield: the outpost moves to its pocket, the fence closes the field, both teams can walk from their end to the outpost', () => {
+  const m = createMatch({ arena: buildTileArena(def), myTeam: 'hufflepuff', rivalTeam: 'gryffindor', rng: makeRng(2) });
+  const z = m.sim.zones.find(q => q.battlefield); assert.ok(z && z.stage, 'Boulevard Park has a battlefield');
+  const { back, front, hw } = z.battlefield; z.x = z.stage.x; z.z = z.stage.z;
+  const cells = stageWall(m.grid, z); assert.ok(cells.length > 2 * (front + back + 2 * hw), 'a fence all round');
+  setWall(m.grid, cells, true);
+  for (const [, , x, zz] of cells) { const d = zz - z.z, v = Math.abs(x - z.x); assert.ok(!(d > -back && d < front && v < hw), 'the fence is outside the field'); }
+  const home = { x: z.x, z: z.z + front - 2.5 }, circle = { x: z.x, z: z.z + z.r - 0.3 };
+  assert.ok(m.grid.freeCircle(home.x, home.z, 0.45), 'the home spawn is open');
+  assert.ok(m.nav.path(home.x, home.z, circle.x, circle.z), 'the team can walk up the field to the outpost');
+  for (const [v, d] of [[-8, -3.5], [8, -3.5], [-9.5, 4], [9.5, 4], [-3, 7.5], [0, 8], [3, 7.5]]) assert.ok(m.nav.path(z.x + v, z.z + d, circle.x, circle.z), `rivals from ${v},${d}`);
+  setWall(m.grid, cells, false);
 });
 
 test('snowmen: spawn, walk toward the outpost, a lid blocks shots from the front, frozen snowmen melt away', () => {

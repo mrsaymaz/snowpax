@@ -203,7 +203,8 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   LOOK.v2 = look === 'v2';
   // a stage build: only the cells near one outpost (the rest becomes '~', nothing)
   if (clip) {
-    const near = (x, z, pad = 0) => Math.hypot(x - clip.x, z - clip.z) <= clip.r + pad;
+    const R = clip.rect, near = R ? (x, z, pad = 0) => x >= R.x0 - pad && x <= R.x1 + pad && z >= R.z0 - pad && z <= R.z1 + pad
+      : (x, z, pad = 0) => Math.hypot(x - clip.x, z - clip.z) <= clip.r + pad;
     const cx0 = arena.x0, cz0 = arena.z0;
     arena = { ...arena, clip,
       rows: arena.rows.map((row, j) => [...row].map((c, i) => (near(cx0 + i + 0.5, cz0 + j + 0.5) ? c : '~')).join('')),

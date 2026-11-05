@@ -119,18 +119,28 @@ async function startGame(myTeam, kit, pace) {
   // each stage at its own time of day; dusk = how far the lamps and windows are lit
   const STAGE_LIGHT = { boulevard: ['morning', 0], archery: ['noon', 0], kizilay: ['afternoon', 0.1], sururi: ['golden', 0.35], waterfront: ['sunset', 0.7], schoolyard: ['evening', 1] };
   let stageLight = STAGE_LIGHT.boulevard;
-  const stageClip = z => ({ x: z.x, z: z.z, r: 16.5 });
+  // what a stage build shows: a circle round the outpost, or a battlefield's rectangle and its cleared band
+  const fieldBox = (z, pad = 0) => { const b = z.battlefield; return { x0: z.x - b.hw - pad, x1: z.x + b.hw + pad, z0: z.z - b.back - pad, z1: z.z + b.front + pad }; };
+  const stageClip = z => (z.battlefield ? { x: z.x, z: z.z, r: 40, rect: fieldBox(z, 3) } : { x: z.x, z: z.z, r: 16.5 });
+  const stageBackdrop = z => {
+    if (!z.battlefield) return buildBackdrop(z.x, z.z, { rIn: 17, seed: z.id.length * 7 });
+    const b = fieldBox(z, 2.5), cz = (b.z0 + b.z1) / 2;
+    // nothing right behind the south fence, where it would stand between the camera and the team
+    return buildBackdrop(z.x, cz, { rIn: z.battlefield.hw + 2, rOut: 46, seed: z.id.length * 7, avoid: (x, zz) => x > b.x0 && x < b.x1 && zz > b.z0 && zz < b.z1 + 9 });
+  };
+  // a battlefield is played in a pocket of the map: the outpost's place moves there with it
+  const arenaFor = z => (z.town ? { ...arena, places: arena.places.map(p => (p.kind === 'zone' && p.id === z.id ? { ...p, x: z.x, z: z.z } : p)) } : arena);
   const firstZone = sim.zones.find(q => q.id === 'boulevard') || sim.zones[0];
   let world = buildVillage(arena, { rivalTeam, homeTeam: myTeam, quality: LEVELS[level].name, look: V2 ? 'v2' : 'v1', clip: V2 ? stageClip(firstZone) : null }); scene.add(world.group);
   let life = arena.world ? new WorldLife(scene, world.life, { low: LEVELS[level].name === 'low', ground: groundH, pickups: sim.pickups }) : null;
-  let backdrop = V2 ? buildBackdrop(firstZone.x, firstZone.z, { rIn: 17, seed: 3 }) : null; if (backdrop) scene.add(backdrop);
+  let backdrop = V2 ? stageBackdrop(firstZone) : null; if (backdrop) scene.add(backdrop);
   // a stage build: only the area round this outpost, plus the painted backdrop beyond the snowbanks
   const rebuildWorld = z => {
     if (!V2) return;
     scene.remove(world.group); world.group.traverse(o => { if (o.geometry) o.geometry.dispose(); });
-    world = buildVillage(arena, { rivalTeam, homeTeam: myTeam, quality: LEVELS[level].name, look: 'v2', clip: stageClip(z) }); scene.add(world.group);
+    world = buildVillage(arenaFor(z), { rivalTeam, homeTeam: myTeam, quality: LEVELS[level].name, look: 'v2', clip: stageClip(z) }); scene.add(world.group);
     if (life) scene.remove(life.g); life = new WorldLife(scene, world.life, { low: LEVELS[level].name === 'low', ground: groundH, pickups: sim.pickups });
-    if (backdrop) scene.remove(backdrop); backdrop = buildBackdrop(z.x, z.z, { rIn: 17, seed: z.id.length * 7 }); scene.add(backdrop);
+    if (backdrop) scene.remove(backdrop); backdrop = stageBackdrop(z); scene.add(backdrop);
     for (const zz of sim.zones) { if (zz.owner === 'home') world.setOwner(zz.id, myCol); delete zoneKeys[zz.id]; }
     stageLight = STAGE_LIGHT[z.id] || STAGE_LIGHT.boulevard; dayK = -1;
   };
@@ -216,7 +226,7 @@ async function startGame(myTeam, kit, pace) {
     match, flow, unit, unitProgress, save, writeSave, pace, rng, team: myTeam, kit, reduceMotion,
     ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play,
       snapCamera: () => { focus.set(player.x, 0, player.z - 1.2); camShift = 0; },
-      showWall: cells => showWall(cells), onGone: list => dropSnowmen(list), rebuildWorld: z => rebuildWorld(z), fireworks,
+      showWall: cells => showWall(cells), onGone: list => dropSnowmen(list), rebuildWorld: z => rebuildWorld(z), markRival: z => world.setOwner(z.id, rivCol), fireworks,
       seizeButton: on => { $('#seizebtn').hidden = !on; },
       showdown: {
         start: (z, b) => showdownView.start(z, b), raise: k => showdownView.raise(k), giantBall: (f, t, s) => showdownView.giantBall(f, t, s), ring: () => showdownView.ring(), stop: () => showdownView.stop(),
@@ -243,7 +253,7 @@ async function startGame(myTeam, kit, pace) {
   // mini-map (top left) and the big map: tap a place to walk there
   const FAM = { answer: 'B', sort: 'C', match: 'A', listen: 'E', build: 'D' };
   const mapImg = document.createElement('canvas'), MP = 4; mapImg.width = arena.w * MP; mapImg.height = arena.h * MP;
-  const TILE_COL = { H: '#5e6888', S: '#d9cfa6', K: '#f4f8ff', Q: '#a99bd2', C: '#8e86b8', W: '#5f9bd0', G: '#b98a6a', O: '#24304f', c: '#7c84a8', t: '#2d5a5d', '_': '#ffffff', '=': '#eef0fa', '+': '#e3dcf6', q: '#ece6fb', P: '#d5c79c', f: '#d5c79c', '#': '#d5c79c', d: '#ffffff', Y: '#eadfc0', h: '#eadfc0', r: '#f4f8ff', j: '#b98a6a', p: '#dfeee3', '.': '#e7edf8', u: '#f6f8ff', s: '#cfe0fb', l: '#7c84a8', R: '#8d95b8', D: '#f4f6fc', T: '#2d5a5d', v: '#9aa36a', y: '#a8453c', x: '#2f6f6a', B: '#4f7a5a', F: '#b9845a', k: '#b9845a' };
+  const TILE_COL = { '~': '#c9d2e4', H: '#5e6888', S: '#d9cfa6', K: '#f4f8ff', Q: '#a99bd2', C: '#8e86b8', W: '#5f9bd0', G: '#b98a6a', O: '#24304f', c: '#7c84a8', t: '#2d5a5d', '_': '#ffffff', '=': '#eef0fa', '+': '#e3dcf6', q: '#ece6fb', P: '#d5c79c', f: '#d5c79c', '#': '#d5c79c', d: '#ffffff', Y: '#eadfc0', h: '#eadfc0', r: '#f4f8ff', j: '#b98a6a', p: '#dfeee3', '.': '#e7edf8', u: '#f6f8ff', s: '#cfe0fb', l: '#7c84a8', R: '#8d95b8', D: '#f4f6fc', T: '#2d5a5d', v: '#9aa36a', y: '#a8453c', x: '#2f6f6a', B: '#4f7a5a', F: '#b9845a', k: '#b9845a' };
   function drawMap() {
     const g = mapImg.getContext('2d');
     for (let j = 0; j < arena.h; j++) for (let i = 0; i < arena.w; i++) { g.fillStyle = TILE_COL[arena.rows[j][i]] || '#e7edf8'; g.fillRect(i * MP, j * MP, MP, MP); }
@@ -321,7 +331,7 @@ async function startGame(myTeam, kit, pace) {
     focus.set(player.x, 0, player.z - 1.6);
   }
 
-  let last = performance.now(), puffT = 0, camY = 0, camShift = 0, tScale = 1; const zoneKeys = {}, held = new Set();
+  let last = performance.now(), puffT = 0, camY = 0, camShift = 0, tScale = 1, fieldZoom = 1; const zoneKeys = {}, held = new Set();
   function frame(now) {
     const rdt = Math.min(0.05, (now - last) / 1000); last = now; // real time
     tScale += ((worldTasks?.active ? 0.25 : 1) - tScale) * Math.min(1, rdt * 3); // a 3D task: the fight goes on in slow motion
@@ -432,19 +442,20 @@ async function startGame(myTeam, kit, pace) {
     for (const zz of sim.zones) { const key = `${zz.progress.toFixed(3)}|${zz.contested}`; if (key !== zoneKeys[zz.id] || zz.contested) { zoneKeys[zz.id] = key; world.setZone(zz.progress, myCol, rivCol, zz.contested, now / 1000, zz.id); } }
     const z = sim.nearestZone(player.x, player.z);
 
-    // camera
-    const tH = Math.tan(camera.fov * Math.PI / 360), upright = camera.aspect < 1, halfW0 = tH * off.length() * zoom * camera.aspect;
+    // camera (a battlefield pulls back a little and looks a little ahead, up the field)
+    const onField = !!(stages?.mode === 'outpost' && stages.zone?.battlefield && !player.planted); fieldZoom += ((onField ? 1.1 : 1) - fieldZoom) * Math.min(1, dt * 2); const zf = zoom * fieldZoom;
+    const tH = Math.tan(camera.fov * Math.PI / 360), upright = camera.aspect < 1, halfW0 = tH * off.length() * zf * camera.aspect;
     // reading a card: keep the student and the fight beside it (left half), or above it in portrait, where the card is at the bottom
-    camShift += ((player.planted && !worldTasks?.active ? (upright ? tH * off.length() * zoom * 0.55 : halfW0 * 0.5) : 0) - camShift) * Math.min(1, dt * 4);
-    const tx = player.x + (upright ? 0 : camShift), tz = player.z - 1.2 + (upright ? camShift : 0);
+    camShift += ((player.planted && !worldTasks?.active ? (upright ? tH * off.length() * zf * 0.55 : halfW0 * 0.5) : 0) - camShift) * Math.min(1, dt * 4);
+    const tx = player.x + (upright ? 0 : camShift), tz = player.z - 1.2 - (fieldZoom - 1) * 15 + (upright ? camShift : 0);
     focus.x += (tx - focus.x) * Math.min(1, dt * 5); focus.z += (tz - focus.z) * Math.min(1, dt * 5);
-    const halfW = tH * off.length() * zoom * camera.aspect, lim = params.has('zoom') ? 0 : Math.max(0, arena.w / 2 - halfW + 0.5);
+    const halfW = tH * off.length() * zf * camera.aspect, lim = params.has('zoom') ? 0 : Math.max(0, arena.w / 2 - halfW + 0.5);
     focus.x = Math.max(-lim, Math.min(lim, focus.x));
     if (!params.has('zoom')) focus.z = Math.max(arena.z0 + 5, Math.min(arena.z0 + arena.h - 3.5, focus.z));
     shake = Math.max(0, shake - dt);
     const j = shake > 0 ? shake * 0.6 : 0;
     camY += (groundH(player.x, player.z) - camY) * Math.min(1, dt * 4);
-    camera.position.set(focus.x + off.x * zoom + (Math.random() - 0.5) * j, off.y * zoom + camY, focus.z + off.z * zoom + (Math.random() - 0.5) * j);
+    camera.position.set(focus.x + off.x * zf + (Math.random() - 0.5) * j, off.y * zf + camY, focus.z + off.z * zf + (Math.random() - 0.5) * j);
     camera.lookAt(focus.x, camY, focus.z); camera.updateMatrixWorld();
     sun.position.set(focus.x + sunDir[0], sunDir[1], focus.z + sunDir[2]); sun.target.position.set(focus.x, 0, focus.z - 2); sun.target.updateMatrixWorld();
     world.tick(dt, focus, reduceMotion, camera); showdownView.tick(dt); worldTasks?.tick(rdt);
@@ -473,7 +484,7 @@ async function startGame(myTeam, kit, pace) {
     // HUD
     const p = Math.round(Math.abs(z.progress) * 100);
     $('#zone-bar .home').style.width = (z.progress > 0 ? p : 0) + '%'; $('#zone-bar .rival').style.width = (z.progress < 0 ? p : 0) + '%';
-    $('#zone-label').textContent = `${z.label}: ` + (stages?.phase === 'fight' && stages.zone === z ? 'clear the snowmen!' : z.showdown ? (z.owner === 'home' ? 'giant snowball!' : `banners ${stages?.bannersUp || 0} of 5`) : flow?.busy && flow.zone === z ? (flow.mode === 'defend' ? 'answer to refill snowballs' : `answer to seize ${p}%`) : flow?.waveZone === z ? 'defend it!' : z.owner === 'home' ? 'yours!' : z.owner === 'rival' ? 'rivals hold it' : z.contested ? 'contested!' : z.home ? `seizing… ${p}%` : z.rival ? `rivals seizing… ${p}%` : `${Math.round(Math.hypot(z.x - player.x, z.z - player.z))} steps away`);
+    $('#zone-label').textContent = `${z.label}: ` + (stages?.phase === 'fight' && stages.zone === z ? (z.battlefield ? 'beat the rival team!' : 'clear the snowmen!') : z.showdown ? (z.owner === 'home' ? 'giant snowball!' : `banners ${stages?.bannersUp || 0} of 5`) : flow?.busy && flow.zone === z ? (flow.mode === 'defend' ? 'answer to refill snowballs' : `answer to seize ${p}%`) : flow?.waveZone === z ? 'defend it!' : z.owner === 'home' ? 'yours!' : z.owner === 'rival' ? 'rivals hold it' : z.contested ? 'contested!' : z.home ? `seizing… ${p}%` : z.rival ? `rivals seizing… ${p}%` : `${Math.round(Math.hypot(z.x - player.x, z.z - player.z))} steps away`);
     drawMini();
     $('#zone').classList.toggle('contested', !!z.contested);
     $('#score .h').textContent = score.home; $('#score .r').textContent = score.rival;
@@ -485,14 +496,14 @@ async function startGame(myTeam, kit, pace) {
     const wts = worldTasks?.session, inStation = wts && now >= wts.showAt; draw(inStation ? wts.scene : scene, inStation ? wts.camera : camera); // a station shows its own set
   }
   requestAnimationFrame(frame);
-  // rivals just out of view: an arrow at the screen edge pointing to each (within 22 m)
+  // rivals just out of view: an arrow at the screen edge pointing to each (within 30 m)
   const edgeLayer = document.createElement('div'); edgeLayer.id = 'edge-marks'; document.body.appendChild(edgeLayer);
   const marks = Array.from({ length: 6 }, () => { const m = document.createElement('div'); m.className = 'edge-mark'; m.style.setProperty('--c', rivCol); m.hidden = true; edgeLayer.appendChild(m); return m; });
   const ev = new Vector3();
   function edgeMarks() {
     const show = stages ? stages.mode === 'outpost' && !worldTasks?.active : true; let k = 0;
     if (show) for (const c of sim.enemiesOf(player)) {
-      if (k >= marks.length) break; if (c.gone || Math.hypot(c.x - player.x, c.z - player.z) > 22) continue;
+      if (k >= marks.length) break; if (c.gone || Math.hypot(c.x - player.x, c.z - player.z) > 30) continue;
       ev.set(c.x, groundH(c.x, c.z) + 0.9, c.z).project(camera);
       const sx = (ev.x + 1) / 2 * innerWidth, sy = (1 - ev.y) / 2 * innerHeight, M = 34, top = 96;
       if (ev.z < 1 && sx > M && sx < innerWidth - M && sy > top && sy < innerHeight - M) continue; // on screen

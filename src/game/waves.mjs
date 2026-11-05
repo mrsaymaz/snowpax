@@ -15,7 +15,7 @@ export const RIVAL_INFO = {
 // m: snowmen by type; kids: how many rival kids join this wave
 export const WAVES = {
   boulevard: [
-    { name: 'Snowman scouts', m: { waddler: 3 }, kids: 0 },
+    { name: 'The rival team', m: { waddler: 2 }, kids: 2 }, // on the battlefield: the team that holds the outpost
     { name: 'More snowmen!', m: { waddler: 4 }, kids: 1 },
     { name: 'They want it back!', m: { waddler: 3 }, kids: 2, final: true },
   ],
@@ -58,12 +58,25 @@ export const minionList = wave => Object.entries(wave.m).flatMap(([type, n]) => 
 
 // The ring of snowbanks that closes a stage: walkable cells between rIn and rOut of the centre.
 export function stageWall(grid, z, rIn = 13, rOut = 14.3) {
+  if (z.battlefield) return fieldWall(grid, z);
   const cells = [];
   const i0 = Math.floor(z.x - grid.x0), j0 = Math.floor(z.z - grid.z0), R = Math.ceil(rOut) + 1;
   for (let j = j0 - R; j <= j0 + R; j++) for (let i = i0 - R; i <= i0 + R; i++) {
     if (i < 0 || j < 0 || i >= grid.W || j >= grid.H) continue;
     const [cx, cz] = grid.center(i, j), d = Math.hypot(cx - z.x, cz - z.z);
     if (d >= rIn && d < rOut && !(grid.f[j * grid.W + i] & GRID.BLOCK)) cells.push([i, j, cx, cz]);
+  }
+  return cells;
+}
+// A battlefield's fence: a band of snowbanks just outside the field's rectangle.
+export function fieldWall(grid, z, w = 1.3) {
+  const { back, front, hw } = z.battlefield, cells = [];
+  const i0 = Math.floor(z.x - grid.x0 - hw - w - 1), i1 = Math.ceil(z.x - grid.x0 + hw + w + 1), j0 = Math.floor(z.z - grid.z0 - back - w - 1), j1 = Math.ceil(z.z - grid.z0 + front + w + 1);
+  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+    if (i < 0 || j < 0 || i >= grid.W || j >= grid.H) continue;
+    const [cx, cz] = grid.center(i, j), d = cz - z.z, v = Math.abs(cx - z.x);
+    const inside = d > -back && d < front && v < hw, near = d > -back - w && d < front + w && v < hw + w;
+    if (!inside && near && !(grid.f[j * grid.W + i] & GRID.BLOCK)) cells.push([i, j, cx, cz]);
   }
   return cells;
 }

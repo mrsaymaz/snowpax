@@ -32,21 +32,39 @@ Each stage has its own time of day (`STAGE_LIGHT` in `brawl.js`, presets in `DAY
 
 ## Battlefields (Brawl-style principles, from the second play-test)
 
-Inside the stage ring the town is replaced by a purpose-built battlefield (`ARENAS` in
-`tools/build-world.mjs`, step 10). Boulevard Park is the first; the other outposts follow.
-- **Layout:** two spawn sides (the team's on the fight-yard side, the rivals' opposite), the
-  outpost in the middle, three lanes: the middle lane past crates, two side routes with L-shaped
-  snow walls, bushes to hide in and an ice patch. It is symmetric, so neither side has better
-  routes, and squared to the grid so walls run straight.
+A battlefield is a purpose-built field (`ARENAS` in `tools/build-world.mjs`, step 10). Boulevard
+Park is the first; the other outposts follow.
+- **The rivals hold the outpost.** Its landmark stands at the north end of the field, behind the
+  rival team; our team spawns at the south end. The team has to beat the rival team in the open
+  field first (frozen rivals go back to their camp; after 45 s the ones still standing run back
+  too, so nobody is stuck), then run up and seize the outpost with English. Until then the circle
+  shows the rivals' colour. Later waves come round the outpost from the camp behind it.
+- **Size, from 3v3 brawler maps:** those are about 21 × 33 tiles, with heroes running about 2.5
+  tiles/s and throwing 3–10 tiles. Our kids run 3.4 tiles/s and throw 5–7.5 tiles, so the same
+  footprint gives the same rhythm: the field is **22 × 34 tiles** (the old ring was 25 across
+  with the outpost in the middle: 377 tiles to move in; the field has 642). About 6 s from
+  spawn to the first fight, room to dodge sideways, cover every 4–6 tiles, about 12% of the
+  field covered (walls, barricades, crates, bushes).
+- **Layout:** the long axis runs up the screen (portrait-first). Three lanes: the middle lane
+  past crates and a bush (so nobody throws spawn to spawn), two side lanes along bushes, with
+  L-shaped snow walls between. An eyebrow wall shields the home spawn; the rival line has
+  barricades to fight from. Mirrored left–right, so neither flank is the better route.
+- **A pocket of its own:** the real streets round Boulevard Park are too tight for a field this
+  size (it has mosques on three sides, and those are never fought near). So each field is built
+  in a band below the town, with a copy of the outpost's landmark and stalls, and the stage moves
+  the outpost there while it is played. The town keeps its outpost where it really is. The build
+  stops with an error if a field would ever reach a place of worship or a cemetery.
+- **Rival team AI:** the defenders hold their line in front of the outpost and come out to meet
+  anyone within 11 m of it; the snowmen walk out to the middle of the field.
+- **Camera:** on a battlefield the camera pulls back 10% and looks a little ahead, up the field;
+  rivals just out of view show as arrows at the screen edge (now within 30 m).
 - **Environment kit** (`render/village.js`): rounded snow walls with a fat white cap, wooden
   barricades with snow along the top, bevelled crates, frosted bushes, glassy ice patches. All
   the same proportions, bevelled, with thick snow caps.
 - **Colour:** the battlefield floor is lilac-tinted packed snow, so plain white means wall or out
   of bounds; ice is glassy blue.
-- **Waves** come from the rivals' spawn. During a stand there are no blizzards or sun bursts, so
-  the light stays steady; each stage keeps its own time of day.
-- **Camera:** closer (bigger heroes), fixed angle and zoom, only a light haze; rivals just out of
-  view show as arrows at the screen edge.
+- During a stand there are no blizzards or sun bursts, so the light stays steady; each stage
+  keeps its own time of day.
 
 ## A stage
 
@@ -140,7 +158,8 @@ celebration, results). Arena 1 comes to about **11.9 minutes** for every Grade 5
 
 After the first play-test the rides became 45 s and wind (curves, banked turns, gentle hills), and
 every stand opens with a fight in the outpost's fight yard (about 10 s, plus about 3 s to walk
-into the circle). That brings Arena 1 to about **13.9 minutes**, over the brief's 10–12; the
+into the circle); a battlefield adds about 11 s (the run up the field and a whole rival team).
+That brings Arena 1 to about **14.1 minutes**, over the brief's 10–12; the
 class play-test should decide what to trim. The table above is from before these changes. The test checks 10
 seeds. Real play with students should confirm the per-item seconds.
 
