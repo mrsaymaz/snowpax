@@ -12,6 +12,7 @@ import { CONFIG } from '../config.js';
 import { FAMILIES } from '../tasks/subtasks.mjs';
 import { recordItem, holdOutpost, accuracyOf } from '../rules/progress.mjs';
 import { Visit, stepSeconds, cocoaQuestion, flakeWords } from './visit.mjs';
+import { FAMILY_STATION } from './fights.mjs';
 import { TaskCard } from './taskcard.js';
 import { speech } from './speech.js';
 
@@ -55,10 +56,11 @@ export class OutpostFlow {
   begin(z) {
     const fam = this.familyOf(z);
     let v = this.visits.get(z.id);
-    if (!v) { v = new Visit({ unit: this.unit, family: fam, arena: 1, rng: this.rng, history: this.history, speech: speech.available || !speech.checked, families: z.showdown ? BANNERS.map(b => b.family) : null, perFamily: 2 }); this.visits.set(z.id, v); }
+    // two halves (z.halves: two task families, fights between): one round of each family
+    if (!v) { v = new Visit({ unit: this.unit, family: fam, arena: 1, rng: this.rng, history: this.history, speech: speech.available || !speech.checked, families: z.showdown ? BANNERS.map(b => b.family) : z.halves || null, perFamily: z.halves ? CONFIG.demand.itemsPerRound : 2 }); this.visits.set(z.id, v); }
     this.mode = 'seize'; this.zone = z; z.seizing = true; this.shown = Math.max(0, z.progress); this.plant(true);
-    const th = OUTPOST_THEME[z.id] || { theme: 'kizilay', name: z.label };
-    this.card.open({ theme: th.theme, title: z.showdown ? `${th.name} · Raise the banners!` : `${th.name} · ${FAMILY_NAME[fam]}`, coach: '' });
+    const th = OUTPOST_THEME[z.id] || { theme: 'kizilay', name: z.label }, part = v.halfDone ? 2 : 1;
+    this.card.open({ theme: th.theme, title: z.showdown ? `${th.name} · Raise the banners!` : z.halves ? `${th.name} · Part ${part} of 2` : `${th.name} · ${FAMILY_NAME[fam]}`, coach: '' });
     this.card.setProgress(v.progress);
     if (z.showdown) this.ui.coach('Every task raises a banner. Raise all five for the giant snowball!', 5);
     else if (!this.seenSeize) { this.seenSeize = true; this.ui.coach('Answer the questions to seize the outpost. Your team will guard you!', 5); }
@@ -68,6 +70,9 @@ export class OutpostFlow {
     const v = this.mode === 'defend' ? this.defendVisit : this.visits.get(this.zone?.id);
     const step = v.next();
     if (!step) { this.onStepDone(true); return; }
+    if (this.zone.halves) { // two halves: each family in its own activity
+      this.card.setCoach(`${FAMILY_NAME[v.family]}${v.coach ? ': ' + v.coach : ''}`); this.card.show(step, { theme: FAMILY_STATION[v.family] || this.zone.id }); return;
+    }
     const b = v.families && BANNERS[v.famIdx];
     this.card.setCoach(b ? `🚩 ${b.name} banner (${v.famIdx + 1} of ${BANNERS.length}) · ${FAMILY_NAME[v.family]}${v.coach ? ': ' + v.coach : ''}` : v.coach || ''); this.card.show(step, b ? { theme: b.outpost } : undefined); // Showdown: each banner in its own outpost's scene
   }
@@ -77,7 +82,7 @@ export class OutpostFlow {
   }
 
   onItem({ itemId, correctFirstTry }) {
-    if (this.mode === 'cocoa') { this.cocoaRight = correctFirstTry; return; }
+    if (this.mode === 'cocoa' || this.mode === 'supply') { this.cocoaRight = correctFirstTry; return; }
     const v = this.mode === 'defend' ? this.defendVisit : this.visits.get(this.zone.id);
     v.answer(correctFirstTry);
     recordItem(this.up, 0, { correctFirstTry, itemId }); this.writeSave(this.save);
@@ -93,7 +98,13 @@ export class OutpostFlow {
   }
   onStepDone(empty = false) {
     if (this.mode === 'cocoa') return this.finishCocoa();
+    if (this.mode === 'supply') return this.finishSupply();
     const v = this.mode === 'defend' ? this.defendVisit : this.visits.get(this.zone.id);
+    if (this.mode === 'seize' && this.zone.halves && !v.halfDone && v.famIdx === 0 && v.famDone >= v.perFamily && !v.finished) { // half way: a fight before the second half
+      v.halfDone = true; this.mode = 'half'; this.card.setCoach('Half of it is yours! Get ready…');
+      if (this.card.inWorld) this.celebrateT = this.card.world.celebrate('Half the outpost is yours!');
+      return;
+    }
     if (!v.finished && !empty) return this.showNext();
     if (this.mode === 'seize') { this.card.setCoach('Great work! Hold on…'); this.mode = 'seize-fill'; if (this.card.inWorld) this.celebrateT = this.card.world.celebrate(this.zone.showdown ? 'All five banners are up!' : 'Outpost seized!'); } // fireworks in the station first // the bar catches up, then the outpost is yours
     else if (this.mode === 'defend') this.finishDefend();
@@ -128,6 +139,22 @@ export class OutpostFlow {
     const a = this.accuracy; this.ui.coach(`${z.label} is yours for good! Right first time so far: ${a.firstTry} of ${a.total} (${a.pct}%).`, 5);
   }
 
+  // ---------- supply crates (in the fights) ----------
+  openSupply(pickupId) {
+    const p = this.sim.pickups.find(q => q.id === pickupId); if (!p) return;
+    if (this.mode) { p.asking = false; return; }
+    this.mode = 'supply'; this.cocoaId = pickupId; this.cocoaRight = false; this.plant(true);
+    this.card.open({ theme: 'cocoa', title: 'Supply crate!', coach: '', leave: false }); this.card.setProgress(0);
+    this.card.show(cocoaQuestion(this.unit, this.rng)); this.card.setCoach('Answer right: snowballs for the whole team and a big boost for your super!');
+  }
+  finishSupply() {
+    const right = this.cocoaRight;
+    this.card.close(); this.plant(false); this.mode = null;
+    this.sim.supplyResult(this.cocoaId, this.player, right);
+    if (right) { this.ui.banner('SUPPLIES!', 'win', 1.3); this.ui.play('superReady'); }
+    else this.ui.coach('Not quite, but here is a snowball anyway. The next crate is coming!', 3);
+  }
+
   // ---------- hot cocoa ----------
   openCocoa(pickupId) {
     if (this.mode) { this.sim.pickups.find(p => p.id === pickupId).asking = false; return; }
@@ -149,12 +176,13 @@ export class OutpostFlow {
     this.card.tick(dt);
     if (this.chillT > 0) this.chillT -= dt;
     // seize bar: eases up to the answers given; a rival hit chills it for a moment
-    if ((this.mode === 'seize' || this.mode === 'seize-fill') && this.zone) {
+    if ((this.mode === 'seize' || this.mode === 'seize-fill' || this.mode === 'half') && this.zone) {
       const v = this.visits.get(this.zone.id);
       if (this.chillT <= 0) this.shown = Math.min(v.progress, this.shown + dt * 0.6);
       sim.seizeProgress(this.zone, this.shown);
       if (this.celebrateT > 0) this.celebrateT -= dt;
       if (this.mode === 'seize-fill' && this.shown >= v.progress - 1e-6 && v.finished && !(this.celebrateT > 0)) { const z = this.zone; sim.capture(z, 'home'); this.startDefend(z); }
+      else if (this.mode === 'half' && this.shown >= v.progress - 1e-6 && !(this.celebrateT > 0)) { const z = this.zone; this.card.close(); this.plant(false); z.seizing = false; this.mode = null; this.zone = null; this.ui.onHalf?.(z); }
     }
     // defend wave countdown, then the refill round
     if (this.waveZone && !this.mode) {
@@ -179,6 +207,7 @@ export class OutpostFlow {
   onEvent(e) {
     if (e.type === 'plantedHit' && e.id === this.player.id && (this.mode === 'seize' || this.mode === 'seize-fill') && !this.card.inWorld) { this.chillT = 1.2; this.card.chill(); } // 3D actions are protected: hits never chill the bar
     if (e.type === 'cocoaAsk' && e.id === this.player.id) this.openCocoa(e.pickup);
+    if (e.type === 'supplyAsk' && e.id === this.player.id) this.openSupply(e.pickup);
     if (e.type === 'collect' && e.kind === 'flake') {
       const p = this.sim.pickups.find(q => q.id === e.pickup), w = p?.word;
       if (w) { this.ui.fx.number(e.x, e.z, `${w.en} = ${w.tr}`, 'word'); speech.say(w.en); }

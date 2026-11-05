@@ -11,7 +11,7 @@ export const LIVES = 3;
 // newRival: the rival type this stage introduces ("New rivals!" card).
 export const STAGES = [
   { id: 'boulevard', outpost: 'boulevard', family: 'answer', title: 'Boulevard Park', ride: { theme: 'boulevard', seconds: 45, spell: false }, newRival: 'waddler' },
-  { id: 'archery', outpost: 'archery', family: 'sort', title: 'Archery Ground', ride: { theme: 'archery', seconds: 45, spell: true }, newRival: 'shield' },
+  { id: 'archery', outpost: 'archery', family: 'sort', halves: ['match', 'sort'], fights: 'long', title: 'Archery Ground', ride: { theme: 'archery', seconds: 45, spell: true }, newRival: 'shield' },
   { id: 'kizilay', outpost: 'kizilay', family: 'match', title: 'Kızılay Square', ride: { theme: 'kizilay', seconds: 45, spell: false }, newRival: 'sledder' },
   { id: 'sururi', outpost: 'sururi', family: 'build', title: 'Sururi Park', ride: { theme: 'sururi', seconds: 45, spell: true }, newRival: 'lobber' },
   { id: 'waterfront', outpost: 'waterfront', family: 'listen', title: 'Waterfront Park', ride: { theme: 'waterfront', seconds: 45, spell: false }, newRival: null },

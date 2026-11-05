@@ -487,3 +487,15 @@ body.reading #seizebtn, body.sledding #seizebtn { display: none; }
 body.reading .edge-mark, body.sledding .edge-mark { display: none; }
 /* compact panels: the battlefield gets the screen */
 @media (orientation: portrait) and (max-width: 600px) { #coach, #minimap:not([hidden]) ~ #coach { font-size: 12px; padding: 4px 8px; max-width: 64vw; line-height: 1.2; } #coach b { font-size: 10px; } }
+
+/* the word-snowman hunt (fights): the Turkish word to find, under the outpost bar */
+#hunt { position: fixed; left: 50%; top: 84px; transform: translateX(-50%); z-index: 24; display: flex; flex-direction: column; align-items: center; gap: 0; padding: 6px 18px 8px; border-radius: 16px; background: #fffaf0; border: 3px solid #2d6fb5; box-shadow: 0 4px 0 #1c4f8a; color: #1c2a55; font: 700 12px system-ui, sans-serif; pointer-events: none; animation: hunt-in 0.35s ease-out; max-width: calc(100vw - 32px); text-align: center; }
+#hunt[hidden] { display: none; }
+#hunt small { font-size: 12px; opacity: 0.8; }
+#hunt b { font: 900 24px system-ui, sans-serif; line-height: 1.1; }
+#hunt .hunt-word { display: flex; align-items: center; gap: 8px; }
+#hunt img { width: 34px; height: 34px; object-fit: contain; }
+@keyframes hunt-in { from { transform: translate(-50%, -12px) scale(0.9); opacity: 0; } to { transform: translate(-50%, 0) scale(1); opacity: 1; } }
+body.reading #hunt { display: none; }
+@media (orientation: portrait) and (max-width: 600px) { #hunt { top: 184px; } #hunt b { font-size: 21px; } } /* below Mr. Saymaz's bubble */
+@media (prefers-reduced-motion: reduce) { #hunt { animation: none; } }

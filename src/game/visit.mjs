@@ -35,7 +35,7 @@ export class Visit {
   }
   // banners raised so far (mixed visits): one per family whose share is answered
   get bannersUp() { return this.families ? Math.min(this.families.length, this.famIdx + (this.famDone >= this.perFamily ? 1 : 0)) : 0; }
-  get progress() { return this.families ? this.bannersUp / this.families.length + (this.bannersUp < this.families.length ? Math.min(1, this.famDone / this.perFamily) / this.families.length : 0) : Math.min(1, this.done / this.total); }
+  get progress() { return this.families ? this.bannersUp / this.families.length + (this.famDone < this.perFamily ? this.famDone / this.perFamily / this.families.length : 0) : Math.min(1, this.done / this.total); } // a finished family counts once, in bannersUp
   get finished() { return this.families ? this.bannersUp >= this.families.length : this.done >= this.total; }
   // The next step to show (a fresh round when the last one is used up), or null when finished.
   next() {

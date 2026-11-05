@@ -50,8 +50,19 @@ export class SnowmanView {
     this.bar = new Sprite(new SpriteMaterial({ map: this.tex, depthTest: false, transparent: true })); this.bar.scale.set(1.0, 0.17, 1); this.bar.position.y = c.minion === 'captain' ? 4.3 : c.minion === 'sledder' ? 2.1 : 2.85; this.bar.renderOrder = 20; this.root.add(this.bar);
     this.last = -1; this.t = Math.random() * 6; this.spawnT = 0.4;
   }
+  // a word snowman (the fights) holds up a sign with its English word
+  addSign(word) {
+    const cv = document.createElement('canvas'); cv.width = 320; cv.height = 96; const g = cv.getContext('2d');
+    g.font = '900 52px system-ui, sans-serif'; const w = Math.min(308, g.measureText(word).width + 40);
+    g.fillStyle = '#fffaf0'; g.strokeStyle = '#2d6fb5'; g.lineWidth = 7; g.beginPath(); g.roundRect((320 - w) / 2, 8, w, 80, 22); g.fill(); g.stroke();
+    g.fillStyle = '#1c2a55'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(word, 160, 50, 290);
+    const tex = new CanvasTexture(cv); tex.colorSpace = SRGBColorSpace;
+    this.sign = new Sprite(new SpriteMaterial({ map: tex, depthTest: false, transparent: true })); this.sign.scale.set(2.2, 0.66, 1); this.sign.position.y = 3.2; this.sign.renderOrder = 6; this.root.add(this.sign);
+    this.bar.position.y = 2.75;
+  }
   update(dt, groundY = 0) {
     const c = this.c; this.t += dt * (2 + c.moving * 2);
+    if (c.word && !this.sign) this.addSign(c.word.en);
     this.root.position.set(c.x, groundY, c.z); this.body.rotation.y = c.face;
     const wob = c.minion === 'sledder' ? 0 : Math.sin(this.t * 2) * 0.08 * Math.min(1, c.moving);
     this.body.rotation.z = wob; this.body.position.y = Math.abs(Math.sin(this.t * 2)) * 0.06 * Math.min(1, c.moving);
@@ -60,9 +71,9 @@ export class SnowmanView {
     const melt = c.frozen > 0 || c.thaw > 0 ? Math.max(0.05, 1 - (CONFIG.timing.frozenSeconds - c.frozen) / 1.2) : 1;
     const pop = 1 - this.spawnT / 0.4;
     const k = this.size * pop; this.body.scale.set(k * (melt < 1 ? 1 + (1 - melt) * 0.4 : 1), k * melt, k * (melt < 1 ? 1 + (1 - melt) * 0.4 : 1)); this.ring.visible = melt === 1;
-    this.bar.visible = melt === 1;
+    this.bar.visible = melt === 1; if (this.sign) this.sign.visible = melt > 0.3;
     const f = Math.max(0, c.warmth / c.maxWarmth);
     if (Math.abs(f - this.last) > 0.01) { this.last = f; const g = this.cv.getContext('2d'); g.clearRect(0, 0, 96, 16); g.fillStyle = 'rgba(28,35,64,0.8)'; g.beginPath(); g.roundRect(0, 2, 96, 12, 6); g.fill(); g.fillStyle = f > 0.5 ? '#ff6b5e' : '#ffb03b'; g.beginPath(); g.roundRect(2, 4, 92 * f, 8, 4); g.fill(); this.tex.needsUpdate = true; }
   }
-  dispose() { this.mat.dispose(); this.tex.dispose(); this.bar.material.dispose(); }
+  dispose() { this.mat.dispose(); this.tex.dispose(); this.bar.material.dispose(); if (this.sign) { this.sign.material.map.dispose(); this.sign.material.dispose(); } }
 }

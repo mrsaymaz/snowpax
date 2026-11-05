@@ -30,7 +30,7 @@ import { useBasicScenes } from './cards/scenes.js';
 import { WorldTasks } from './render/worldtask.js';
 import { castleStation } from './cards/castle3d.js';
 import { treehouseStation, archeryStation, fountainStation, bellStation } from './cards/stations.js';
-import { InstancedMesh, MeshLambertMaterial, SphereGeometry, Object3D } from 'three';
+import { InstancedMesh, MeshLambertMaterial, SphereGeometry, Object3D, Group, Mesh, BoxGeometry, Sprite, SpriteMaterial, CanvasTexture, SRGBColorSpace } from 'three';
 
 const $ = s => document.querySelector(s);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -226,6 +226,7 @@ async function startGame(myTeam, kit, pace) {
       snapCamera: () => { focus.set(player.x, 0, player.z - 1.2); camShift = 0; },
       showWall: cells => showWall(cells), onGone: list => dropSnowmen(list), rebuildWorld: z => rebuildWorld(z), markRival: z => world.setOwner(z.id, rivCol), fireworks,
       seizeButton: on => { $('#seizebtn').hidden = !on; },
+      fx, hunt: w => { const el = $('#hunt'), clean = s => String(s ?? '').replace(/[&<>"']/g, ''); el.hidden = !w; if (w) el.innerHTML = `<small>Freeze the snowman that means</small><span class="hunt-word">${w.pic ? `<img src="${clean(w.pic)}" alt="">` : ''}<b>${clean(w.tr)}</b></span>`; },
       showdown: {
         start: (z, b) => showdownView.start(z, b), raise: k => showdownView.raise(k), giantBall: (f, t, s) => showdownView.giantBall(f, t, s), ring: () => showdownView.ring(), stop: () => showdownView.stop(),
         burst: at => { fx.emit(at.x, 1.4, at.z, reduceMotion ? 20 : 70, '#ffffff', 9, 1.4, 1.6); fx.emit(at.x, 1.4, at.z, reduceMotion ? 8 : 30, '#bfe0ff', 6, 1.2, 1.2); },
@@ -243,6 +244,17 @@ async function startGame(myTeam, kit, pace) {
     const o = new Object3D(); cells.forEach(([, , x, z], k) => { o.position.set(x, 0, z); o.rotation.y = k; o.scale.set(1.5 + (k % 3) * 0.2, 1.2 + (k % 4) * 0.25, 1.5); o.updateMatrix(); wallMesh.setMatrixAt(k, o.matrix); });
     wallMesh.receiveShadow = true; scene.add(wallMesh);
   };
+  // supply crates on the field (the fights): a crate with a snow cap and a glowing question mark
+  const crates = new Map(), qTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); const gr = g.createRadialGradient(64, 64, 8, 64, 64, 62); gr.addColorStop(0, 'rgba(255,214,110,1)'); gr.addColorStop(0.55, 'rgba(255,170,60,0.55)'); gr.addColorStop(1, 'rgba(255,150,40,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); g.fillStyle = '#5a3200'; g.font = '900 72px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', 64, 68); const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; return t; })();
+  const addCrate = (id, x, z) => {
+    const g = new Group(), y0 = groundH(x, z); g.position.set(x, y0, z);
+    const box = new Mesh(new BoxGeometry(0.9, 0.7, 0.9), new MeshLambertMaterial({ color: '#c08a52' })); box.position.y = 0.35; box.castShadow = true; g.add(box);
+    for (const s of [-1, 1]) { const band = new Mesh(new BoxGeometry(0.94, 0.1, 0.94), new MeshLambertMaterial({ color: '#7a4f2a' })); band.position.y = 0.35 + s * 0.22; g.add(band); }
+    const cap = new Mesh(new BoxGeometry(0.92, 0.12, 0.92), new MeshLambertMaterial({ color: '#f6f8ff' })); cap.position.y = 0.76; g.add(cap);
+    const q = new Sprite(new SpriteMaterial({ map: qTex, depthWrite: false, transparent: true })); q.scale.set(1.1, 1.1, 1); q.position.y = 1.5; q.renderOrder = 5; g.add(q); g.userData.q = q;
+    scene.add(g); crates.set(id, g); fx.emit(x, 1, z, 24, '#ffd166', 4, 0.8);
+  };
+  const dropCrate = id => { const g = crates.get(id); if (!g) return; scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); crates.delete(id); };
   // rival snowmen views
   const snowmen = new Map();
   const dropSnowmen = list => { for (const [id, v] of snowmen) if (!list || list.some(c => c.id === id) || !sim.chars.some(c => c.id === id)) { scene.remove(v.root); v.dispose(); snowmen.delete(id); } };
@@ -372,6 +384,9 @@ async function startGame(myTeam, kit, pace) {
     if (flow && live) flow.update(rdt); // card timers run in real time
     for (const e of sim.drainEvents()) {
       fx.onEvent(e, sim); flow?.onEvent(e); stages?.onEvent(e);
+      if (e.type === 'supplyDrop') addCrate(e.pickup, e.x, e.z);
+      if (e.type === 'supplyGone') dropCrate(e.pickup);
+      if (e.type === 'collect' && e.kind === 'supply') { fx.emit(e.x, 0.8, e.z, 30, '#ffd166', 4, 0.8); fx.number(e.x, e.z, e.right ? 'SUPPLIES!' : '+1 ❄', 'warm'); }
       if (e.type === 'spawnMinion') { const c = sim.chars.find(q => q.id === e.id); if (c) { const v = new SnowmanView(c); snowmen.set(c.id, v); scene.add(v.root); fx.emit(e.x, 0.6, e.z, 20, '#ffffff', 3, 0.6); } }
       if (e.type === 'melt') fx.emit(e.x, 0.5, e.z, 22, '#f4f7ff', 2.5, 0.8);
       if (e.type === 'blast') fx.emit(e.x, 3.2, e.z, 16, myCol, 3, 0.6);
@@ -434,6 +449,7 @@ async function startGame(myTeam, kit, pace) {
       const c = k.c, visible = !c.benched && (c.side === 'home' || sim.canSee(player, c) || c.frozen);
       k.update(dt, { visible, reduceMotion, groundY: groundH(c.x, c.z) });
     }
+    for (const g of crates.values()) { g.userData.q.position.y = 1.5 + Math.sin(now / 300) * 0.12; g.rotation.y += dt * 0.6; }
     for (const v of snowmen.values()) { v.update(dt, groundH(v.c.x, v.c.z)); v.root.visible = sim.canSee(player, v.c) || v.c.frozen > 0; }
     sim.drifts.forEach((d, i) => { const t = 1 - d.cd / 6; if (d.lt !== t) { d.lt = t; world.updateDrift(i, Math.max(0.2, t)); } });
     fx.update(pose ? 0 : dt, sim);
@@ -481,8 +497,9 @@ async function startGame(myTeam, kit, pace) {
 
     // HUD
     const p = Math.round(Math.abs(z.progress) * 100);
-    $('#zone-bar .home').style.width = (z.progress > 0 ? p : 0) + '%'; $('#zone-bar .rival').style.width = (z.progress < 0 ? p : 0) + '%';
-    $('#zone-label').textContent = `${z.label}: ` + (stages?.phase === 'fight' && stages.zone === z ? (z.battlefield ? 'beat the rival team!' : 'clear the snowmen!') : z.showdown ? (z.owner === 'home' ? 'giant snowball!' : `banners ${stages?.bannersUp || 0} of 5`) : flow?.busy && flow.zone === z ? (flow.mode === 'defend' ? 'answer to refill snowballs' : `answer to seize ${p}%`) : flow?.waveZone === z ? 'defend it!' : z.owner === 'home' ? 'yours!' : z.owner === 'rival' ? 'rivals hold it' : z.contested ? 'contested!' : z.home ? `seizing… ${p}%` : z.rival ? `rivals seizing… ${p}%` : `${Math.round(Math.hypot(z.x - player.x, z.z - player.z))} steps away`);
+    const fbar = stages?.fightBar(), ftext = stages?.fightText();
+    $('#zone-bar .home').style.width = (fbar != null ? Math.round(fbar * 100) : z.progress > 0 ? p : 0) + '%'; $('#zone-bar .rival').style.width = (fbar == null && z.progress < 0 ? p : 0) + '%';
+    $('#zone-label').textContent = `${z.label}: ` + (ftext && stages.zone === z ? ftext : stages?.phase === 'fight' && stages.zone === z ? (z.battlefield ? 'beat the rival team!' : 'clear the snowmen!') : z.showdown ? (z.owner === 'home' ? 'giant snowball!' : `banners ${stages?.bannersUp || 0} of 5`) : flow?.busy && flow.zone === z ? (flow.mode === 'defend' ? 'answer to refill snowballs' : `answer to seize ${p}%`) : flow?.waveZone === z ? 'defend it!' : z.owner === 'home' ? 'yours!' : z.owner === 'rival' ? 'rivals hold it' : z.contested ? 'contested!' : z.home ? `seizing… ${p}%` : z.rival ? `rivals seizing… ${p}%` : `${Math.round(Math.hypot(z.x - player.x, z.z - player.z))} steps away`);
     drawMini();
     $('#zone').classList.toggle('contested', !!z.contested);
     $('#score .h').textContent = score.home; $('#score .r').textContent = score.rival;

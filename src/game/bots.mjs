@@ -42,6 +42,7 @@ export class Bot {
     let best = null, bd = Infinity;
     for (const o of this.sim.enemiesOf(c)) {
       if (!this.sim.canSee(c, o) || this.sim.grid.has(o.x, o.z, GRID.ZONE)) continue;
+      if (o.word && c.side === 'home') continue; // word snowmen are the student's to find
       const raw = Math.hypot(o.x - c.x, o.z - c.z);
       if (raw > seek) continue;
       const d = raw - (o.role === 'player' && c.side === 'rival' ? 1.5 : 0) + (o.warmth / o.maxWarmth) * 1.5;

@@ -7,6 +7,7 @@ import { CONFIG } from '../config.js';
 import { STAGES, stageById, Lives, stageState, isUnlocked, nextStage, finishStage, totalStars, UNLOCK } from './stages.mjs';
 import { WAVES, RIVAL_INFO, BANNERS, minionList, stageWall, setWall, entryPoints, schoolyardSpot } from './waves.mjs';
 import { flakeWords } from './visit.mjs';
+import { FIGHT_PLANS, WordHunt, supplySpot } from './fights.mjs';
 import { SledRun } from './sledrun.js';
 import { THEME_ICON } from './taskcard.js';
 import { speech } from './speech.js';
@@ -22,7 +23,7 @@ export class StageRunner {
   constructor({ match, flow, unit, unitProgress, save, writeSave, pace, rng, team, kit, reduceMotion, ui }) {
     Object.assign(this, { match, sim: match.sim, flow, unit, up: unitProgress, save, writeSave, pace, rng, team, kit, reduceMotion, ui });
     this.mode = 'map'; this.lives = new Lives(); this.wall = []; this.waves = []; this.runFlakes = 0; this.ridesDone = 0;
-    flow.ui.onCaptured = z => this.captured(z); flow.ui.onHeld = z => this.held(z);
+    flow.ui.onCaptured = z => this.captured(z); flow.ui.onHeld = z => this.held(z); flow.ui.onHalf = z => this.startStrike(z);
     this.bindInput();
     // rival kids wait off the field until their wave
     for (const c of this.sim.chars) if (c.side === 'rival') this.bench(c);
@@ -89,6 +90,10 @@ export class StageRunner {
     this.ui.rebuildWorld?.(z); // v2 look: build only this stage's area
     this.mode = 'outpost'; document.body.classList.remove('sledding'); $('#runhud').hidden = true; $('#hud').hidden = false;
     this.zone = z; this.tStand = 0; this.waveIdx = 0; this.waves = []; this.finalT = null;
+    // longer fights with English inside them (fights.mjs): the stage's plan, two halves of English
+    this.plan = st.fights ? FIGHT_PLANS[st.fights] : null; z.halves = st.halves || null;
+    this.score = 0; this.hunt = null; this.huntT = 0; this.trickleT = 0; this.crateT = 0; this.toldFrozen = false;
+    if (this.plan) { this.huntNext = this.plan.hunt.first; this.crateNext = this.plan.crate.first; this.words = this.words || new WordHunt(this.unit, this.rng, this.plan.hunt.size); }
     // close the stage with snowbanks, find where the waves come in
     this.wall = stageWall(grid, z); setWall(grid, this.wall, true); this.ui.showWall?.(this.wall);
     this.entries = entryPoints(grid, z);
@@ -131,7 +136,7 @@ export class StageRunner {
     if (st.newRival && RIVAL_INFO[st.newRival]) this.newRival(st.newRival);
     // first a fight: clear the first wave of snowmen, then seize the outpost with English
     this.phase = 'fight'; this.tFight = 0; this.flow.stageHold = true;
-    if (z.battlefield && !st.final) { this.ui.markRival?.(z); setTimeout(() => { if (this.phase === 'fight') this.ui.coach(`The rival team holds ${z.label}! Beat them in a snowball fight, then seize it with English.`, 6); }, 1700); }
+    if (z.battlefield && !st.final) { this.ui.markRival?.(z); setTimeout(() => { if (this.phase === 'fight') this.ui.coach(this.plan ? `The rival team holds ${z.label}! Freeze ${this.plan.open.goal} rivals to break their line. They keep coming back, so keep throwing!` : `The rival team holds ${z.label}! Beat them in a snowball fight, then seize it with English.`, 6); }, 1700); }
     if (!this.toldTap) { this.toldTap = true; setTimeout(() => { if (this.phase === 'fight') this.ui.coach('Snowmen! Tap a rival to throw a snowball at it, or tap yourself to throw at the nearest one.', 6); }, 1800); }
   }
   // A battlefield (a 22 × 34 field with the rivals' outpost at the north end): the team starts
@@ -164,6 +169,83 @@ export class StageRunner {
     this.waves[i] = { members, t: 0, cleared: false, final: !!w.final };
     this.waveIdx = i + 1;
     this.ui.banner(`WAVE ${i + 1}: ${w.name.toUpperCase()}`, w.final ? 'lose' : 'super', 1.8); this.ui.play('whoosh');
+  }
+  // ---------- the longer fights (fights.mjs) ----------
+  // a snowman walks out of the rivals' camp (round the outpost) toward `goal`
+  spawnSnowman(type, goal, word = null) {
+    const e = this.entries[Math.floor(this.rng() * this.entries.length)], c = this.match.addMinion(type, e.x + (this.rng() - 0.5), e.z + (this.rng() - 0.5), goal);
+    if (word) c.word = word; return c;
+  }
+  // the opening round and the strike-back: snowmen keep coming, word snowmen and supply crates
+  updateExtras(dt) {
+    const P = this.plan, z = this.zone, fighting = this.phase === 'fight' || this.phase === 'strike';
+    const goal = this.phase === 'fight' ? this.yardGoal : z;
+    if (fighting) {
+      this.trickleT += dt;
+      const live = this.sim.chars.filter(c => c.role === 'minion' && !c.gone && !c.word && !c.frozen).length;
+      if (this.trickleT >= P.open.trickle && live < P.open.snowmen) { this.trickleT = 0; const types = minionList(WAVES[this.cur.id][0]); this.spawnSnowman(types[Math.floor(this.rng() * types.length)], goal); }
+      // supply crates: one at a time on the field
+      this.crateT += dt;
+      if (this.crateT >= this.crateNext && !this.sim.pickups.some(p => p.kind === 'supply')) {
+        const at = supplySpot(this.match.grid, z, this.rng, [this.match.player]); this.crateT = 0; this.crateNext = P.crate.every;
+        if (at) { this.sim.dropSupply(at.x, at.z); if (!this.toldCrate) { this.toldCrate = true; this.ui.coach('A supply crate! Run onto it and answer a question: snowballs for the whole team.', 5); } }
+      }
+    }
+    // word snowmen: find the English word for the Turkish one
+    if (this.hunt) {
+      this.huntT += dt;
+      if (this.huntT > P.hunt.seconds) { const t = this.words.timeout(); this.endHunt(); if (t) this.ui.coach(`Time! The word was "${t.en}" (${t.tr}).`, 3.5); }
+    } else if (fighting || this.finalT !== null) {
+      this.huntNext -= dt;
+      if (this.huntNext <= 0 && this.words.ready && !this.flow.busy) {
+        const h = this.words.next(); this.huntT = 0; this.huntNext = P.hunt.every;
+        this.hunt = h.words.map(w => this.spawnSnowman('waddler', goal, { id: w.id, en: w.en, tr: w.tr }));
+        this.ui.hunt?.(h.target); this.ui.play('whoosh');
+        if (!this.toldHunt) { this.toldHunt = true; this.ui.coach('Word snowmen! Read their signs and freeze the one that means the word at the top. Tap it to throw at it.', 6); }
+      }
+    }
+  }
+  endHunt() { for (const c of this.hunt || []) if (!c.frozen && !c.thaw) c.gone = true; this.hunt = null; this.ui.hunt?.(null); }
+  // everyone still standing runs back to camp (the end of a fight)
+  retreat(text) {
+    if (text) this.ui.banner(text, 'win', 1.4);
+    this.endHunt(); this.match.clearMinions(); this.ui.onGone?.();
+    for (const c of this.sim.chars) if (c.side === 'rival') this.bench(c);
+    this.sim.removeSupply();
+  }
+  // "They strike back!" between the two halves: hold the circle until the clock runs out (it
+  // stops while rivals stand in the circle with nobody of ours)
+  startStrike(z) {
+    if (this.mode !== 'outpost' || z !== this.zone) return;
+    this.phase = 'strike'; this.flow.stageHold = true; this.tStrike = 0; this.strikeLeft = this.plan ? this.plan.strike.seconds : 20; this.trickleT = 0;
+    this.ui.banner('THEY STRIKE BACK!', 'lose', 1.6); this.ui.play('whoosh');
+    this.ui.coach(`Half of ${z.label} is yours! Now hold the circle for ${Math.round(this.strikeLeft)} seconds. Freeze anyone who steps in.`, 5);
+    this.spawnWave(1);
+  }
+  updateStrike(dt) {
+    const z = this.zone; this.tStrike += dt;
+    this.strikeHeld = !(z.rival > 0 && z.home === 0);
+    if (this.strikeHeld) this.strikeLeft -= dt;
+    else if (!this.toldIn || this.tStrike - this.toldIn > 8) { this.toldIn = this.tStrike; this.ui.coach('Rivals are in the circle! Freeze them to keep the clock going.', 3); }
+    if (this.strikeLeft > 0 && this.tStrike < (this.plan?.strike.max ?? 40)) return;
+    this.retreat('YOU HELD IT!'); this.toldIn = 0;
+    this.phase = 'seize'; this.begun = false; this.flow.stageHold = false; this.tSeize = 0;
+    this.ui.play('superReady'); this.ui.seizeButton?.(true);
+    this.ui.coach('Part 2! Walk into the circle to finish taking the outpost (or tap ▶ Seize).', 4);
+  }
+  // the HUD line for the fights (null: the usual one)
+  fightText() {
+    if (this.mode !== 'outpost' || !this.plan) return null;
+    if (this.phase === 'fight') return `freeze rivals ${Math.min(this.score, this.plan.open.goal)} / ${this.plan.open.goal}`;
+    if (this.phase === 'strike') return this.strikeHeld === false ? 'rivals in the circle!' : `hold it ${Math.max(0, Math.ceil(this.strikeLeft))}s`;
+    if (this.finalT !== null) return `final wave ${Math.max(0, Math.ceil(this.plan.final - this.finalT))}s`;
+    return null;
+  }
+  fightBar() {
+    if (this.mode !== 'outpost' || !this.plan) return null;
+    if (this.phase === 'fight') return Math.min(1, this.score / this.plan.open.goal);
+    if (this.phase === 'strike') return Math.max(0, this.strikeLeft / this.plan.strike.seconds);
+    return null;
   }
   alive(wave) { return wave.members.filter(c => !c.gone && !c.frozen && !c.thaw && !(c.role !== 'minion' && c.benched)).length; }
 
@@ -200,6 +282,7 @@ export class StageRunner {
     for (const c of this.sim.chars) if (c.side === 'rival') this.bench(c);
     this.sim.balls = [];
     if (lost && z && z.owner !== 'home') { z.owner = null; z.progress = 0; z.seizing = false; }
+    if (z) z.halves = null; this.endHunt(); this.sim.removeSupply(); this.plan = null;
     if (this.yard) { const i = this.sim.zones.indexOf(this.yard); if (i >= 0) this.sim.zones.splice(i, 1); this.ui.showdown?.stop(); clearTimeout(this.giantT); this.giant = null; }
     this.zone = null;
   }
@@ -277,7 +360,9 @@ export class StageRunner {
     this.tStand += dt;
     const gone = this.match.removeGone(); if (gone.length) this.ui.onGone?.(gone);
     const v = this.flow.visits.get(this.zone.id);
+    if (this.plan) this.updateExtras(dt);
     if (this.phase === 'fight') this.updateFight(dt);
+    else if (this.phase === 'strike') this.updateStrike(dt);
     else if (this.phase === 'seize' && !this.flow.busy && !this.zone.owner && !this.begun) { // walk into the circle to start seizing (after 8 s the kid walks in by itself)
       const P = this.match.player, inside = Math.hypot(P.x - this.zone.x, P.z - this.zone.z) <= this.zone.r;
       this.tSeize += dt; if (this.tSeize > 8 && !P.travel && !inside) this.walkIn();
@@ -285,10 +370,10 @@ export class StageRunner {
     }
     if (this.cur.final) { this.updateShowdown(dt, v); return; }
     if (this.waveIdx === 0 && this.tStand > 2) this.spawnWave(0);
-    if (this.waveIdx === 1 && this.phase !== 'fight' && ((v && v.done >= 3 && this.alive(this.waves[0]) <= 1) || this.waves[0].t > 30) && !this.zone.owner) this.spawnWave(1);
-    for (const w of this.waves) { if (!w || w.cleared) continue; w.t += dt; if (!this.alive(w)) { w.cleared = true; if (!w.final) { this.ui.banner('WAVE CLEAR!', 'win', 1.3); this.ui.play('superReady'); } } }
+    if (this.waveIdx === 1 && !this.plan && this.phase !== 'fight' && ((v && v.done >= 3 && this.alive(this.waves[0]) <= 1) || this.waves[0].t > 30) && !this.zone.owner) this.spawnWave(1);
+    for (const w of this.waves) { if (!w || w.cleared) continue; w.t += dt; if (!this.alive(w)) { w.cleared = true; if (!w.final && !this.plan) { this.ui.banner('WAVE CLEAR!', 'win', 1.3); this.ui.play('superReady'); } } }
     // the final wave decides: beaten (or 8 s of it held off) and the outpost is yours
-    if (this.finalT !== null) { this.finalT += dt; const fw = this.waves[2]; if ((fw && fw.cleared) || this.finalT > 8) { this.finalT = null; if (fw && !fw.cleared) this.ui.banner('THEY GIVE UP!', 'win', 1.2); setTimeout(() => { if (this.mode === 'outpost') this.flow.held(this.zone); }, fw?.cleared ? 600 : 1200); } }
+    if (this.finalT !== null) { this.finalT += dt; const fw = this.waves[2]; if ((fw && fw.cleared) || this.finalT > (this.plan ? this.plan.final : 8)) { this.finalT = null; if (this.plan) this.retreat(); if (fw && !fw.cleared) this.ui.banner('THEY GIVE UP!', 'win', 1.2); setTimeout(() => { if (this.mode === 'outpost') this.flow.held(this.zone); }, fw?.cleared ? 600 : 1200); } }
   }
   // walk into the circle: to a free spot just inside its edge, nearest the player (the middle is the landmark)
   walkIn() {
@@ -309,10 +394,16 @@ export class StageRunner {
   // landmark opens for seizing.
   // On a battlefield the whole rival team has to be beaten (frozen rivals go back to their camp);
   // after FIELD_MAX seconds the ones still standing run back to camp, so nobody is stuck.
+  // With a fight plan: a round against a rival team that keeps coming back; freeze `goal` rivals.
   updateFight(dt) {
     this.tFight += dt; const w0 = this.waves[0], field = !!this.zone.battlefield;
     if (!w0) return;
-    const beaten = field ? this.alive(w0) === 0 && this.tFight > 3 : this.alive(w0) <= 1 && this.tFight > 6;
+    if (this.plan) {
+      const won = this.score >= this.plan.open.goal;
+      if (!won && this.tFight <= this.plan.open.max) return;
+      this.retreat(won ? 'RIVAL LINE BROKEN!' : 'THEY RUN BACK TO CAMP!');
+    }
+    const beaten = this.plan || (field ? this.alive(w0) === 0 && this.tFight > 3 : this.alive(w0) <= 1 && this.tFight > 6);
     if (!beaten && this.tFight <= (field ? FIELD_MAX : FIGHT_MAX)) return;
     for (const c of w0.members) c.guard = null;
     if (field && !beaten) { for (const c of w0.members) { if (c.role === 'minion') c.gone = true; else this.bench(c); } this.ui.banner('THEY RUN BACK TO CAMP!', 'win', 1.3); }
@@ -333,7 +424,23 @@ export class StageRunner {
   }
   onEvent(e) {
     if (this.mode !== 'outpost') return;
-    if (e.type === 'respawn' && this.phase === 'fight' && this.zone?.battlefield) { const c = this.sim.chars.find(q => q.id === e.id); if (c && c.side === 'rival' && c.role !== 'minion') this.bench(c); return; } // frozen rivals go back to camp
+    if (this.plan && e.type === 'freeze') { // the fights: rivals frozen count, word snowmen are checked, and our kids never lose a life
+      const c = this.sim.chars.find(q => q.id === e.id);
+      if (c && c.side === 'rival') {
+        if (this.phase === 'fight') this.score++;
+        if (c.word && this.hunt?.includes(c)) {
+          const r = this.words.frozen(c.word);
+          this.ui.fx?.number(c.x, c.z, `${c.word.en} = ${c.word.tr}`, 'word'); speech.say(c.word.en);
+          if (r === 'right') {
+            const P = this.match.player; if (this.phase === 'fight') this.score += this.plan.hunt.bonus;
+            const before = P.super; P.super = Math.min(1, P.super + 0.35); if (before < 1 && P.super >= 1) this.sim.emit('superReady', { id: P.id });
+            this.ui.banner('RIGHT WORD!', 'good', 1.2); this.ui.play('sparkle'); this.endHunt();
+          } else if (r === 'wrong') this.ui.coach(`That one says "${c.word.en}" (${c.word.tr}). Find: ${this.words.cur.target.tr}`, 3);
+        }
+      }
+      if (c && c === this.match.player) { if (!this.toldFrozen) { this.toldFrozen = true; this.ui.coach('Frozen! You are back at the start in a moment. In a fight you never lose a life.', 4); } return; }
+    }
+    if (e.type === 'respawn' && this.phase === 'fight' && this.zone?.battlefield && !this.plan) { const c = this.sim.chars.find(q => q.id === e.id); if (c && c.side === 'rival' && c.role !== 'minion') this.bench(c); return; } // frozen rivals go back to camp
     if (e.type === 'freeze' && e.id === this.match.player.id) { const left = this.lives.lose(); this.ui.banner(left ? `${left} ${left === 1 ? 'LIFE' : 'LIVES'} LEFT` : 'NO LIVES LEFT', 'lose', 1.4); this.drawLives(); if (!left) setTimeout(() => this.outOfLives(), 900); }
   }
   drawLives() { const el = $('#lives'); if (el) { el.hidden = this.mode !== 'outpost'; el.innerHTML = Array.from({ length: this.lives.max }, (_, i) => `<i class="${i < this.lives.left ? 'on' : ''}">♥</i>`).join(''); } }

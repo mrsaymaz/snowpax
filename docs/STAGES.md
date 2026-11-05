@@ -6,7 +6,7 @@ stages played in order:
 | # | Stage | Sled ride | Task family | New rival |
 |---|---|---|---|---|
 | 1 | Boulevard Park | 45 s, plane-tree avenue | Answer | snowmen (waddlers) |
-| 2 | Archery Ground | 45 s, record stones and targets, spelling letters | Sorting | shield snowmen |
+| 2 | Archery Ground | 45 s, record stones and targets, spelling letters | Matching, then Sorting (two halves, the long fights) | shield snowmen |
 | 3 | Kızılay Square | 45 s, tiled kiosks and simit carts | Matching | sledder snowmen |
 | 4 | Sururi Park | 45 s, snow castles and slides, spelling letters | Builder | lobber snowmen |
 | 5 | Waterfront Park | 45 s, along the frozen Golden Horn | Listening | — (everything mixed) |
@@ -68,6 +68,38 @@ its own layout.
   of bounds; ice is glassy blue.
 - During a stand there are no blizzards or sun bursts, so the light stays steady; each stage
   keeps its own time of day.
+
+## Longer fights with English inside them (Archery Ground, the sample)
+
+From the third play-test talk: fewer, bigger outposts, each taken in two halves of English with
+real fights round them, and English inside the fights too. Archery Ground is the sample
+(`fights` and `halves` in `stages.mjs`, the plan in `fights.mjs`); the others follow once it is
+approved.
+
+1. **The opening round** (about 60–90 s): the rival team holds its line in front of the lodge
+   and keeps coming back from its camp; snowmen keep walking out. Freeze **12 rivals** to break
+   the line (the bar under the outpost name fills). After 90 s the rivals give up anyway.
+2. **Part 1 of 2: Matching**, in the fountain activity. Half the bar fills, then "Half the
+   outpost is yours!".
+3. **"They strike back!"**: hold the circle for **50 s**. The clock stops while rivals stand in
+   the circle with nobody of ours (85 s at most).
+4. **Part 2 of 2: Sorting**, in the archery activity.
+5. **The final wave**: 30 s at most, then the outpost is yours.
+
+**Being frozen in a fight never costs a life:** the kid goes back to the spawn for a moment.
+Lives are still lost on the sled.
+
+**English inside the fights:**
+- **Word snowmen:** three snowmen walk out holding signs with English words; the top of the
+  screen shows a Turkish word (with its picture). Freeze the snowman with the right English word:
+  "RIGHT WORD!", +2 toward the 12 and a boost for the super. A wrong one shows what its word
+  means. Missed words come back sooner. Teammates leave word snowmen to the student. Practice
+  only: never counted toward the 80%, because a snowball can always hit the wrong snowman.
+- **Supply crates:** a crate with a glowing "?" lands on the field every 20 s or so. Run onto it
+  for one quick question: right, and the whole team's snowballs are refilled and the super gets a
+  big boost; wrong, and there is still a snowball (a question never punishes).
+
+Still to come in the fights: banner points and spell-your-super.
 
 ## A stage
 

@@ -32,14 +32,15 @@ test('stages unlock one by one; stars come from first-try accuracy and the best 
 });
 
 // The brief asked for 10–12 minutes. After the first play-test the rides became 45 s (asked for:
-// longer, winding rides), and after the second every stage opens with a real fight on a full
-// field (asked for: room for a real snow fight), so the arena now plans at about 15 minutes; this
-// checks it stays under 15.5 until the class play-test settles it.
-test('three lives; the whole arena, timed from the real tasks it deals, stays under 15.5 minutes', async () => {
+// longer, winding rides), after the second every stage opens with a real fight on a full field,
+// and then the fights got longer with English inside them (Archery Ground first). Mr. Saymaz
+// asked not to worry about the time for now, so this only checks the arena stays under 25
+// minutes (it plans at about 17) until the class play-test settles it.
+test('three lives; the whole arena, timed from the real tasks it deals, stays under 25 minutes', async () => {
   const l = new Lives(); assert.equal(l.left, 3); l.lose(); l.lose(); assert.ok(!l.out); l.lose(); assert.ok(l.out); l.reset(); assert.equal(l.left, 3);
   const { arenaTime } = await import('../src/game/timing.mjs');
   const unit = JSON.parse(readFileSync(new URL('../content/grade5.json', import.meta.url), 'utf8')).units.find(u => u.id === 'g5u1');
-  for (let seed = 1; seed <= 10; seed++) { const r = arenaTime(unit, { rng: makeRng(seed) }); assert.ok(r.minutes >= 10 && r.minutes <= 15.5, `seed ${seed}: ${r.minutes.toFixed(1)} min ${JSON.stringify(r.parts)}`); }
+  for (let seed = 1; seed <= 10; seed++) { const r = arenaTime(unit, { rng: makeRng(seed) }); assert.ok(r.minutes >= 10 && r.minutes <= 25, `seed ${seed}: ${r.minutes.toFixed(1)} min ${JSON.stringify(r.parts)}`); }
 });
 
 test('every outpost stage has two waves and a final one; each brings in its new rival type', () => {

@@ -20,7 +20,7 @@ export const WAVES = {
     { name: 'They want it back!', m: { waddler: 3 }, kids: 2, final: true },
   ],
   archery: [
-    { name: 'Lids up!', m: { waddler: 2, shield: 1 }, kids: 0 },
+    { name: 'The rival team', m: { waddler: 2, shield: 1 }, kids: 2 },
     { name: 'Shield wall', m: { shield: 2, waddler: 2 }, kids: 1 },
     { name: 'They want it back!', m: { shield: 2, waddler: 2 }, kids: 2, final: true },
   ],

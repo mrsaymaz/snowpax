@@ -35,6 +35,7 @@ export const MINIONS = {
 export const WORLD = {
   sled: { start: 2.5, push: 2.2, gravity: 9, max: 9.5, board: 0.75, cooldown: 1.5, cost: 2.6 },
   cocoa: { respawn: 40, reach: 0.85, superBonus: 0.35 }, // a question first; right answer = full warmth, full snowballs, some super
+  supply: { reach: 0.9, superBonus: 0.45 }, // supply crates in the fights
   flake: { reach: 0.85 },
   dump: { reach: 1.4, damage: 6, slow: 1.1, cooldown: 4, tiles: 'HRtlTvyx' },
   gust: { every: [25, 45], seconds: 6, strength: 2.4, dir: [-Math.SQRT1_2, Math.SQRT1_2] }, // poyraz: from the north-east
@@ -242,6 +243,9 @@ export class Sim {
         if (c.frozen || c.thaw) continue;
         const d = Math.hypot(c.x - p.x, c.z - p.z);
         if (p.kind === 'flake' && c.role === 'player' && d < WORLD.flake.reach) { p.taken = true; c.flakes++; this.emit('collect', { id: c.id, pickup: p.id, kind: 'flake', x: p.x, z: p.z }); break; }
+        if (p.kind === 'supply' && c.role === 'player' && !c.planted && d < WORLD.supply.reach) { // a supply crate: a quick question first
+          p.asking = true; this.emit('supplyAsk', { id: c.id, pickup: p.id, x: p.x, z: p.z }); break;
+        }
         if (p.kind === 'cocoa' && c.role === 'player' && !c.planted && !p.asking && d < WORLD.cocoa.reach) { // a question first
           p.asking = true; this.emit('cocoaAsk', { id: c.id, pickup: p.id, x: p.x, z: p.z }); break;
         }
@@ -338,6 +342,18 @@ export class Sim {
     this.emit('collect', { id: c.id, pickup: p.id, kind: 'cocoa', right, x: p.x, z: p.z });
   }
 
+  // supply crates (fights): dropped on the field, a quick question when the student walks onto one
+  dropSupply(x, z) { const p = { id: 's' + (this.supplyN = (this.supplyN || 0) + 1), kind: 'supply', x, z, cd: 0, taken: false }; this.pickups.push(p); this.emit('supplyDrop', { pickup: p.id, x, z }); return p; }
+  removeSupply(id = null) { for (const p of this.pickups.filter(q => q.kind === 'supply' && (!id || q.id === id))) { this.pickups.splice(this.pickups.indexOf(p), 1); this.emit('supplyGone', { pickup: p.id, x: p.x, z: p.z }); } }
+  // right: the whole team's snowballs refilled, the student warm and the super charged; wrong: a
+  // snowball in hand all the same (a question never punishes)
+  supplyResult(pickupId, c, right) {
+    const p = this.pickups.find(q => q.id === pickupId); if (!p) return;
+    if (right) { this.refillTeam(c.side); c.warmth = c.maxWarmth; const before = c.super; c.super = Math.min(1, c.super + WORLD.supply.superBonus); if (before < 1 && c.super >= 1) this.emit('superReady', { id: c.id }); }
+    else c.ammo = Math.min(F.ammoMax, c.ammo + 1);
+    this.emit('collect', { id: c.id, pickup: p.id, kind: 'supply', right, x: p.x, z: p.z });
+    this.removeSupply(pickupId);
+  }
   resetZone(id = null) { for (const z of this.zones) if (!id || z.id === id) Object.assign(z, { progress: 0, owner: null }); }
 
   stepChar(c, dt, inp) {
