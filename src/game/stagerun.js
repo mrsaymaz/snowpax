@@ -212,28 +212,19 @@ export class StageRunner {
     return c;
   }
   addStar() { if (!this.arm) return; this.arm.earn(1); this.ui.stars?.(this.arm.stars, true); }
-  // Build: spend stars on another friend or a boost; then the fight starts (Fight! or 35 s).
+  // Build: the Snow Shop, where stars buy boosts; then the fight starts (Fight! or 35 s).
   startBuild(kind, next) {
     if (this.mode !== 'outpost' || !this.plan) { next(); return; }
     this.phase = 'build'; this.buildKind = kind; this.buildNext = next; this.tBuild = 0; this.flow.stageHold = true; this.ui.seizeButton?.(false);
     this.ui.build?.open(this.buildInfo());
     if (this.pendingRival) { this.newRival(this.pendingRival); this.pendingRival = null; } // who you will meet in the fight
-    this.ui.coach(this.arm.stars ? `You have ${this.arm.stars} ⭐. Invite another friend or pick a boost, then tap Fight!` : 'No stars this time. Answer right first time to earn stars for friends and boosts! Tap Fight! when you are ready.', 5);
   }
-  buildInfo() { return { kind: this.buildKind, stars: this.arm.stars, team: this.arm.team.slice(), invitable: this.arm.invitable(), cost: this.arm.cost, boosts: this.arm.boosts, next: this.arm.next, left: Math.max(0, Math.ceil(this.plan.build - this.tBuild)) }; }
+  buildInfo() { return { kind: this.buildKind, stars: this.arm.stars, boosts: this.arm.boosts, next: this.arm.next, left: Math.max(0, Math.ceil(this.plan.build - this.tBuild)) }; }
   updateBuild(dt) { this.tBuild += dt; if (this.tBuild > this.plan.build) this.endBuild(); }
-  // invite a friend with stars: they come running in from the home end
-  invite(role) {
-    if (this.phase !== 'build' || !this.arm.invite(role)) return false;
-    const z = this.zone, gender = this.rng() < 0.5 ? 'girl' : 'boy', used = new Set(this.sim.chars.filter(c => c.recruit).map(c => c.name)), names = KID_NAMES[gender].filter(n => !used.has(n));
-    const P = this.match.player, x = P.x + (this.rng() - 0.5) * 2, zz = Math.min(z.z + z.battlefield.front - 1.5, P.z + 1.5);
-    this.joinTeam(role, names[Math.floor(this.rng() * names.length)] || 'Deniz', makeLook(gender, this.rng), this.match.grid.freeCircle(x, zz, 0.4) ? x : P.x, this.match.grid.freeCircle(x, zz, 0.4) ? zz : P.z);
-    this.ui.stars?.(this.arm.stars); this.ui.build?.refresh(this.buildInfo()); return true;
-  }
   buyBoost(id) {
     if (this.phase !== 'build' || !this.arm.buyBoost(id)) return false;
     const P = this.match.player; if (id === 'gloves') { P.ammoMax = CONFIG.fight.ammoMax + 1; P.ammo = P.ammoMax; } if (id === 'quick') P.reloadMul = 1.45;
-    this.ui.play('sparkle'); this.ui.stars?.(this.arm.stars); this.ui.build?.refresh(this.buildInfo()); return true;
+    this.ui.play('sparkle'); this.ui.stars?.(this.arm.stars); this.ui.build?.refresh(this.buildInfo(), id); return true;
   }
   endBuild() {
     if (this.phase !== 'build') return;

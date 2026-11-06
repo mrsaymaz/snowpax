@@ -76,24 +76,21 @@ test('supply crates land on open ground in the field; walking onto one asks a qu
   const q = m.sim.dropSupply(s.x, s.z); P.ammo = 0; m.sim.supplyResult(q.id, P, false); assert.equal(P.ammo, 1, 'a wrong answer still gives a snowball');
 });
 
-test('recruits: camp children join one role each; stars invite the roles still missing (up to the team limit) and buy boosts', async () => {
+test('recruits: camp children join one role each (3 at most); stars buy boosts in the Snow Shop; one-fight boosts are used up', async () => {
   const { Armoury, SHOP, ROLES, KID_NAMES } = await import('../src/game/fights.mjs');
   const P = FIGHT_PLANS.long;
   assert.ok(P.camp.kids.length >= 3 && P.recruits.max >= P.camp.kids.length && P.build >= 20);
   for (const [, , role] of P.camp.kids) assert.ok(ROLES[role], role);
   assert.ok(KID_NAMES.girl.length >= 3 && KID_NAMES.boy.length >= 3);
   const a = new Armoury(P.recruits);
-  assert.ok(a.join('thrower')); assert.deepEqual(a.invitable().sort(), ['builder', 'lobber', 'sprayer']);
-  assert.equal(a.invite('lobber'), false, 'no stars, no invite');
+  for (const [, , role] of P.camp.kids) assert.ok(a.join(role));
+  assert.equal(a.join('builder'), false, 'the team is full');
+  assert.equal(a.buyBoost('gloves'), false, 'no stars, no boost');
   a.earn(5);
-  assert.ok(a.invite('lobber')); assert.equal(a.stars, 5 - P.recruits.cost);
-  assert.equal(a.invite('lobber'), false, 'one of each role');
-  assert.ok(a.buyBoost('gloves')); assert.equal(a.buyBoost('gloves'), false, 'gloves last the stage');
-  a.earn(4); assert.ok(a.invite('sprayer')); assert.ok(a.invite('builder') || a.team.length >= a.max);
-  assert.equal(a.team.length, Math.min(4, P.recruits.max)); assert.deepEqual(a.invitable(), [], 'a full team');
-  a.earn(1); assert.ok(a.buyBoost('coat'));
+  assert.ok(a.buyBoost('gloves')); assert.equal(a.stars, 5 - SHOP.boosts.gloves.cost); assert.equal(a.buyBoost('gloves'), false, 'gloves last the stage');
+  assert.ok(a.buyBoost('coat'));
   const f1 = a.takeFight(), f2 = a.takeFight(); assert.ok(f1.has('coat') && !f2.has('coat') && f2.has('gloves'));
-  assert.ok(SHOP.boosts.super && SHOP.boosts.quick);
+  assert.deepEqual(Object.keys(SHOP.boosts).sort(), ['coat', 'gloves', 'quick', 'super']);
 });
 
 test('a camp child waits on open ground; answering in reach asks the question; a recruit joins the home team, follows the student and fights; a warm coat takes the first hit', () => {

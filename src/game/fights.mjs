@@ -7,8 +7,8 @@
 //   1. camp: neighbourhood children wait at the home end in plain coats; walk up to one and answer
 //      their question: right first time and they join your team (team colour, puffer jacket) and
 //      you get a star; wrong and they wait, ask again in a moment; no rivals on the field yet;
-//   2. build: stars invite another friend (a role you have not got yet) or buy a boost (big
-//      gloves, quick hands, super start, warm coat); then Fight!;
+//   2. build: the Snow Shop, where stars buy boosts (big gloves, quick hands, super start,
+//      warm coat); then Fight!;
 //   3. the opening round: the rival team keeps coming back from its camp; freeze `goal` rivals to
 //      break the line (after `max` seconds they give up anyway, so a class is never stuck);
 //   4. part 1 of the outpost's English (each right first try is also a star), build;
@@ -25,7 +25,7 @@ export const FIGHT_PLANS = {
     // outpost centre), one role each
     camp: { kids: [[-7, 24.5, 'thrower'], [0, 21.8, 'lobber'], [7, 24.5, 'sprayer']], max: 75, retry: 4 },
     build: 35,
-    recruits: { max: 4, cost: 2, extraSnowmen: 1 }, // at most 4 friends; each one brings an extra snowman to the rivals' side
+    recruits: { max: 3, extraSnowmen: 1 }, // the camp's children (3 at most); each one brings an extra snowman to the rivals' side
     open: { goal: 12, max: 90, trickle: 8, snowmen: 4 },
     strike: { seconds: 50, max: 85 },
     final: 30,
@@ -54,14 +54,10 @@ export const SHOP = {
 
 // The stars, the team's recruits and the boosts at one outpost (no DOM, tested in node).
 export class Armoury {
-  constructor({ max = 4, cost = 2 } = {}) { this.stars = 0; this.earned = 0; this.max = max; this.cost = cost; this.team = []; this.boosts = new Set(); this.next = new Set(); }
+  constructor({ max = 3 } = {}) { this.stars = 0; this.earned = 0; this.max = max; this.team = []; this.boosts = new Set(); this.next = new Set(); }
   earn(n = 1) { this.stars += n; this.earned += n; }
-  // a child joined (from the camp, or invited with stars)
+  // a child joined (from the camp)
   join(role) { if (this.team.length >= this.max || !ROLES[role]) return false; this.team.push(role); return true; }
-  // the roles that can still be invited with stars: one of each, while there is room
-  invitable() { return this.team.length >= this.max ? [] : Object.keys(ROLES).filter(r => !this.team.includes(r)); }
-  canInvite(role) { return this.invitable().includes(role) && this.stars >= this.cost; }
-  invite(role) { if (!this.canInvite(role)) return false; this.stars -= this.cost; return this.join(role); }
   canBoost(id) { const b = SHOP.boosts[id]; return !!(b && !(b.keep ? this.boosts : this.next).has(id) && this.stars >= b.cost); }
   buyBoost(id) { if (!this.canBoost(id)) return false; const b = SHOP.boosts[id]; this.stars -= b.cost; (b.keep ? this.boosts : this.next).add(id); return true; }
   // the boosts for the fight that is starting (the one-fight ones are used up)

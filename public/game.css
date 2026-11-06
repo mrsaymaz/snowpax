@@ -578,3 +578,17 @@ body.building #attack, body.building #super, body.building #stick, body.building
 /* build moments: the new-rivals card sits above the build panel, under the coach's line */
 body.building #newrival { top: calc(190px + env(safe-area-inset-top)); bottom: auto; z-index: 41; }
 @media (orientation: landscape) { body.building #newrival { top: 130px; } }
+
+/* ---------- the Snow Shop (cards/shop.js): build moments ---------- */
+#build { width: min(560px, calc(100vw - 24px)); padding: 8px 10px; }
+#build .bd-head { margin: 0; flex-wrap: wrap; }
+#build .bd-hint { font: 700 12px system-ui, sans-serif; opacity: 0.7; }
+.wt-label.shop-tag { white-space: normal; width: 128px; padding: 6px 8px 8px; border-radius: 14px; border: 3px solid #1c2a55; background: #fffaf0; box-shadow: 0 4px 0 #1c2a55; color: #1c2a55; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; font: 800 13px/1.15 system-ui, sans-serif; cursor: pointer; }
+.shop-tag small { font: 600 10.5px/1.2 system-ui, sans-serif; opacity: 0.75; }
+.shop-tag .shop-price { margin-top: 3px; padding: 3px 10px; border-radius: 999px; background: linear-gradient(#fff3b0, #ffcf3e); border: 2px solid #e3a21a; font: 900 13px system-ui, sans-serif; color: #6b3a00; }
+.wt-label.shop-tag.poor { opacity: 0.55; }
+.wt-label.shop-tag.owned { border-color: #1d7a47; box-shadow: 0 4px 0 #1d7a47; background: #eafaf0; }
+.shop-tag.owned .shop-price { background: #3aa76d; border-color: #1d7a47; color: #fff; }
+/* the new-rivals card still shows at a build moment, at the top over the shop */
+body.worldtask.building #newrival { opacity: 1; top: calc(12px + env(safe-area-inset-top)); bottom: auto; z-index: 41; }
+@media (orientation: portrait) and (max-width: 600px) { .wt-label.shop-tag { width: auto; min-width: 96px; font-size: 12px; padding: 4px 8px 6px; } .shop-tag small { display: none; } } /* phones: the name and the price; the thing itself shows what it is */

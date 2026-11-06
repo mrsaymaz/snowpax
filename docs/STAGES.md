@@ -78,7 +78,7 @@ its own layout.
 From the third play-test talk: fewer, bigger outposts, each taken in two halves of English with
 real fights round them. English and fighting are kept apart, so nobody has to read while being
 hit, but the English decides the fights: right answers **recruit neighbourhood children** to your
-team and earn **⭐ snow stars** for more friends and boosts. Archery Ground was the sample; every
+team and earn **⭐ snow stars** to spend on boosts in the Snow Shop. Archery Ground was the sample; every
 stage plays this way now (`fights` and `halves` in `stages.mjs`; the plan, the roles and the shop
 in `fights.mjs`).
 
@@ -90,8 +90,11 @@ in `fights.mjs`).
    on your team!", a puff of snow, and out they come in your team's colour and puffer jacket, plus
    a ⭐. A miss: a surprised face, "Hmm… not quite! Try the glowing one.", and they ask again in a
    moment (4 s). No rivals on the field yet. Counted toward the 80% (answered calmly).
-2. **Build** (35 s at most, or tap Fight!): stars invite another friend (a role you have not got
-   yet, ⭐2) or buy a boost.
+2. **The Snow Shop** (35 s at most, or tap Fight!; `cards/shop.js`): the camera cuts to a snowy
+   market stall with a striped awning in your team's colour. The four boosts stand on the counter
+   and the shelf as things (big mittens, a lightning bolt, a gold star, a puffer jacket on a
+   hanger), each with a price tag to tap; your kid stands by the counter and cheers for each buy.
+   A slim bar shows your stars, the time and Fight!.
 3. **The opening round:** the rival team keeps coming back from its camp; freeze **12 rivals**
    to break the line (90 s at most). Each friend brings one more snowman to the rivals' side, so
    the fight stays exciting.
@@ -106,12 +109,12 @@ in `fights.mjs`).
 the schoolyard). Then the five banners are raised calmly with English (no waves while answering),
 a build moment, and the finale: the rival captain comes and the giant snowball rolls.
 
-| Friends who can join (one of each, 4 at most) | | Boosts (for your kid) | ⭐ |
-|---|---|---|---|
-| ❄️ Quick thrower: fast snowballs, runs in | camp | Big gloves: 4 snowballs instead of 3 (the whole stage) | 2 |
-| 🌨️ Lobber: throws over walls | camp | Quick hands: snowballs come back faster (the whole stage) | 2 |
-| 💨 Sprayer: three snowballs up close | camp | Super start: half a super for the next fight | 1 |
-| 🧱 Wall builder: puts up snow walls | ⭐2 | Warm coat: the first hit in the next fight does not count | 1 |
+| Friends who join at the camp (3 at most) | Boosts in the Snow Shop (for your kid) | ⭐ |
+|---|---|---|
+| ❄️ Quick thrower: fast snowballs, runs in | Big gloves: 4 snowballs instead of 3 (the whole stage) | 2 |
+| 🌨️ Lobber: throws over walls | Quick hands: snowballs come back faster (the whole stage) | 2 |
+| 💨 Sprayer: three snowballs up close | Super start: half a super for the next fight | 1 |
+| | Warm coat: the first hit in the next fight does not count | 1 |
 
 Only neighbourhood children join (first names like Elif, Can, Zeynep, Emir), girls and boys. Each
 friend is a bot that follows the student, and a team seat a classmate could take one day.

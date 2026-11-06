@@ -31,6 +31,7 @@ import { WorldTasks } from './render/worldtask.js';
 import { castleStation } from './cards/castle3d.js';
 import { treehouseStation, archeryStation, fountainStation, bellStation } from './cards/stations.js';
 import { talkStation } from './cards/talk.js';
+import { shopStation, shopScene } from './cards/shop.js';
 import { InstancedMesh, MeshLambertMaterial, SphereGeometry, Object3D, Group, Mesh, BoxGeometry, Sprite, SpriteMaterial, CanvasTexture, SRGBColorSpace, CylinderGeometry, PlaneGeometry, MeshBasicMaterial, AdditiveBlending, DoubleSide, CircleGeometry, RingGeometry, TorusGeometry } from 'three';
 import { SHOP, ROLES } from './fights.mjs';
 import { buildKid, bakeKid } from './render/kids2.js';
@@ -224,7 +225,7 @@ async function startGame(myTeam, kit, pace) {
   $('#flakes b').textContent = save.snowflakes || 0; $('#flakes').hidden = !arena.world;
   const banner = (text, cls = '', sec = 1.6) => { const b = $('#banner'); b.textContent = text; b.className = 'show ' + cls; clearTimeout(banner.t); banner.t = setTimeout(() => { b.className = ''; }, sec * 1000); };
   // English tasks as task stations (?scenes=basic for the plain cards): a staged 3D set opens for the task, like Languini's stations
-  const worldTasks = arena.world ? new WorldTasks({ layer: $('#wt-layer'), player, reduceMotion, sound: (n, o) => play(n, o), stations: { sururi: s => castleStation(s, { color: myCol }), boulevard: s => treehouseStation(s, { color: myCol }), archery: s => archeryStation(s, { color: myCol }), kizilay: s => fountainStation(s, { color: myCol }), waterfront: s => bellStation(s, { color: myCol }), recruit: s => talkStation(s, { color: myCol }) } }) : null;
+  const worldTasks = arena.world ? new WorldTasks({ layer: $('#wt-layer'), player, reduceMotion, sound: (n, o) => play(n, o), stations: { sururi: s => castleStation(s, { color: myCol }), boulevard: s => treehouseStation(s, { color: myCol }), archery: s => archeryStation(s, { color: myCol }), kizilay: s => fountainStation(s, { color: myCol }), waterfront: s => bellStation(s, { color: myCol }), recruit: s => talkStation(s, { color: myCol }), shop: s => shopStation(s, { color: myCol }) } }) : null;
   const flow = unit ? new OutpostFlow({
     sim, player, unit, unitProgress, save, writeSave, pace, rng, root: $('#taskcard'), familyOverride: params.get('family'), world: worldTasks, worldColor: myCol,
     ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play, fx, fireworks: z => { if (reduceMotion) return; for (const col of [myCol, '#ffffff', '#ffd166', '#7cc4f0']) fx.emit(z.x, 3.5, z.z, 40, col, 6, 1.4, 1.2); } },
@@ -318,27 +319,17 @@ async function startGame(myTeam, kit, pace) {
     fx.emit(c.x, 0.9, c.z, reduceMotion ? 20 : 60, '#ffffff', 5, 1.0, 1.2); fx.emit(c.x, 1.2, c.z, 24, myCol, 4, 0.8);
   };
   const dropGoneKids = () => { for (const [id, k] of kids) if (!sim.chars.some(c => c.id === id)) { scene.remove(k.root); k.dispose?.(); kids.delete(id); } };
-  // the build panel: stars, invite a friend, boosts, Fight!
+  // the build moment: the Snow Shop opens (a 3D stall, cards/shop.js) with a slim bar for the
+  // stars, the time and Fight!
   const buildUI = (() => {
-    let info = null, open = false;
+    let info = null, open = false, shop = null;
     const el = $('#build');
-    const render = () => {
-      el.querySelector('.bd-stars').textContent = `⭐ ${info.stars}`;
-      const team = info.team.map(r => `<span class="bd-mate" title="${ROLES[r].name}">${ROLES[r].icon}</span>`).join('');
-      const inv = info.invitable.length ? info.invitable.map(r => { const R = ROLES[r], can = info.stars >= info.cost; return `<button type="button" class="bd-boost bd-invite" data-invite="${r}" ${can ? '' : 'disabled'}><span class="i">${R.icon}</span><b>${R.name}</b><small>${R.tip}</small><span class="c">⭐${info.cost}</span></button>`; }).join('') : '<p class="bd-full">Your team is full!</p>';
-      el.querySelector('.bd-team').innerHTML = `<b>Invite a friend</b><span class="bd-mates">Your team: 🧒${team}</span>`;
-      el.querySelector('.bd-invites').innerHTML = inv;
-      el.querySelector('.bd-boosts').innerHTML = Object.entries(SHOP.boosts).map(([id, b]) => { const owned = (b.keep ? info.boosts : info.next).has(id), can = !owned && info.stars >= b.cost; return `<button type="button" class="bd-boost${owned ? ' owned' : ''}" data-boost="${id}" ${can ? '' : 'disabled'}><span class="i">${b.icon}</span><b>${b.name}</b><small>${owned ? '✓ ready' : b.tip}</small><span class="c">⭐${b.cost}</span></button>`; }).join('');
-    };
-    el.addEventListener('click', e => {
-      const b = e.target.closest('[data-boost]'); if (b && !b.disabled) stages?.buyBoost(b.dataset.boost);
-      const iv = e.target.closest('[data-invite]'); if (iv && !iv.disabled) stages?.invite(iv.dataset.invite);
-      if (e.target.closest('.bd-go')) stages?.endBuild();
-    });
+    const render = () => { el.querySelector('.bd-stars').textContent = `⭐ ${info.stars}`; el.querySelector('.bd-hint').textContent = info.stars ? 'Tap something to buy it' : 'No stars to spend this time'; };
+    el.addEventListener('click', e => { if (e.target.closest('.bd-go')) stages?.endBuild(); });
     return {
-      open(i) { info = i; open = true; el.hidden = false; render(); document.body.classList.add('building'); },
-      refresh(i) { info = i; if (open) render(); },
-      close() { if (!open) return; open = false; el.hidden = true; document.body.classList.remove('building'); },
+      open(i) { info = i; open = true; el.hidden = false; render(); document.body.classList.add('building'); const s = worldTasks?.open('shop'); shop = s ? shopScene(s, { info: i, buy: id => stages?.buyBoost(id), color: myCol }) : null; },
+      refresh(i, bought) { info = i; if (!open) return; render(); shop?.refresh(i, bought); },
+      close() { if (!open) return; open = false; el.hidden = true; document.body.classList.remove('building'); if (shop) worldTasks?.close(); shop = null; },
       tick() { if (open && stages?.plan) el.querySelector('.bd-time').textContent = `${Math.max(0, Math.ceil(stages.plan.build - stages.tBuild))}s`; },
     };
   })();
