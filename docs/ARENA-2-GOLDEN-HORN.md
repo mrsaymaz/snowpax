@@ -45,4 +45,18 @@ item per question, pair or card; right first time or not; a miss glows the right
 The flow uses a place's own scene when it has one (`places` on the stage, `WORLD_SCENES` in
 `cards/scenes.js`), otherwise the task family's first-arena scene.
 
-**Still to come:** the places' music borrows the first arena's themes.
+## The places' themes (`audio.js`)
+
+Each place has its own short theme (about 7 s, synthesized like all the game's music, at the same
+loudness as the first arena's). It plays over the ride's tune, turned down, while the place's view
+shows on the sled ride, and again, a little softer, when the place's task opens at the outpost.
+
+| Place | Theme |
+|---|---|
+| Karaköy Bridge and Pier | a ferry's horn, then a lilting 6/8 tune on two accordion-like reeds a hair apart, in D minor, over the lapping of the water; a gull |
+| Bankalar Caddesi | a stately march in B flat: brass chords, an oom-pah tuba, a trumpet tune, a soft drum, coins clinking on the off-beat |
+| Tersane İstanbul | a shipyard work song in A minor: a low pulse, hammer on anvil (clang-clang), a confident whistled tune |
+| Aynalıkavak Pavilion | a slow, breathy ney-like reed in Uşşak makam (with its half-flat second) over a drone, a soft frame drum, glassy shimmers like mirrors catching the light |
+| Miniatürk | a little toy parade in G: piccolo and glockenspiel, a clockwork tick, a toy drum, a bouncy bass |
+
+`measureTrack(name)` renders a theme offline and reports its length and loudness, for balancing.

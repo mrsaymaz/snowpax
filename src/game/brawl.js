@@ -19,7 +19,7 @@ import { BrawlFx } from './render/brawlfx.js';
 import { CUT } from './render/cutout.js';
 import { AutoQuality, guessLevel, LEVELS } from './quality.js';
 import { Sticks } from './sticks.js';
-import { unlockAudio, play, setSound, music, stopMusic } from './audio.js';
+import { unlockAudio, play, setSound, music, stopMusic, measureTrack } from './audio.js';
 import { speech } from './speech.js';
 import { karakoyStation, bankalarStation, tersaneStation, aynalikavakStation, miniaturkStation } from './cards/golden.js';
 import { drawLogo, Hero, lessonPicker, unitsOf } from './startui.js';
@@ -699,7 +699,7 @@ async function startGame(myTeam, kit, pace) {
     }
   }
   const screenOf = c => { const v = new Vector3(c.x, groundH(c.x, c.z) + (c.role === 'minion' ? 0.7 : 0.75), c.z).project(camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight }; };
-  globalThis.__snowpax = { match, sim, player, quality, renderer, world, life, flow, stages, scene, snowmen, screenOf, worldTasks, intro: () => intro };
+  globalThis.__snowpax = { match, sim, player, quality, renderer, world, life, flow, stages, scene, snowmen, screenOf, worldTasks, intro: () => intro, measureTrack };
   if (stages) stages.showMap();
 }
 

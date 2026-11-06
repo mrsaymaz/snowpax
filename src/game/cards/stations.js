@@ -219,7 +219,7 @@ export function fountainStation(s, { color = '#f5b616' } = {}) {
 // opts (another set using the same matching): tile colour, the colours tiles turn when matched
 export function fountainMatch(ctx, opts = {}) {
   const s = ctx.world, st = ctx.step, K = s.set.K, A = s.set.A;
-  const T = tall(); frameFor(s, { eye: [0, 9.2, 10.6], look: [0, 0.1, -0.5] }, { eye: [0, 7.4, 8.2], look: [0, 0.1, 0.25] }, { eye: [0, 11.5, 5.6], look: [0, 0.1, -0.7], width: 42 });
+  const T = tall(), F = opts.frame; frameFor(s, F?.desk || { eye: [0, 9.2, 10.6], look: [0, 0.1, -0.5] }, F?.short || { eye: [0, 7.4, 8.2], look: [0, 0.1, 0.25] }, F?.port || { eye: [0, 11.5, 5.6], look: [0, 0.1, -0.7], width: 42 });
   s.say(esc(st.prompt));
   const right = shuffle(st.right, ctx.rng), n = st.left.length, zs = Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * (T ? 1.75 : 1.25));
   const tileHTML = t => (t.pic ? `<img src="${esc(t.pic)}" alt="${esc(t.alt || '')}">` : `<span ${t.lang === 'tr' ? 'lang="tr"' : ''}>${esc(t.text)}</span>`);

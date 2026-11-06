@@ -161,8 +161,60 @@ const TRACKS = {
     for (const [at, n, len] of ARCHERY_MELODY) if (at === k) { synth(t, hz(n), sp * len * 0.7, { type: 'sawtooth', gain: 0.06, attack: 0.004, release: 0.25, cutoff: 2200, dest }); synth(t, hz(n + 12), sp * len * 0.4, { type: 'triangle', gain: 0.02, attack: 0.004, release: 0.2, dest }); }
   } },
 };
-// the Golden Horn's places borrow the first arena's themes for now
-Object.assign(TRACKS, { karakoy: TRACKS.pier, bankalar: TRACKS.kizilay, tersane: TRACKS.sururi, aynalikavak: TRACKS.archery, miniaturk: TRACKS.boulevard });
+// ---------- the Golden Horn's places (about 7 s each) ----------
+// Karaköy: a ferry's horn, then a lilting 6/8 tune on an accordion-like reed in D minor over lapping water
+const KARAKOY = [[4, 74, 3], [7, 72, 1.5], [8.5, 70, 1.5], [10, 69, 4], [16, 70, 2], [18, 72, 2], [20, 74, 2], [22, 77, 4], [28, 76, 2], [30, 74, 2], [32, 72, 3], [35, 70, 1.5], [36.5, 69, 1.5], [38, 67, 2], [40, 69, 8]];
+// Bankalar Caddesi: a stately march in B flat: brass chords, a tuba, coins clinking on the beat
+const BANK_CH = [[0, [58, 62, 65]], [8, [55, 58, 63]], [16, [53, 58, 62]], [24, [53, 57, 60]], [32, [55, 58, 63]], [40, [58, 62, 65, 70]]];
+const BANK_MEL = [[0, 70, 3], [3, 70, 1], [4, 72, 4], [8, 74, 3], [11, 72, 1], [12, 70, 4], [16, 74, 3], [19, 75, 1], [20, 77, 4], [24, 76, 3], [27, 74, 1], [28, 72, 4], [32, 75, 3], [35, 74, 1], [36, 72, 2], [38, 70, 2], [40, 70, 8]];
+// Tersane: a shipyard work song in A minor: hammer on anvil, a low pulse, a confident whistle
+const TERS_MEL = [[2, 76, 2], [4, 76, 1], [5, 77, 1], [6, 79, 2], [10, 76, 2], [12, 74, 4], [18, 74, 2], [20, 74, 1], [21, 76, 1], [22, 77, 2], [26, 74, 2], [28, 72, 4], [34, 72, 2], [36, 74, 2], [38, 76, 2], [40, 81, 6]];
+// Aynalıkavak: a ney-like reed in Uşşak (A, B half-flat, C, D …) over a drone, mirror shimmers
+const AYN_MEL = [[0, 69, 6], [6, 70.5, 2], [8, 72, 4], [12, 74, 4], [16, 72, 2], [18, 70.5, 2], [20, 69, 6], [26, 67, 2], [28, 69, 4], [32, 70.5, 3], [35, 72, 1], [36, 70.5, 4], [40, 69, 8]];
+// Miniatürk: a little toy parade in G: piccolo and glockenspiel, a clockwork tick, a toy drum
+const MINI_MEL = [[0, 79, 1], [1, 81, 1], [2, 83, 2], [4, 86, 2], [6, 83, 2], [8, 84, 2], [10, 81, 2], [12, 79, 4], [16, 81, 1], [17, 83, 1], [18, 84, 2], [20, 88, 2], [22, 86, 2], [24, 84, 2], [26, 83, 2], [28, 81, 4], [32, 79, 1], [33, 81, 1], [34, 83, 2], [36, 84, 2], [38, 81, 2], [40, 79, 6]];
+const breath = (t, f, dur, gain, dest) => { // a breathy reed: a soft tone with vibrato and a little air
+  const o = ctx.createOscillator(), lfo = ctx.createOscillator(), lg = ctx.createGain(), e = ctx.createGain(), flt = ctx.createBiquadFilter();
+  o.type = 'triangle'; o.frequency.value = f; lfo.frequency.value = 5.2; lg.gain.value = f * 0.008; lfo.connect(lg); lg.connect(o.frequency); flt.type = 'lowpass'; flt.frequency.value = 2400;
+  e.gain.setValueAtTime(0.0001, t); e.gain.exponentialRampToValueAtTime(gain, t + 0.12); e.gain.setValueAtTime(gain, t + Math.max(0.12, dur - 0.2)); e.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.15);
+  o.connect(flt); flt.connect(e); e.connect(dest); o.start(t); lfo.start(t); o.stop(t + dur + 0.2); lfo.stop(t + dur + 0.2);
+  hit(t, { f0: 1800, f1: 2600, dur: Math.min(0.4, dur), gain: gain * 0.25, dest }); // the air at the start of the note
+};
+Object.assign(TRACKS, {
+  karakoy: { bpm: 100, steps: 48, loop: false, step(k, t, sp, dest) {
+    if (k === 0) { synth(t, 98, 1.0, { type: 'sawtooth', gain: 0.05, attack: 0.06, release: 0.4, cutoff: 380, dest }); synth(t, 147, 1.0, { type: 'sawtooth', gain: 0.025, attack: 0.06, release: 0.4, cutoff: 500, dest }); } // the ferry's horn
+    if (k % 6 === 4) hit(t, { f0: 500, f1: 260, dur: 0.5, gain: 0.04, type: 'lowpass', dest }); // the water lapping
+    if (k % 6 === 4) synth(t, hz(k < 28 ? 50 : 46), sp * 2.5, { gain: 0.08, attack: 0.01, release: 0.2, dest });
+    if (k % 6 === 1 || k % 6 === 3) for (const n of (k < 28 ? [62, 65, 69] : [58, 62, 65])) synth(t, hz(n), sp, { type: 'square', gain: 0.012, cutoff: 1500, dest });
+    for (const [at0, n, len] of KARAKOY) if (Math.floor(at0) === k) { const tt = t + (at0 - k) * sp; synth(tt, hz(n), sp * len * 0.9, { type: 'square', gain: 0.03, attack: 0.03, release: 0.15, cutoff: 1800, dest }); synth(tt, hz(n) * 1.005, sp * len * 0.9, { type: 'square', gain: 0.022, attack: 0.03, release: 0.15, cutoff: 1800, dest }); } // two reeds a hair apart, like an accordion
+    if (k === 30) synth(t, 1500, 0.2, { type: 'sawtooth', gain: 0.02, attack: 0.01, release: 0.1, cutoff: 3000, dest }); // a gull
+  } },
+  bankalar: { bpm: 100, steps: 48, loop: false, step(k, t, sp, dest) {
+    for (const [at0, ch] of BANK_CH) if (at0 === k) { for (const n of ch) synth(t, hz(n), sp * 7, { type: 'sawtooth', gain: 0.018, attack: 0.05, release: 0.3, cutoff: 1300, dest }); synth(t, hz(ch[0] - 24), sp * 1.6, { gain: 0.12, attack: 0.01, release: 0.15, dest }); }
+    if (k % 8 === 4) synth(t, hz((BANK_CH.find(([a0]) => a0 <= k && k < a0 + 8) || BANK_CH[0])[1][0] - 17), sp * 1.6, { gain: 0.1, attack: 0.01, release: 0.15, dest }); // oom-pah tuba
+    for (const [at0, n, len] of BANK_MEL) if (at0 === k) synth(t, hz(n), sp * len * 0.85, { type: 'sawtooth', gain: 0.04, attack: 0.02, release: 0.12, cutoff: 2400, dest }); // the trumpet
+    if (k % 4 === 0) thump(t, 110, 0.12, dest, 0.15);
+    if (k % 8 === 6) { bellAt(t, 2637, 0.03, 0.18, dest); bellAt(t + 0.06, 3136, 0.025, 0.16, dest); } // coins clinking
+  } },
+  tersane: { bpm: 96, steps: 48, loop: false, step(k, t, sp, dest) {
+    if (k % 4 === 0) { thump(t, 70, 0.18, dest, 0.25); } // the low pulse of the yard
+    if (k % 8 === 2 || k % 8 === 3) { bellAt(t, k % 8 === 2 ? 1180 : 1580, 0.05, 0.3, dest); hit(t, { f0: 3500, f1: 2000, dur: 0.06, gain: 0.06, type: 'bandpass', dest }); } // hammer on anvil, clang-clang
+    if (k % 8 === 0) synth(t, hz(k < 24 ? 45 : 43), sp * 3.5, { type: 'sawtooth', gain: 0.05, attack: 0.01, release: 0.2, cutoff: 600, dest });
+    for (const [at0, n, len] of TERS_MEL) if (at0 === k) { synth(t, hz(n), sp * len * 0.85, { gain: 0.06, attack: 0.02, release: 0.1, dest }); synth(t, hz(n + 12), sp * len * 0.85, { gain: 0.015, attack: 0.02, release: 0.1, dest }); } // the whistle
+  } },
+  aynalikavak: { bpm: 92, steps: 48, loop: false, step(k, t, sp, dest) {
+    if (k === 0) { synth(t, hz(45), sp * 46, { type: 'sawtooth', gain: 0.022, attack: 0.6, release: 0.8, cutoff: 500, dest }); synth(t, hz(52), sp * 46, { type: 'triangle', gain: 0.02, attack: 0.6, release: 0.8, dest }); } // the drone
+    for (const [at0, n, len] of AYN_MEL) if (at0 === k) breath(t, hz(n), sp * len * 0.92, 0.07, dest);
+    if (k % 12 === 6) [0, 1, 2, 3].forEach(j => bellAt(t + j * 0.07, [2349, 2794, 3136, 3729][j], 0.018, 0.5, dest)); // a mirror catching the light
+    if (k % 8 === 0) thump(t, 80, 0.07, dest, 0.3);
+  } },
+  miniaturk: { bpm: 108, steps: 48, loop: false, step(k, t, sp, dest) {
+    if (k % 2 === 0) hit(t, { f0: 6000, f1: 5000, dur: 0.025, gain: 0.03, type: 'highpass', dest }); // the clockwork tick
+    if (k % 4 === 0) hit(t, { f0: 1600, f1: 900, dur: 0.09, gain: 0.05, dest }); if (k % 8 === 7) hit(t, { f0: 1600, f1: 900, dur: 0.06, gain: 0.035, dest }); // a toy drum
+    for (const [at0, n, len] of MINI_MEL) if (at0 === k) { synth(t, hz(n), sp * len * 0.7, { gain: 0.05, attack: 0.01, release: 0.08, dest }); bellAt(t, hz(n + 12), 0.02, 0.35, dest); } // piccolo and glockenspiel
+    if (k % 4 === 0) synth(t, hz([43, 50, 48, 50][(k / 4) % 4]), sp * 1.5, { gain: 0.09, attack: 0.005, release: 0.1, dest });
+  } },
+});
 function schedule() {
   if (!ctx) return;
   const ahead = ctx.currentTime + 0.15;
@@ -193,3 +245,17 @@ export function stopMusic(name = null, fade = 0.6) {
 // turn a playing piece down or back up (a scene's theme over the ride's tune)
 export function duckMusic(name, level, time = 0.5) { const p = playing.get(name); if (!ctx || !p) return; const t = ctx.currentTime; p.gain.gain.cancelScheduledValues(t); p.gain.gain.setValueAtTime(p.gain.gain.value, t); p.gain.gain.linearRampToValueAtTime(level, t + time); }
 export const hasMusic = name => !!TRACKS[name];
+
+// Render a piece offline (no speakers) and measure it: its length and its loudness, to balance
+// the places' themes against each other. For checks only (the browser test harness).
+export async function measureTrack(name) {
+  const def = TRACKS[name], OAC = globalThis.OfflineAudioContext || globalThis.webkitOfflineAudioContext; if (!def || !OAC) return null;
+  const sp = 60 / def.bpm / 4, secs = def.steps * sp + 2.5, off = new OAC(1, Math.ceil(secs * 44100), 44100);
+  const saved = { ctx, noiseBuf, master }; ctx = off; master = off.createGain(); master.gain.value = 0.5; master.connect(off.destination);
+  noiseBuf = off.createBuffer(1, off.sampleRate * 0.5, off.sampleRate); { const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  const bus = off.createGain(); bus.gain.value = MUSIC_VOL; bus.connect(master);
+  try { for (let k = 0; k < def.steps; k++) def.step(k, 0.05 + k * sp, sp, bus); } finally { ({ ctx, noiseBuf, master } = saved); }
+  const buf = await off.startRendering(), d = buf.getChannelData(0); let peak = 0, sum = 0, last = 0;
+  for (let i = 0; i < d.length; i++) { const v = Math.abs(d[i]); if (v > peak) peak = v; sum += d[i] * d[i]; if (v > 0.002) last = i; }
+  return { seconds: +(last / 44100).toFixed(2), peak: +peak.toFixed(3), rms: +Math.sqrt(sum / Math.max(1, last)).toFixed(4) };
+}

@@ -30,7 +30,7 @@ export class StageRunner {
     this.mode = 'map'; this.lives = new Lives(); this.wall = []; this.waves = []; this.runFlakes = 0; this.runBalls = 0; this.ridesDone = 0;
     flow.ui.onCaptured = z => this.captured(z); flow.ui.onHeld = z => this.held(z); flow.ui.onHalf = z => this.startBuild('strike', () => this.startStrike(z)); flow.ui.onStar = () => this.addFlake(); flow.ui.onRecruit = (id, right) => this.recruitAnswer(id, right);
     flow.ui.onExtraDone = () => this.startBuild('final', () => this.startShowdown());
-    flow.ui.onPlaceStart = f => { const k = this.seatOf(f); if (k >= 0) this.ui.carousel?.face(k); };
+    flow.ui.onPlaceStart = f => { const k = this.seatOf(f); if (k >= 0) this.ui.carousel?.face(k); const id = this.cur?.places?.[f]?.id; if (id && hasMusic(id)) music(id, { level: 0.7 }); }; // the place's own theme as its task opens
     flow.ui.onPlaceDone = f => { const k = this.seatOf(f); if (k >= 0 && !this.lit.includes(k)) { this.lit.push(k); this.ui.carousel?.light(k); } };
     this.bindInput();
     // rival kids wait off the field until their wave
