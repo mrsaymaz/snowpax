@@ -14,8 +14,8 @@ export const STUDENT_SECONDS = { choice: 7, listen: 9, spell: 12, order: 12, mat
 // longOpen: the opening round of a long fight (freeze the goal's worth of rivals, about 60 s)
 // camp: three children's questions with the walks between; build: one shop visit; showdown: the
 // Final Showdown, won first time
-// scene: one place's cinematic scene on the sled ride in (about 7 s at 60% speed, plus its clear stretch)
-export const OVERHEAD = { map: 10, arrive: 3, fight: 21, longOpen: 60, camp: 35, build: 12, walkIn: 3, celebrate: 1.8, showdown: 60, results: 6, scene: 9 };
+// arrive: the arrival at the carousel (about 8 s) and the walk-in; scene: one place's cinematic scene on the sled ride in (about 7 s at 60% speed, plus its clear stretch)
+export const OVERHEAD = { map: 10, arrive: 11, fight: 21, longOpen: 60, camp: 35, build: 12, walkIn: 3, celebrate: 1.8, showdown: 60, results: 6, scene: 9 };
 
 export const stepTime = (st, S = STUDENT_SECONDS) => (st.kind === 'match' ? S.matchPair * stepItems(st) : st.kind === 'sort' ? S.sortCard * stepItems(st) : S[st.kind] || S.choice) + S.feedback;
 

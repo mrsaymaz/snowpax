@@ -261,7 +261,7 @@ Grade 5 student needs per item on the Relaxed pace (choice 7 s, listening 9 s, s
 12 s, a match pair or sort card 5 s, plus 1.5 s of feedback per step), plus the sled ride, the camp
 (35 s), three shop visits (12 s each), the opening round (60 s), the strike-back (50 s), the Final
 Showdown won first time (60 s), the five places' scenes on the ride (about 9 s each) and the
-moments between. For Grade 5 Unit 1 that is about **9.3 minutes** (the ride 95 s, the English
+moments between, and the arrival at the carousel (about 8 s). For Grade 5 Unit 1 that is about **9.4 minutes** (the ride 95 s, the English
 196 s for 24 items, the rest 260 s); five outposts and a Showdown came to about 32. The test keeps it between 7 and 13 minutes. Real play with students
 should confirm the per-item seconds.
 
