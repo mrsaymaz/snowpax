@@ -34,20 +34,27 @@ export function talkStation(s, { color = '#f5b616' } = {}) {
 
 export function recruitTalk(ctx) {
   const s = ctx.world, st = ctx.step, who = st.speaker || {}, K = s.set.K, T = tall();
-  // the camera: head and shoulders, the child a little above the middle, replies below
-  if (T) s.frame([0, 1.6, 3.5], [0, 1.15, 0], 34); else s.frame([0, 1.6, 4.3], [0.6, 1.35, 0], 44);
+  // the camera: the child in the middle band, between the question (top) and your replies (bottom)
+  if (T) s.frame([0, 1.42, 4.1], [0, 1.32, 0], 30); else s.frame([0, 1.6, 4.3], [0.95, 1.35, 0], 44);
   const g = new Group(); s.step.add(g);
   const make = (design, team) => { const k = bakeKid(buildKid({ design, team, kit: who.kit || 'thrower', ...(who.look || {}) })); k.traverse(o => { if (o.isMesh) o.castShadow = true; }); return k; };
   let kid = make('vinyl', 'neutral'); g.add(kid);
   const shadow = new Mesh(new CylinderGeometry(0.45, 0.45, 0.01, 20), new MeshBasicMaterial({ color: '#4a6182', transparent: true, opacity: 0.22, depthWrite: false })); shadow.position.y = 0.01; g.add(shadow);
-  // their question, in a speech bubble over their head (read aloud), with their name
-  const bubble = s.label(`<b class="wt-who">${esc(who.name || '')}</b><span>${esc(st.prompt)}</span>`, { cls: T ? 'wt-bubble' : 'wt-bubble side', obj: g, at: T ? [0, 2.62, 0] : [1.7, 1.98, 0.4] } /* landscape: above your replies, like a chat */);
-  const sayBubble = html => { bubble.innerHTML = `<b class="wt-who">${esc(who.name || '')}</b><span>${html}</span>`; bubble.classList.remove('pop'); void bubble.offsetWidth; bubble.classList.add('pop'); };
+  // the conversation sits in fixed places on the screen, so it always fits whatever the phone's
+  // height: the child's question just under the card's header, your replies at the bottom
+  // (landscape: both on the right, like a chat); nothing else covers them
+  const ui = document.createElement('div'); ui.className = 'talk-ui' + (T ? '' : ' side');
+  ui.innerHTML = `<div class="talk-q"><b class="talk-who">${esc(who.name || '')}</b><span class="talk-line">${esc(st.prompt)}</span></div><div class="talk-replies"></div>`;
+  (document.querySelector('#wt-layer') || document.body).appendChild(ui);
+  const place = () => { const head = document.querySelector('#taskcard')?.getBoundingClientRect(); ui.style.setProperty('--talk-top', `${Math.max(12, (head?.bottom || 70) + 10)}px`); };
+  place(); s.onTick(place);
+  const line = ui.querySelector('.talk-line'), q = ui.querySelector('.talk-q');
+  const sayBubble = text => { line.textContent = text; q.classList.remove('pop'); void q.offsetWidth; q.classList.add('pop'); };
   ctx.speech?.say(st.prompt);
-  // your replies: chat bubbles, stacked below the child
-  const n = st.options.length, replies = st.options.map((o, i) => {
-    const el = s.label(`<span class="wt-you">You</span>${esc(o)}`, { cls: 'wt-reply', onTap: () => pick(i), obj: g, at: T ? [0, 0.95 - i * 0.42, 1.25] : [1.55, 1.36 - i * 0.42, 0.4] });
-    return el;
+  const box = ui.querySelector('.talk-replies');
+  const replies = st.options.map((o, i) => {
+    const el = document.createElement('button'); el.type = 'button'; el.className = 'wt-reply'; el.innerHTML = `<span class="wt-you">You</span>${esc(o)}`;
+    el.addEventListener('click', e => { e.preventDefault(); pick(i); }); box.appendChild(el); return el;
   });
   // the child's little moves: waiting (sway), happy (hop), surprised (lean back)
   let t = 0, hop = 0, lean = 0;
@@ -62,7 +69,7 @@ export function recruitTalk(ctx) {
   const pick = i => {
     if (ctx.busy || done) return;
     if (i === st.answer) {
-      done = true; ctx.item(st.sourceIds?.[0], !tried); replies[i].classList.add('right'); ctx.reveal(st.answerText || st.options[i]);
+      done = true; ctx.item(st.sourceIds?.[0], !tried); replies[i].classList.add('right');
       for (const r of replies) if (r !== replies[i]) r.classList.add('dim');
       if (!tried) { // they join: a smile, a hop, a puff of snow, and out they come in the team's puffer jacket
         setKidMood(kid, 'joy'); hop = 1; ctx.sound('sparkle');
@@ -81,5 +88,6 @@ export function recruitTalk(ctx) {
       if (!tried) { tried = true; sayBubble('Hmm… not quite! Try the glowing one.'); ctx.later(() => setKidMood(kid, 'happy'), 1200); }
     }
   };
-  ctx.onTimeUp(() => { if (done) return; done = true; if (!tried) ctx.item(st.sourceIds?.[0], false); glowRight(); ctx.reveal(st.answerText || st.options[st.answer]); sayBubble(`I wanted to hear: "${esc(st.options[st.answer])}"`); ctx.finish(1900); });
+  ctx.onTimeUp(() => { if (done) return; done = true; if (!tried) ctx.item(st.sourceIds?.[0], false); glowRight(); sayBubble(`I wanted to hear: "${st.options[st.answer]}"`); ctx.finish(1900); });
+  return () => ui.remove(); // the step is over: the conversation goes
 }

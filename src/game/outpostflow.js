@@ -153,7 +153,7 @@ export class OutpostFlow {
     // face to face: a close-up of the child asking (the recruit scene in cards/talk.js)
     const step = { ...talkQuestion(this.unit, this.rng, this.talked = this.talked || new Set()), speaker: { name: p.name, look: p.look, kit: ROLES[p.role]?.kit } };
     this.card.open({ theme: 'recruit', title: `${p.name} wants to join!`, coach: '', leave: false }); this.card.setProgress(0);
-    this.card.setCoach(`Answer ${p.name}! Right first time and ${p.name} joins your team (and a ⭐ for you).`); this.card.show(step, { theme: 'recruit' });
+    this.card.setCoach(''); this.card.show(step, { theme: 'recruit' }); // a slim header: the child's question says it all
   }
   finishRecruit() {
     const right = this.cocoaRight, id = this.cocoaId;

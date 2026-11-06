@@ -171,7 +171,7 @@ export class StageRunner {
     }
     this.waves[i] = { members, t: 0, cleared: false, final: !!w.final };
     this.waveIdx = i + 1;
-    this.ui.banner(`WAVE ${i + 1}: ${w.name.toUpperCase()}`, w.final ? 'lose' : 'super', 1.8); this.ui.play('whoosh');
+    if (!this.plan || w.final) this.ui.banner(this.plan ? 'FINAL WAVE!' : `WAVE ${i + 1}: ${w.name.toUpperCase()}`, w.final ? 'lose' : 'super', 1.8); this.ui.play('whoosh');
   }
   // ---------- the longer fights (fights.mjs) ----------
   // a snowman walks out of the rivals' camp (round the outpost) toward `goal`
@@ -259,7 +259,7 @@ export class StageRunner {
     // word snowmen: find the English word for the Turkish one
     if (this.hunt) {
       this.huntT += dt;
-      if (this.huntT > P.hunt.seconds) { const t = this.words.timeout(); this.endHunt(); if (t) this.ui.coach(`Time! The word was "${t.en}" (${t.tr}).`, 3.5); }
+      if (this.huntT > P.hunt.seconds) { const t = this.words.timeout(); this.endHunt(); if (t) { this.ui.hunt?.({ tr: `It was: ${t.en}`, pic: t.pic, reveal: true }); clearTimeout(this.huntRevealT); this.huntRevealT = setTimeout(() => { if (!this.hunt) this.ui.hunt?.(null); }, 2500); } }
     } else if (fighting || this.finalT !== null) {
       this.huntNext -= dt;
       if (this.huntNext <= 0 && this.words.ready && !this.flow.busy) {
@@ -274,7 +274,6 @@ export class StageRunner {
           c.word = { id: w.id, en: w.en, tr: w.tr }; c.march = { x: z.x + v, z: z.z + toD }; c.face = toD > fromD ? 0 : Math.PI; return c;
         });
         this.ui.hunt?.(h.target); this.ui.play('whoosh');
-        if (!this.toldHunt) { this.toldHunt = true; this.ui.coach('Word snowmen! Read their signs and freeze the one that means the word at the top. Tap it to throw at it.', 6); }
       }
     }
   }
@@ -298,7 +297,6 @@ export class StageRunner {
     const z = this.zone; this.tStrike += dt;
     this.strikeHeld = !(z.rival > 0 && z.home === 0);
     if (this.strikeHeld) this.strikeLeft -= dt;
-    else if (!this.toldIn || this.tStrike - this.toldIn > 8) { this.toldIn = this.tStrike; this.ui.coach('Rivals are in the circle! Freeze them to keep the clock going.', 3); }
     if (this.strikeLeft > 0 && this.tStrike < (this.plan?.strike.max ?? 40)) return;
     this.retreat('YOU HELD IT!'); this.toldIn = 0;
     this.phase = 'seize'; this.begun = false; this.flow.stageHold = false; this.tSeize = 0;
@@ -507,12 +505,12 @@ export class StageRunner {
         if (this.phase === 'fight') this.score++;
         if (c.word && this.hunt?.includes(c)) {
           const r = this.words.frozen(c.word);
-          this.ui.fx?.number(c.x, c.z, `${c.word.en} = ${c.word.tr}`, 'word'); speech.say(c.word.en);
+          if (e.by === this.match.player.id) { this.ui.fx?.number(c.x, c.z, `${c.word.en} = ${c.word.tr}`, 'word'); speech.say(c.word.en); } // the word, when you froze it
           if (r === 'right') {
             const P = this.match.player; if (this.phase === 'fight') this.score += this.plan.hunt.bonus;
             const before = P.super; P.super = Math.min(1, P.super + 0.35); if (before < 1 && P.super >= 1) this.sim.emit('superReady', { id: P.id });
-            this.ui.banner('RIGHT WORD!', 'good', 1.2); this.ui.play('sparkle'); this.endHunt();
-          } else if (r === 'wrong') this.ui.coach(`That one says "${c.word.en}" (${c.word.tr}). Find: ${this.words.cur.target.tr}`, 3);
+            this.ui.fx?.number(c.x, c.z + 0.6, 'RIGHT WORD! +2', 'big'); this.ui.play('sparkle'); this.endHunt();
+          }
         }
       }
       if (c && c === this.match.player) { if (!this.toldFrozen) { this.toldFrozen = true; this.ui.coach('Frozen! You are back at the start in a moment. In a fight you never lose a life.', 4); } return; }

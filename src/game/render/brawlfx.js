@@ -51,8 +51,10 @@ export class BrawlFx {
     if (e.type === 'splat') this.emit(e.x, Math.max(0.2, e.y), e.z, e.big ? 34 : 14, e.onChar ? '#ffffff' : '#f2f8ff', e.big ? 5 : 3, 0.55);
     if (e.type === 'splat' && e.big) this.emit(e.x, 0.3, e.z, 12, color, 3, 0.5);
     if (e.type === 'poof') this.emit(e.x, e.y, e.z, 8, '#e3d9ff', 1.2, 0.5);
-    if (e.type === 'hit') this.number(e.x, e.z, '-' + e.dmg, sim.chars.find(c => c.id === e.id)?.side === 'home' ? 'dmg hurt' : 'dmg');
-    if (e.type === 'freeze') { this.number(e.x, e.z, 'FROZEN!', 'big'); this.emit(e.x, 1, e.z, 40, '#bfe8ff', 4, 0.9); }
+    // numbers and words only for what the student does or gets (calmer fights): everyone else's hits are just splats
+    const mine = this.focusId == null || e.id === this.focusId || e.by === this.focusId;
+    if (e.type === 'hit' && mine) this.number(e.x, e.z, '-' + e.dmg, sim.chars.find(c => c.id === e.id)?.side === 'home' ? 'dmg hurt' : 'dmg');
+    if (e.type === 'freeze') { if (mine) this.number(e.x, e.z, 'FROZEN!', 'big'); this.emit(e.x, 1, e.z, 40, '#bfe8ff', 4, 0.9); }
     if (e.type === 'shake') { const c = sim.chars.find(o => o.id === e.id); if (c) this.emit(c.x, 1.2, c.z, 46, '#ffffff', 5, 0.8); }
     if (e.type === 'respawn') this.emit(e.x, 0.4, e.z, 24, '#fff4b8', 2.5, 0.7);
     if (e.type === 'pickup') { const c = sim.chars.find(o => o.id === e.id); if (c) this.emit(c.x, 0.4, c.z, 18, '#bfe2ff', 2.5, 0.6); }

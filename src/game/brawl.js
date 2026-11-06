@@ -211,7 +211,15 @@ async function startGame(myTeam, kit, pace) {
   $('#score .home').innerHTML = emblemSVG(myTeam, 22); $('#score .rival').innerHTML = emblemSVG(rivalTeam, 22);
   $('#super').style.setProperty('--c', '#ffd23f');
   const touch = matchMedia('(pointer: coarse)').matches;
-  const coach = (text, sec = 4.5) => { $('#coach .line').textContent = text; $('#coach').hidden = false; clearTimeout(coach.t); coach.t = setTimeout(() => { $('#coach').hidden = true; }, sec * 1000); };
+  // Mr. Saymaz keeps quiet in a fight: during one, each line is said once at most, and not more
+  // often than every 12 s (the HUD line already says what to do)
+  const coachSaid = new Set(); let coachLast = -1e9;
+  const coach = (text, sec = 4.5) => {
+    const fighting = stages?.mode === 'outpost' && (stages.phase === 'fight' || stages.phase === 'strike' || stages.finalT != null), now = performance.now();
+    if (fighting && (coachSaid.has(text) || now - coachLast < 12000)) return;
+    coachSaid.add(text); coachLast = now; coachShow(text, sec);
+  };
+  const coachShow = (text, sec = 4.5) => { $('#coach .line').textContent = text; $('#coach').hidden = false; clearTimeout(coach.t); coach.t = setTimeout(() => { $('#coach').hidden = true; }, sec * 1000); };
   const seen = new Set(), once = (key, text, sec = 4.5) => { if (seen.has(key)) return; seen.add(key); coach(text, sec); };
   $('#flakes b').textContent = save.snowflakes || 0; $('#flakes').hidden = !arena.world;
   const banner = (text, cls = '', sec = 1.6) => { const b = $('#banner'); b.textContent = text; b.className = 'show ' + cls; clearTimeout(banner.t); banner.t = setTimeout(() => { b.className = ''; }, sec * 1000); };
@@ -232,7 +240,7 @@ async function startGame(myTeam, kit, pace) {
       seizeButton: on => { $('#seizebtn').hidden = !on; },
       stars: (n, pop) => { const el = $('#stars'); el.hidden = n == null; if (n != null) { el.querySelector('b').textContent = n; if (pop) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); } } },
       build: { open: i => buildUI.open(i), refresh: i => buildUI.refresh(i), close: () => buildUI.close() },
-      fx, hunt: w => { const el = $('#hunt'), clean = s => String(s ?? '').replace(/[&<>"']/g, ''); el.hidden = !w; if (w) el.innerHTML = `<small>Freeze the snowman that means</small><span class="hunt-word">${w.pic ? `<img src="${clean(w.pic)}" alt="">` : ''}<b>${clean(w.tr)}</b></span>`; },
+      fx, hunt: w => { const el = $('#hunt'), clean = s => String(s ?? '').replace(/[&<>"']/g, ''); el.hidden = !w; if (w) el.innerHTML = `<small>${w.reveal ? 'Time!' : 'Freeze the snowman that means'}</small><span class="hunt-word">${w.pic ? `<img src="${clean(w.pic)}" alt="">` : ''}<b>${clean(w.tr)}</b></span>`; },
       showdown: {
         start: (z, b) => showdownView.start(z, b), raise: k => showdownView.raise(k), giantBall: (f, t, s) => showdownView.giantBall(f, t, s), ring: () => showdownView.ring(), stop: () => showdownView.stop(),
         burst: at => { fx.emit(at.x, 1.4, at.z, reduceMotion ? 20 : 70, '#ffffff', 9, 1.4, 1.6); fx.emit(at.x, 1.4, at.z, reduceMotion ? 8 : 30, '#bfe0ff', 6, 1.2, 1.2); },
@@ -473,7 +481,7 @@ async function startGame(myTeam, kit, pace) {
     // events → effects, sounds, HUD
     if (flow && live) flow.update(rdt); // card timers run in real time
     for (const e of sim.drainEvents()) {
-      fx.onEvent(e, sim); flow?.onEvent(e); stages?.onEvent(e);
+      fx.focusId = player.id; fx.onEvent(e, sim); flow?.onEvent(e); stages?.onEvent(e);
       if (e.type === 'recruitWait') { const p = sim.pickups.find(q => q.id === e.pickup); if (p) addWaiting({ ...p, pickup: p.id }); }
       if (e.type === 'recruitGone') dropWaiting(e.pickup);
       if (e.type === 'spawnKid') spawnKidView(e.id);
@@ -489,15 +497,14 @@ async function startGame(myTeam, kit, pace) {
       if (['throw', 'hit', 'pickup', 'poof', 'dodge'].includes(e.type)) play(e.type, { near: e.id === player.id ? 1 : near });
       if (e.type === 'splat' && e.wall) play('splat', { near: near * 0.6 });
       if (e.type === 'super') { play('super', { near }); if (!reduceMotion) shake = Math.max(shake, 0.25); }
-      if (e.type === 'superReady' && e.id === player.id) { play('superReady'); banner('SUPER READY!', 'super', 1.2); coach('Your super is ready! Press the gold button to roll a giant snowball.', 4); }
+      if (e.type === 'superReady' && e.id === player.id) { play('superReady'); if (!seen.has('super')) banner('SUPER READY!', 'super', 1.2); once('super', 'Your super is ready! Press the gold button to roll a giant snowball.'); } // the glowing button says it after the first time
       if (e.type === 'hit' && e.id === player.id && !reduceMotion) shake = Math.max(shake, 0.18);
       if (e.type === 'freeze') {
         const v = sim.chars.find(c => c.id === e.id), by = sim.chars.find(c => c.id === e.by);
         play('freeze', { near: e.id === player.id ? 1 : near });
         if (!reduceMotion) fx.emit(e.x, 0.2, e.z, 34, '#ffffff', 4.5, 0.8, 1.3);
-        if (v) { score[v.side === 'home' ? 'rival' : 'home']++; feed(`<b style="color:${CONFIG.teams[by?.team || v.team].dark}">${by ? name(by) : 'Someone'}</b> froze <b style="color:${CONFIG.teams[v.team].dark}">${name(v) === 'You' ? 'you' : name(v)}</b> ❄`); }
+        if (v) { score[v.side === 'home' ? 'rival' : 'home']++; if (!stages) feed(`<b style="color:${CONFIG.teams[by?.team || v.team].dark}">${by ? name(by) : 'Someone'}</b> froze <b style="color:${CONFIG.teams[v.team].dark}">${name(v) === 'You' ? 'you' : name(v)}</b> ❄`); }
         if (e.id === player.id) { $('#frozen').hidden = false; coach('Brrr! You are a snowman. Shake it off and you are back at Our School.', 3.5); }
-        if (by === player) banner('FROZEN ONE!', 'good', 1.1);
       }
       if (e.type === 'respawn' && e.id === player.id) $('#frozen').hidden = true;
       if (e.type === 'noThrowZone' && e.id === player.id) coach('Quiet zone: no snowballs near the mosque.', 3);
@@ -608,7 +615,7 @@ async function startGame(myTeam, kit, pace) {
   requestAnimationFrame(frame);
   // rivals just out of view: an arrow at the screen edge pointing to each (within 30 m)
   const edgeLayer = document.createElement('div'); edgeLayer.id = 'edge-marks'; document.body.appendChild(edgeLayer);
-  const marks = Array.from({ length: 6 }, () => { const m = document.createElement('div'); m.className = 'edge-mark'; m.style.setProperty('--c', rivCol); m.hidden = true; edgeLayer.appendChild(m); return m; });
+  const marks = Array.from({ length: 3 }, () => { const m = document.createElement('div'); m.className = 'edge-mark'; m.style.setProperty('--c', rivCol); m.hidden = true; edgeLayer.appendChild(m); return m; });
   const crateMark = document.createElement('div'); crateMark.className = 'crate-mark'; crateMark.hidden = true; crateMark.innerHTML = '<span class="cm-in"><i></i><b>?</b></span>'; edgeLayer.appendChild(crateMark);
   const ev = new Vector3();
   function edgeMarks() {

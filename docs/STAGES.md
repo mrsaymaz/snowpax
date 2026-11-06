@@ -110,6 +110,13 @@ The fights stay winnable without any friends.
 
 **Being frozen in a fight never costs a life:** the kid goes back to the spawn for a moment.
 
+**Calm fights** (from the fourth play-test): during a fight the screen shows what you need to
+play, and little else. Mr. Saymaz says each line at most once and not more often than every 12 s
+(the HUD line already says what to do); there is no list of who froze whom; floating numbers and
+"FROZEN!" only for your own hits; no wave banners (the phase banners say it); "RIGHT WORD!" is a
+word at the snowman, not a banner; at most 3 arrows at the screen edge. While a close-up is open,
+the game's other panels hide.
+
 **Word snowmen** stay in the fights, but tidy: three snowmen walk out together in a row, side by
 side, slowly, in their own lanes, and never throw. The top of the screen shows a Turkish word with
 its picture; freeze the snowman with the right English word ("RIGHT WORD!", +2 toward the 12, a
