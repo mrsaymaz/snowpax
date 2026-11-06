@@ -72,6 +72,9 @@ const THEMES = {
   home: { fog: '#cfc6e4', props: ['house', 'lamp', 'pine', 'plane'], finish: 'Our School', end: 'school', gap: 3.2 },
 };
 // what each obstacle needs: jump (j), duck (d) or a different lane (lane); full = all three lanes
+// obstacles in proportion to the (smaller) kid: jump ones low enough to clear with a jump, duck
+// ones at head height of the kid sitting on the sled, above the kid tucked down
+const OBST_SCALE = { snowman: [0.62, 0.62, 0.62], crate: [0.85, 0.85, 0.85], car: [0.9, 0.9, 0.9], fence: [1, 0.92, 1], line: [1, 0.84, 1], branch: [1, 0.8, 1], awning: [1, 0.85, 1] };
 const OBST = {
   car: { needs: 'j', h: 1.0 }, snowman: { needs: 'j', h: 1.0 }, crate: { needs: 'j', h: 1.1 },
   fence: { needs: 'j', full: true, h: 1.0 }, line: { needs: 'd', full: true }, branch: { needs: 'd', lanes: 2 }, awning: { needs: 'd' }, gull: { needs: 'd' },
@@ -129,6 +132,7 @@ export class SledRun {
       P.x[i] = x; P.z[i] = z; x += Math.sin(P.th[i]); z -= Math.cos(P.th[i]);
     }
     for (let i = 0; i <= N; i++) { const a = P.th[Math.min(N, i + 2)] - P.th[Math.max(0, i - 2)]; P.bank[i] = Math.max(-0.24, Math.min(0.24, a / 4 * 11)); } // outer edge higher in a turn
+    { const raw = P.bank.slice(), W = 6; for (let i = 0; i <= N; i++) { let s = 0, n = 0; for (let k = -W; k <= W; k++) { const j = i + k; if (j < 0 || j > N) continue; const w = W + 1 - Math.abs(k); s += raw[j] * w; n += w; } P.bank[i] = s / n; } } // eased in and out of each turn
   }
   // where a point of the track is: distance s along it, lat metres to the right, y up from the snow
   at(s, lat = 0, y = 0, out = new Vector3()) {
@@ -139,8 +143,9 @@ export class SledRun {
     return out.set(cx + Math.cos(th) * lat, lerp(P.h) + y - lat * bank, cz + Math.sin(th) * lat);
   }
   heading(s) { const P = this.path, i = Math.max(0, Math.min(P.N - 1, Math.floor(s))), t = Math.max(0, Math.min(1, s - i)); return P.th[i] + (P.th[i + 1] - P.th[i]) * t; }
-  bankAt(s) { const P = this.path, i = Math.max(0, Math.min(P.N, Math.round(s))); return P.bank[i]; }
-  slope(s) { const P = this.path, i = Math.max(1, Math.min(P.N - 1, Math.round(s))); return (P.h[i + 1] - P.h[i - 1]) / 2; }
+  // bank and slope blend smoothly between metres (no steps from one metre to the next)
+  bankAt(s) { const P = this.path, i = Math.max(0, Math.min(P.N - 1, Math.floor(s))), t = Math.max(0, Math.min(1, s - i)); return P.bank[i] + (P.bank[i + 1] - P.bank[i]) * t; }
+  slope(s) { const P = this.path, i = Math.max(1, Math.min(P.N - 2, Math.floor(s))), t = Math.max(0, Math.min(1, s - i)), at = k => (P.h[k + 1] - P.h[k - 1]) / 2; return at(i) + (at(i + 1) - at(i)) * t; }
   // the track ribbon, the snowfield either side (banked near the track), the snowbanks along it
   buildGround(groundTex, T) {
     const P = this.path, N = P.N, v = new Vector3();
@@ -173,7 +178,7 @@ export class SledRun {
     const list = this.pool.get(kind) || []; this.pool.set(kind, list);
     const free = list.find(m => !m.visible); if (free) { free.visible = true; return free; }
     if (!this.geo[kind]) this.geo[kind] = kind.startsWith('house') ? SHAPES.house(+kind.slice(5) || 0) : (SHAPES[kind] || SHAPES.crate)(0);
-    const m = new Mesh(this.geo[kind], this.mats.vc); this.scene.add(m); list.push(m); return m;
+    const m = new Mesh(this.geo[kind], this.mats.vc); if (OBST_SCALE[kind]) m.scale.set(...OBST_SCALE[kind]); this.scene.add(m); list.push(m); return m;
   }
 
   // ---------- lay out the whole run ----------
@@ -293,7 +298,10 @@ export class SledRun {
     k.update(dt, { visible: !(this.blinkT > 0 && Math.floor(this.blinkT * 10) % 2), reduceMotion: this.reduceMotion });
     k.bar.visible = false; this.at(d, this.x, this.y, k.root.position); k.root.rotation.order = 'YXZ';
     k.root.rotation.set(this.slope(d) * 0.9, -this.heading(d), (LANES[this.lane] - this.x) * -0.12 - this.bankAt(d) * 0.8); // leans into the curve
-    k.kid.scale.y = k.kid.scale.x * (this.duckT > 0 ? 0.55 : 1);
+    // ducking: tuck down and forward over the sled (eased in and out, not a squash)
+    this.tuck = (this.tuck || 0) + ((this.duckT > 0 ? 1 : 0) - (this.tuck || 0)) * Math.min(1, dt * 18);
+    k.kid.scale.y = k.kid.scale.x * (1 - 0.28 * this.tuck); k.kid.rotation.x = 0.6 * this.tuck; k.kid.position.z = 0.12 * this.tuck;
+    if (this.tuck > 0.05) { k.arms[0].rotation.x = k.arms[1].rotation.x = -1.1 * this.tuck; }
     // the obstacles and pickups in view
     for (const it of this.items) {
       const dz = it.d - d;
@@ -307,7 +315,7 @@ export class SledRun {
       const x = it.full ? 0 : LANES[it.lane];
       if (it.kind === 'flake' || it.kind === 'word') { this.put(it.m, it.d, x, (it.y || 0.6) + Math.sin(this.time * 3 + it.d) * 0.08, this.time * 2 + it.d); it.m.scale.setScalar(it.kind === 'word' ? 1.6 : 0.9); if (it.tag) { it.tag.visible = true; this.at(it.d, x, 1.9, it.tag.position); } }
       else if (it.kind === 'letter') { this.put(it.m, it.d, x, 1.0 + Math.sin(this.time * 3 + it.lane) * 0.06); }
-      else if (it.kind === 'gull') { this.put(it.m, it.d, x + Math.sin(this.time * 2 + it.d) * 0.3, 1.25 + Math.sin(this.time * 6) * 0.05); it.m.rotation.z = Math.sin(this.time * 12) * 0.3; }
+      else if (it.kind === 'gull') { this.put(it.m, it.d, x + Math.sin(this.time * 2 + it.d) * 0.3, 1.05 + Math.sin(this.time * 6) * 0.05); it.m.rotation.z = Math.sin(this.time * 12) * 0.3; }
       else if (it.kind === 'branch') this.put(it.m, it.d, x, 0, it.lane === 0 ? Math.PI : 0);
       else this.put(it.m, it.d, x, 0);
     }
@@ -319,7 +327,9 @@ export class SledRun {
     const sp = this.at(d, this.x * 0.5, 0), ct = this.camTh;
     this.camera.position.set(sp.x - Math.sin(ct) * 7.2, sp.y + 4.3 + this.y * 0.3, sp.z + Math.cos(ct) * 7.2);
     const look = this.at(d + 7, this.x * 0.3, 0.9 + this.y * 0.4); look.lerp(new Vector3(sp.x + Math.sin(ct) * 7, sp.y + 0.9 + this.y * 0.4, sp.z - Math.cos(ct) * 7), 0.5);
-    this.camera.lookAt(look); this.camera.rotateZ(this.bankAt(d + 4) * 0.5);
+    // the camera leans with the bank, gently: a smoothed roll, so it never jerks
+    const roll = this.bankAt(d + 4) * 0.45; this.camRoll = this.camRoll === undefined ? roll : this.camRoll + (roll - this.camRoll) * Math.min(1, dt * 2.5);
+    this.camera.lookAt(look); this.camera.rotateZ(this.camRoll);
     // sparks
     let n = 0;
     for (const s of this.sparks) { if (s.t <= 0) continue; s.t -= dt; s.vy -= 9 * dt; s.x += s.vx * dt; s.y += s.vy * dt; s.z += s.vz * dt; o.position.set(s.x, s.y, s.z); o.scale.setScalar(Math.max(0.1, s.t * 1.6)); o.updateMatrix(); this.sparkMesh.setMatrixAt(n, o.matrix); this.sparkMesh.setColorAt(n, s.c); n++; }

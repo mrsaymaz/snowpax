@@ -45,9 +45,9 @@ export class SnowmanView {
     const sh = new Mesh(new CircleGeometry(0.55, 16), new MeshBasicMaterial({ color: '#4a6182', transparent: true, opacity: 0.3, depthWrite: false })); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.03; this.root.add(sh);
     // a ring in the rival team's colour, so white snowmen stand out on white snow
     const ring = new Mesh(new RingGeometry(0.55, 0.7, 28), new MeshBasicMaterial({ color: team.color, transparent: true, opacity: 0.9, depthWrite: false, depthTest: false })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05; ring.renderOrder = 6; this.root.add(ring); this.ring = ring;
-    this.body.scale.setScalar(1.3); this.size = 1.3;
+    this.body.scale.setScalar(0.95); this.size = 0.95; // in proportion to the kids
     this.cv = document.createElement('canvas'); this.cv.width = 96; this.cv.height = 16; this.tex = new CanvasTexture(this.cv); this.tex.colorSpace = SRGBColorSpace;
-    this.bar = new Sprite(new SpriteMaterial({ map: this.tex, depthTest: false, transparent: true })); this.bar.scale.set(1.0, 0.17, 1); this.bar.position.y = c.minion === 'captain' ? 4.3 : c.minion === 'sledder' ? 2.1 : 2.85; this.bar.renderOrder = 20; this.root.add(this.bar);
+    this.bar = new Sprite(new SpriteMaterial({ map: this.tex, depthTest: false, transparent: true })); this.bar.scale.set(1.0, 0.17, 1); this.bar.position.y = c.minion === 'captain' ? 3.2 : c.minion === 'sledder' ? 1.6 : 2.15; this.bar.renderOrder = 20; this.root.add(this.bar);
     this.last = -1; this.t = Math.random() * 6; this.spawnT = 0.4;
   }
   // a word snowman (the fights) holds up a sign with its English word
@@ -57,8 +57,8 @@ export class SnowmanView {
     g.fillStyle = '#fffaf0'; g.strokeStyle = '#2d6fb5'; g.lineWidth = 7; g.beginPath(); g.roundRect((320 - w) / 2, 8, w, 80, 22); g.fill(); g.stroke();
     g.fillStyle = '#1c2a55'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(word, 160, 50, 290);
     const tex = new CanvasTexture(cv); tex.colorSpace = SRGBColorSpace;
-    this.sign = new Sprite(new SpriteMaterial({ map: tex, depthTest: false, transparent: true })); this.sign.scale.set(2.2, 0.66, 1); this.sign.position.y = 3.2; this.sign.renderOrder = 6; this.root.add(this.sign);
-    this.bar.position.y = 2.75;
+    this.sign = new Sprite(new SpriteMaterial({ map: tex, depthTest: false, transparent: true })); this.sign.scale.set(1.9, 0.57, 1); this.sign.position.y = 2.5; this.sign.renderOrder = 6; this.root.add(this.sign);
+    this.bar.position.y = 2.1;
   }
   update(dt, groundY = 0) {
     const c = this.c; this.t += dt * (2 + c.moving * 2);

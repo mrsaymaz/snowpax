@@ -13,7 +13,7 @@ export const SIM = {
   radius: 0.36,
   accel: 30,
   iceGrip: 0.12,
-  ballRadius: 0.22, ballHeight: 1.0, lobPeak: 2.6,
+  ballRadius: 0.22, ballHeight: 0.8, lobPeak: 2.6,
   dodgeTime: 0.2, dodgeSpeed: 3, dodgeCooldown: 1.2,
   thawTime: 0.7,
   driftCooldown: 6,
@@ -437,7 +437,7 @@ export class Sim {
       if (b.kind === 'lob') {
         b.t += dt; const u = Math.min(1, b.t / b.T);
         b.x1 += this.weather.wx * dt * 0.6; b.z1 += this.weather.wz * dt * 0.6; // the wind carries lobs a little
-        b.x = b.x0 + (b.x1 - b.x0) * u; b.z = b.z0 + (b.z1 - b.z0) * u; b.y = 1.2 * (1 - u) + 4 * SIM.lobPeak * u * (1 - u) + 0.2 * u + this.ground(b.x, b.z);
+        b.x = b.x0 + (b.x1 - b.x0) * u; b.z = b.z0 + (b.z1 - b.z0) * u; b.y = 0.95 * (1 - u) + 4 * SIM.lobPeak * u * (1 - u) + 0.2 * u + this.ground(b.x, b.z);
         if (u >= 1) {
           if (this.grid.has(b.x, b.z, GRID.ZONE)) this.emit('poof', { x: b.x, y: 0.3, z: b.z });
           else {

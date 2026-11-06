@@ -194,7 +194,7 @@ async function startGame(myTeam, kit, pace) {
     onTap: (x, y) => {
       if (player.planted || player.frozen || player.thaw) return null;
       const R = Math.max(40, Math.min(innerWidth, innerHeight) * 0.09), v = new Vector3();
-      const scr = c => { v.set(c.x, groundH(c.x, c.z) + (c.role === 'minion' ? 0.9 : 1.0), c.z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; };
+      const scr = c => { v.set(c.x, groundH(c.x, c.z) + (c.role === 'minion' ? 0.7 : 0.75), c.z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; };
       let best = null, bd = R;
       for (const c of sim.enemiesOf(player)) { if (c.frozen || c.gone || !sim.canSee(player, c)) continue; const [sx, sy] = scr(c), d = Math.hypot(sx - x, sy - y); if (d < bd) { bd = d; best = c; } }
       if (best) { fx.number?.(best.x, best.z, '🎯', 'warm'); return { target: best.id }; }
@@ -573,7 +573,7 @@ async function startGame(myTeam, kit, pace) {
       }
     }
   }
-  const screenOf = c => { const v = new Vector3(c.x, groundH(c.x, c.z) + (c.role === 'minion' ? 0.9 : 1.0), c.z).project(camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight }; };
+  const screenOf = c => { const v = new Vector3(c.x, groundH(c.x, c.z) + (c.role === 'minion' ? 0.7 : 0.75), c.z).project(camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight }; };
   globalThis.__snowpax = { match, sim, player, quality, renderer, world, life, flow, stages, scene, snowmen, screenOf };
   if (stages) stages.showMap();
 }

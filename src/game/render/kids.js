@@ -12,6 +12,9 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { buildKid, bakeKid } from './kids2.js';
 import { makeLook } from '../looks.mjs';
 
+// the kids' size: about one tile wide and 1.75 tall (the sled run and the stations use the same kid)
+export const KID_SCALE = 0.74;
+
 // Merge meshes (in their parent's space, plus an optional extra matrix) into one geometry
 // with per-vertex colours, so a whole kid draws in a handful of calls.
 function bakeColored(meshes, extra = null) {
@@ -35,7 +38,7 @@ const G = {
   beanie: new SphereGeometry(0.47, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), band: new TorusGeometry(0.45, 0.07, 8, 20), pom: new SphereGeometry(0.15, 12, 10),
   muff: new CylinderGeometry(0.17, 0.17, 0.12, 14), hairband: new TorusGeometry(0.47, 0.045, 6, 20, Math.PI),
   capTop: new SphereGeometry(0.46, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2.3), brim: new CylinderGeometry(0.28, 0.3, 0.05, 16, 1, false, -Math.PI / 2, Math.PI),
-  shadow: new CircleGeometry(0.5, 20), ring: new RingGeometry(0.5, 0.62, 32),
+  shadow: new CircleGeometry(0.4, 20), ring: new RingGeometry(0.4, 0.5, 32),
   snowB: new SphereGeometry(0.55, 16, 12), snowM: new SphereGeometry(0.42, 16, 12), snowT: new SphereGeometry(0.32, 16, 12), nose: new ConeGeometry(0.06, 0.28, 8),
 };
 
@@ -56,14 +59,14 @@ export class Kid {
     // the kid model: its look comes from the seat (girls and boys on every team); old saves get one
     const look = c.look || makeLook(c.id % 2 ? 'girl' : 'boy', () => ((c.id * 0.6180339) % 1));
     const kid = this.kid = bakeKid(buildKid({ team: c.team, kit: c.kit, ...look })); root.add(kid);
-    kid.scale.setScalar(1.1 * s);
+    kid.scale.setScalar(KID_SCALE * s); // about one tile wide and 1.75 tall, in proportion to the battlefield (was 1.1)
     this.arms = kid.userData.arms; this.legs = kid.userData.legs;
     this.vc = kid.userData.material; this.mats.push(this.vc);
     kid.traverse(o => { if (o.isMesh && o.material !== this.vc) { o.material = o.material.clone(); this.mats.push(o.material); } }); // face and badge fade with the kid
     const add = (geo, m, x, y, z, parent = kid, outline = false) => { const o = new Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; parent.add(o); if (outline) this.outline(o, parent); return o; };
     this.outlineMat = new MeshBasicMaterial({ color: OUTLINE, side: BackSide, transparent: true }); this.mats.push(this.outlineMat);
     // snowman (frozen)
-    const sm = this.snowman = new Group(); sm.visible = false; root.add(sm); sm.scale.setScalar(1.15 * s);
+    const sm = this.snowman = new Group(); sm.visible = false; root.add(sm); sm.scale.setScalar(KID_SCALE * 1.05 * s);
     const snowWhite = M('#fbfdff');
     add(G.snowB, snowWhite, 0, 0.5, 0, sm, true); add(G.snowM, snowWhite, 0, 1.12, 0, sm, true); add(G.snowT, snowWhite, 0, 1.62, 0, sm, true);
     const ss = add(G.scarf, M(this.team.color), 0, 1.4, 0, sm); ss.rotation.x = Math.PI / 2;
@@ -72,12 +75,12 @@ export class Kid {
     // shadow + ring
     const shadow = new Mesh(G.shadow, new MeshBasicMaterial({ color: '#4a6182', transparent: true, opacity: 0.28, depthWrite: false })); shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.03; root.add(shadow);
     this.ring = new Mesh(G.ring, new MeshBasicMaterial({ color: isPlayer ? '#ffffff' : this.team.color, transparent: true, opacity: 0.95, depthWrite: false, depthTest: false })); this.ring.renderOrder = 6; // shows even when wading in deep snow this.ring.rotation.x = -Math.PI / 2; this.ring.position.y = 0.04; root.add(this.ring);
-    if (isPlayer) { const inner = new Mesh(new RingGeometry(0.4, 0.5, 32), new MeshBasicMaterial({ color: this.team.color, transparent: true, depthWrite: false, depthTest: false })); inner.renderOrder = 6; inner.rotation.x = -Math.PI / 2; inner.position.y = 0.045; root.add(inner); this.innerRing = inner; }
+    if (isPlayer) { const inner = new Mesh(new RingGeometry(0.32, 0.4, 32), new MeshBasicMaterial({ color: this.team.color, transparent: true, depthWrite: false, depthTest: false })); inner.renderOrder = 6; inner.rotation.x = -Math.PI / 2; inner.position.y = 0.045; root.add(inner); this.innerRing = inner; }
     // bars
     this.bc = document.createElement('canvas'); this.bc.width = 160; this.bc.height = isPlayer ? 56 : 40;
     this.bt = new CanvasTexture(this.bc); this.bt.colorSpace = SRGBColorSpace;
     this.bar = new Sprite(new SpriteMaterial({ map: this.bt, depthTest: false, transparent: true }));
-    this.bar.scale.set(1.9, 1.9 * this.bc.height / 160, 1); this.bar.position.y = 2.95 * s; this.bar.renderOrder = 20; root.add(this.bar);
+    this.bar.scale.set(1.6, 1.6 * this.bc.height / 160, 1); this.bar.position.y = 2.15 * s; this.bar.renderOrder = 20; root.add(this.bar);
     this.bake();
     // a wooden sled with red runners, shown while riding a sled run
     const sled = this.sled = new Group(); sled.visible = false; root.add(sled);
