@@ -14,7 +14,8 @@ export const STUDENT_SECONDS = { choice: 7, listen: 9, spell: 12, order: 12, mat
 // longOpen: the opening round of a long fight (freeze the goal's worth of rivals, about 60 s)
 // camp: three children's questions with the walks between; build: one shop visit; showdown: the
 // Final Showdown, won first time
-export const OVERHEAD = { map: 10, arrive: 3, fight: 21, longOpen: 60, camp: 35, build: 12, walkIn: 3, celebrate: 1.8, showdown: 60, results: 6 };
+// scene: one place's cinematic scene on the sled ride in (about 7 s at 60% speed, plus its clear stretch)
+export const OVERHEAD = { map: 10, arrive: 3, fight: 21, longOpen: 60, camp: 35, build: 12, walkIn: 3, celebrate: 1.8, showdown: 60, results: 6, scene: 9 };
 
 export const stepTime = (st, S = STUDENT_SECONDS) => (st.kind === 'match' ? S.matchPair * stepItems(st) : st.kind === 'sort' ? S.sortCard * stepItems(st) : S[st.kind] || S.choice) + S.feedback;
 
@@ -29,7 +30,8 @@ export function arenaTime(unit, { rng = Math.random, O = OVERHEAD } = {}) {
     // three shop visits and the Final Showdown
     const fights = !P ? O.fight : O.camp + O.longOpen + P.strike.seconds + O.walkIn + 3 * O.build + O.showdown;
     const tasks = visitTime(v), extra = fights + O.walkIn + 2 * O.celebrate + O.arrive + O.results;
-    parts.push({ id: st.id, ride: st.ride.seconds, tasks: Math.round(tasks.t), items: tasks.items, extra, total: Math.round(st.ride.seconds + tasks.t + extra) });
+    const ride = st.ride.seconds + (st.parts ? st.parts.flat().length * O.scene : 0); // the ride in, with a scene at each place
+    parts.push({ id: st.id, ride, tasks: Math.round(tasks.t), items: tasks.items, extra, total: Math.round(ride + tasks.t + extra) });
   }
   const seconds = O.map + parts.reduce((s, p) => s + p.total, 0);
   return { seconds, minutes: seconds / 60, parts };

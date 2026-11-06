@@ -6,16 +6,59 @@ outposts: they are all part of the Kasımpaşa outpost, each with its own Englis
 scene, and there is no sled travel between them. That brings the arena from about 32 minutes to
 about **9** (see Timing), with every task type still in it.
 
-| Place | English task | Its scene | Its landmark on the field |
-|---|---|---|---|
-| Boulevard Park | Answer | the treehouse | the treehouse, west side |
-| Archery Ground | Sorting | the archers' lodge | the archers' lodge, behind the rivals (north-west) |
-| Kızılay Square | Matching | the fountain | **the fountain: the outpost's centre** |
-| Sururi Park | Builder | the snow castle | the snow castle, behind the rivals (north-east) |
-| The Pier | Listening | the waterfront | the admiral's statue, east side |
+| Place | English task | Its task scene | On the carousel | On the sled ride in |
+|---|---|---|---|---|
+| Boulevard Park | Answer | the treehouse | the treehouse | a cinematic scene (to come) |
+| Archery Ground | Sorting | the archers' lodge | the archers' lodge | **the sample cinematic scene** |
+| Kızılay Square | Matching | the fountain | the fountain | a cinematic scene (to come) |
+| Sururi Park | Builder | the snow castle | the snow castle | a cinematic scene (to come) |
+| The Pier | Listening | the waterfront | the admiral's statue | a cinematic scene (to come) |
 
 Part 1 is Boulevard Park and Archery Ground; Part 2 is Kızılay Square, Sururi Park and the Pier
-(`parts` in `stages.mjs`, `PLACE_OF` for the names).
+(`parts` in `stages.mjs`, `PLACE_OF` for the names, `PLACE_ID` for the scenes).
+
+## The carousel: the Kasımpaşa outpost
+
+The outpost is a big wooden carousel at the north end of the field (`buildCarousel` in
+`render/snowtown.js`). In the middle stands a ship's mast with a crow's nest, a big anchor at its
+foot and the **KASIMPAŞA** sign hanging from the yard (tilted back so it reads from the game's
+camera): Kasımpaşa grew up round the old naval shipyard. The outpost's flag flies at the
+masthead. Round it, on a turning deck with a red-and-white skirt and brass poles, ride
+**miniatures of the five places' landmarks** in task order (the real landmark models, built
+aside and moved onto the deck).
+- It turns slowly; while a place's task is played it turns that place to the front.
+- When a place's task is done, its lamp on the deck and its little flag light up in the team's
+  colour: two after Part 1, all five after Part 2.
+- **Lit places help in the fights:** in turn, each lobs a snowball at the nearest rival snowman
+  or kid (never the captain, never a word snowman), so Part 1 helps in "They strike back!" and
+  all five help in the Final Showdown.
+
+## The places on the way: cinematic scenes on the sled ride
+
+The ride into Kasımpaşa passes each place in task order, and at each one the camera turns to a
+scene of it, alive (`render/cinema.js`, about 7 s each). Archery Ground is built as the sample;
+the other four follow the same pattern.
+- **A clear stretch:** the track runs straight and flat, with no obstacles, words or letters; the
+  sled slows to 60% and rides itself (no steering needed).
+- **The camera:** it swings from behind the sled into the scene's shots (cuts, like a film), and
+  swings back for the last second. Letterbox bars come in; the run's buttons and counters fade.
+- **The name card** at about 1 s ("SORTING · PART 1 / Archery Ground"), for 3.4 s, and the
+  welcome read aloud ("Welcome to Archery Ground!"). "GET READY!" as the camera swings back.
+- **Tap to skip** a scene already seen this session. With reduce motion: one held wide shot and
+  cuts instead of swings.
+- **Light:** the scene brings its own low sun with long shadows (shadows only while a scene shows).
+- Each scene is built just before it is needed and thrown away after.
+
+**Archery Ground** (bright late afternoon): the record stones along the way (tall white marble,
+gold bands, snow caps); the archers' lodge with its three lead domes, red-and-white arches, lit
+windows and the golden bow; red and gold pennants snapping on tall poles; four kids in a row
+throwing snowballs at three straw targets on easels, each hit a puff of snow and a wobble; the
+coach beside the targets holding up the score; an old man sweeping the lodge steps, with a ginger
+cat on the step swishing its tail; a salep stall with a purple-and-white awning, a copper urn and
+steam; snow drifting off the domes; pines and houses behind. Shots: a low dolly along the record
+stones, a slow push to the lodge, then behind the row down the range. **The moment:** the small
+girl in the green coat hits the bullseye (a big puff and a golden sparkle, a fanfare), the row
+jumps with their arms up, and the coach, laughing, flips the score from 8 to 10.
 
 ## Three symbols, one job each
 
@@ -35,8 +78,8 @@ A right answer in a scene sends a little ❄ flying into the progress bar.
 
 1. **The arena card:** "Arena 1 · Kasımpaşa", the stars for the stage (of 3) and the first-try
    score against the 80% goal.
-2. **The sled ride in** (50 s, `sledrun.js`, the Kasımpaşa theme: kiosks, plane trees, targets,
-   snow castles). Swipe or use the arrow keys or the buttons: left and right steer, up jumps
+2. **The sled ride in** (50 s of riding plus the places' scenes, `sledrun.js`, the Kasımpaşa
+   theme: kiosks, plane trees, targets, snow castles; see "The places on the way" above). Swipe or use the arrow keys or the buttons: left and right steer, up jumps
    (buried cars, snowmen, crates with sleeping cats, fences), down ducks (laundry lines, branches,
    awnings, gulls); ramps give big jumps with snowballs up high. Collect **snowballs** (lots) and
    **5 golden word snowflakes**, spread along the track: each shows an English word with its
@@ -112,8 +155,7 @@ friend is a bot that follows the student, and a team seat a classmate could take
 There is no real map and there are no real streets. The arena is one purpose-built field
 (`tools/build-world.mjs`), and only the look of the neighbourhood is kept round it: a cobbled lane
 with old lamps, snowed-in houses with lit windows and tea on the sills, buried roofs, trees and
-street stalls (chestnut, simit, çay, salep), and the four other places' landmarks just behind the
-snowbank fence. Beyond that is a painted backdrop.
+street stalls (chestnut, simit, çay, salep). Beyond that is a painted backdrop.
 
 The bold look (cartoon shading, outlines, glow, a build of only the field) is the default.
 `?look=v1` brings back the old diorama look.
@@ -184,9 +226,9 @@ Frozen snowmen melt away. Each one wears the rival team's colours and has a ring
 Grade 5 student needs per item on the Relaxed pace (choice 7 s, listening 9 s, spelling or ordering
 12 s, a match pair or sort card 5 s, plus 1.5 s of feedback per step), plus the sled ride, the camp
 (35 s), three shop visits (12 s each), the opening round (60 s), the strike-back (50 s), the Final
-Showdown won first time (60 s) and the moments between. For Grade 5 Unit 1 that is about **8.6
-minutes** (the ride 50 s, the English 196 s for 24 items, the rest 260 s); five outposts and a
-Showdown came to about 32. The test keeps it between 7 and 13 minutes. Real play with students
+Showdown won first time (60 s), the five places' scenes on the ride (about 9 s each) and the
+moments between. For Grade 5 Unit 1 that is about **9.3 minutes** (the ride 95 s, the English
+196 s for 24 items, the rest 260 s); five outposts and a Showdown came to about 32. The test keeps it between 7 and 13 minutes. Real play with students
 should confirm the per-item seconds.
 
 **Test links:**

@@ -52,9 +52,10 @@ const emblemTex = team => canvas('emb' + team, 128, 128, (g, W) => { g.fillStyle
 // one kid model: { design, team, kit, skin (index), hair (index) }
 // a neighbourhood child not on a team yet: a plain everyday coat, no badge (team 'neutral')
 export const NEUTRAL = { color: '#c9bba4', dark: '#8c7d68' };
-export function buildKid({ design = 'puffer', team = 'hufflepuff', kit = 'thrower', gender = 'boy', style = null, skin = 0, hair = 0, mood = 'happy' } = {}) {
+// colors: { color, dark } for townsfolk in their own coats (no team badge; the sled ride's scenes)
+export function buildKid({ design = 'puffer', team = 'hufflepuff', kit = 'thrower', gender = 'boy', style = null, skin = 0, hair = 0, mood = 'happy', colors = null } = {}) {
   const girl = gender === 'girl'; style = style || (girl ? 'pigtails' : 'short');
-  const T = CONFIG.teams[team] || NEUTRAL, root = new Group(), col = T.color, dark = T.dark, skinCol = SKINS[skin % SKINS.length], hairCol = HAIR[hair % HAIR.length];
+  const T = colors || CONFIG.teams[team] || NEUTRAL, root = new Group(), col = T.color, dark = T.dark, skinCol = SKINS[skin % SKINS.length], hairCol = HAIR[hair % HAIR.length];
   const fab = c => design === 'vinyl' ? new MeshPhysicalMaterial({ color: c, roughness: 0.32, clearcoat: 0.8, clearcoatRoughness: 0.2 }) : design === 'plush' ? new MeshLambertMaterial({ color: '#ffffff', map: knitTex(c) }) : new MeshStandardMaterial({ color: c, roughness: 0.72, metalness: 0 });
   const skinM = design === 'vinyl' ? new MeshPhysicalMaterial({ color: skinCol, roughness: 0.38, clearcoat: 0.6 }) : design === 'plush' ? new MeshLambertMaterial({ color: skinCol }) : new MeshStandardMaterial({ color: skinCol, roughness: 0.6 });
   const M = { team: fab(col), dark: fab(dark), white: fab('#f6f4ef'), boot: fab(design === 'plush' ? '#8a5a3c' : '#5a3a2a'), pants: fab('#34405e'), hair: fab(hairCol), scarf: fab(kit === 'lobber' ? '#ffd166' : kit === 'sprayer' ? '#7bdff2' : '#f4f1ea') };

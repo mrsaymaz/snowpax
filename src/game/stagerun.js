@@ -5,7 +5,8 @@
 // never does); with none left the stage starts again (English answers already given still count).
 // See stages.mjs for the stage, fights.mjs for the plan and waves.mjs for the waves.
 import { CONFIG } from '../config.js';
-import { STAGES, stageById, Lives, stageState, isUnlocked, nextStage, finishStage, totalStars, UNLOCK } from './stages.mjs';
+import { STAGES, stageById, Lives, stageState, isUnlocked, nextStage, finishStage, totalStars, UNLOCK, PLACE_OF, PLACE_ID } from './stages.mjs';
+import { FAMILIES } from '../tasks/subtasks.mjs';
 import { WAVES, RIVAL_INFO, minionList, stageWall, setWall, entryPoints } from './waves.mjs';
 import { flakeWords } from './visit.mjs';
 import { FIGHT_PLANS, WordHunt, Armoury, ROLES, KID_NAMES, SHOP } from './fights.mjs';
@@ -18,6 +19,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const FIGHT_MAX = 14; // seconds of the opening fight at most
 const FIELD_MAX = 45; // on a battlefield: beat the rival team, or after this long they run back to camp
+const FAMILY_NAME = Object.fromEntries(FAMILIES.map(f => [f.id, f.name]));
 const STAR = n => '★'.repeat(n) + '☆'.repeat(3 - n);
 const ICON = { kasimpasa: 'kizilay' };
 
@@ -63,8 +65,11 @@ export class StageRunner {
     const st = this.cur, words = flakeWords(this.unit, st.ride.flakes || 5, this.up.missed, this.rng);
     const spellPool = this.unit.words.filter(w => /^[a-z]{3,7}$/i.test(w.en)), spell = st.ride.spell && spellPool.length ? spellPool[Math.floor(this.rng() * spellPool.length)] : null;
     this.sled?.dispose();
-    this.sled = new SledRun({ theme: st.ride.theme, seconds: st.ride.seconds, pace: this.pace, team: this.team, kit: this.kit, look: this.match.player.look, words, spell, lives: this.lives, rng: this.rng, first: this.ridesDone === 0, reduceMotion: this.reduceMotion,
+    // the places on the way, in the order their tasks are played: a scene where the camera turns to each
+    const cinema = (st.parts || []).flatMap((fams, p) => fams.map(f => ({ id: PLACE_ID[f], title: PLACE_OF[f], task: FAMILY_NAME[f], part: p + 1 })));
+    this.sled = new SledRun({ theme: st.ride.theme, seconds: st.ride.seconds, pace: this.pace, team: this.team, kit: this.kit, look: this.match.player.look, words, spell, lives: this.lives, rng: this.rng, first: this.ridesDone === 0, reduceMotion: this.reduceMotion, cinema,
       on: {
+        cinema: e => this.cinema(e),
         crash: lost => { this.ui.play('hit'); const left = this.lives.lose(); this.drawRunHud(); this.toast(lost ? `Ouch! −${lost} snowballs` : 'Ouch!'); if (!left) this.outOfLives(); },
         count: () => this.drawRunHud(), sound: k => this.ui.play(k),
         word: w => { this.toast(`+1 ❄  ${w.en} = ${w.tr}`, 'word'); speech.say(w.en); },
@@ -77,9 +82,21 @@ export class StageRunner {
     this.mode = 'sled'; document.body.classList.add('sledding'); $('#hud').hidden = true; $('#runhud').hidden = false;
     $('#runhud').innerHTML = `<div class="rh-top"><span class="rh-lives"></span><div class="rh-prog"><i></i><span class="rh-dest">${THEME_ICON[ICON[st.id]] || ''}</span></div><span class="rh-balls" aria-label="Snowballs">⚪ <b>0</b></span><span class="rh-flakes" aria-label="Snowflakes for the Snow Shop">❄ <b>0</b></span></div>
       <div class="rh-spell" ${spell ? '' : 'hidden'}><small>Spell: <span lang="tr">${esc(spell?.tr || '')}</span></small><div class="rh-slots"></div></div><div class="rh-toast"></div>
+      <div class="rh-cine" hidden><small></small><b></b><span class="rh-skip" hidden>Tap to skip</span></div>
       <div class="rh-btns"><button type="button" data-k="left" aria-label="Left">◀</button><button type="button" data-k="duck" aria-label="Duck">▼</button><button type="button" data-k="jump" aria-label="Jump">▲</button><button type="button" data-k="right" aria-label="Right">▶</button></div>`;
     this.spell = spell; this.drawRunHud();
     this.ui.coach(this.ridesDone === 0 ? `Sled into ${st.title}! Swipe left and right to steer, up to jump, down to duck. Grab the snowballs, and catch the rare golden snowflakes: each one is a ❄ for the Snow Shop!` : `Sled into ${st.title}! Catch the golden snowflakes for the Snow Shop!`, 6);
+  }
+  // a place on the way: letterbox bars, its name card, its welcome read aloud
+  cinema(e) {
+    const h = $('#runhud'), card = h?.querySelector('.rh-cine'); if (!card) return;
+    if (e.phase === 'start') {
+      document.body.classList.add('cinema'); card.querySelector('b').textContent = e.title; card.querySelector('small').textContent = `${e.task} · Part ${e.part}`;
+      card.querySelector('.rh-skip').hidden = !this.seenCinema?.has(e.id); card.hidden = true;
+      clearTimeout(this.cineT); this.cineT = setTimeout(() => { card.hidden = false; card.classList.remove('show'); void card.offsetWidth; card.classList.add('show'); this.cineT = setTimeout(() => { card.hidden = true; }, 3400); }, 900); // the name card, then the scene alone
+      clearTimeout(this.sayT); this.sayT = setTimeout(() => { if (this.sled?.cine) speech.say(e.welcome); }, 1300);
+      this.ui.play('whoosh');
+    } else { card.hidden = true; card.classList.remove('show'); clearTimeout(this.cineT); document.body.classList.remove('cinema'); (this.seenCinema ||= new Set()).add(e.id); }
   }
   drawRunHud() {
     const h = $('#runhud'); if (!h || h.hidden || !this.sled) return;
@@ -501,6 +518,7 @@ export class StageRunner {
     sw.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; st = performance.now(); });
     sw.addEventListener('pointerup', e => {
       if (this.mode !== 'sled' || !this.sled) return;
+      if (this.sled.cine) { if (this.seenCinema?.has(this.sled.cine.q.id)) this.sled.skipCine(); return; } // a scene you have seen: a tap skips it
       const dx = e.clientX - sx, dy = e.clientY - sy;
       if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
       if (Math.abs(dx) > Math.abs(dy)) this.sled.move(dx > 0 ? 1 : -1); else if (dy < 0) this.sled.jump(); else this.sled.duck();

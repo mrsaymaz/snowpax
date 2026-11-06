@@ -593,3 +593,19 @@ body.building #newrival { top: calc(190px + env(safe-area-inset-top)); bottom: a
 body.worldtask.building #newrival { opacity: 1; top: calc(12px + env(safe-area-inset-top)); bottom: auto; z-index: 41; }
 @media (orientation: portrait) and (max-width: 600px) { .wt-label.shop-tag { width: auto; min-width: 96px; font-size: 12px; padding: 4px 8px 6px; } .shop-tag small { display: none; } } /* phones: the name and the price; the thing itself shows what it is */
 .shop-tag .shop-icon { font-size: 20px; line-height: 1; }
+
+/* the sled ride's cinematic scenes: letterbox bars, the place's name card, nothing to press */
+#runhud::before, #runhud::after { content: ''; position: fixed; left: 0; right: 0; height: 0; background: #0d1226; transition: height 0.6s ease; z-index: 1; pointer-events: none; }
+#runhud::before { top: 0; } #runhud::after { bottom: 0; }
+body.cinema #runhud::before, body.cinema #runhud::after { height: 9vh; }
+body.cinema .rh-btns, body.cinema .rh-spell, body.cinema .rh-top { opacity: 0; pointer-events: none; transition: opacity 0.4s; }
+.rh-cine { position: fixed; left: 50%; bottom: calc(9vh + 18px); transform: translateX(-50%); z-index: 2; text-align: center; color: #fff6dc; pointer-events: none; }
+.rh-cine[hidden] { display: none; }
+.rh-cine b { display: block; font-size: clamp(26px, 7vw, 44px); font-weight: 900; letter-spacing: 0.02em; text-shadow: 0 3px 0 #2b1d10, 0 6px 18px rgba(0,0,0,0.45); white-space: nowrap; }
+.rh-cine small { display: inline-block; font-size: 14px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #ffd98a; background: rgba(43,29,16,0.7); padding: 3px 10px; border-radius: 999px; margin-bottom: 6px; }
+.rh-cine .rh-skip { display: block; margin-top: 8px; font-size: 12px; font-weight: 700; opacity: 0.75; }
+.rh-cine .rh-skip[hidden] { display: none; }
+.rh-cine.show b { animation: cineIn 0.7s cubic-bezier(.2,.8,.2,1) both; }
+.rh-cine.show small { animation: cineIn 0.7s 0.15s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes cineIn { from { opacity: 0; transform: translateY(14px) scale(0.96); letter-spacing: 0.2em; } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .rh-cine.show b, .rh-cine.show small { animation: none; } #runhud::before, #runhud::after { transition: none; } }

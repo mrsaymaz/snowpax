@@ -15,6 +15,8 @@ export const STAGES = [
 ];
 // the place each task family belongs to (its landmark and its scene)
 export const PLACE_OF = { answer: 'Boulevard Park', sort: 'Archery Ground', match: 'Kızılay Square', build: 'Sururi Park', listen: 'The Pier' };
+// the place's id (its scene on the sled ride, render/cinema.js)
+export const PLACE_ID = { answer: 'boulevard', sort: 'archery', match: 'kizilay', build: 'sururi', listen: 'pier' };
 export const stageById = id => STAGES.find(s => s.id === id);
 
 // Stars for a finished stage, from its first-try accuracy.

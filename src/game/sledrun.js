@@ -14,6 +14,7 @@ import {
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Kid } from './render/kids.js';
+import { CINEMA, shotAt, TRACK_Z, SCENE_SECONDS } from './render/cinema.js';
 
 const LANE = 1.8, LANES = [-LANE, 0, LANE];
 const rnd = (a, b = 0) => { let h = Math.imul((a * 73856093) ^ (b * 19349663), 2654435761); h ^= h >>> 13; h = Math.imul(h, 1597334677); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
@@ -89,18 +90,26 @@ const letterTex = (ch, col) => { const c = document.createElement('canvas'); c.w
 export class SledRun {
   // words: [{en, tr}] for the golden word snowflakes (all of them on the track, spread out);
   // spell: {en, tr} or null; lives: Lives
-  constructor({ theme = 'boulevard', seconds = 50, pace = 'relaxed', team = 'hufflepuff', kit = 'thrower', look = null, words = [], spell = null, lives, rng = Math.random, first = false, reduceMotion = false, on = {} }) {
+  // cinema: the places the ride passes, in task order ([{ id, title, task, part }]); the ones with a
+  // scene in render/cinema.js get a clear, straight stretch where the camera turns to them
+  constructor({ theme = 'boulevard', seconds = 50, pace = 'relaxed', team = 'hufflepuff', kit = 'thrower', look = null, words = [], spell = null, lives, rng = Math.random, first = false, reduceMotion = false, cinema = [], on = {} }) {
     Object.assign(this, { theme, seconds, pace, words, spell, lives, rng, first, reduceMotion, on });
     const T = this.T = THEMES[theme] || THEMES.boulevard;
     this.vmax = pace === 'challenge' ? 12.5 : 10.2; this.v = 6; this.dist = 0;
-    this.length = Math.round(seconds * this.vmax * 0.88);
+    const base = Math.round(seconds * this.vmax * 0.88), slow = 0.6 * this.vmax; // the sled rides itself at 60% through a scene
+    const span = () => 10 + slow * SCENE_SECONDS + 16; // the approach, the scene, the way out
+    const withScene = cinema.filter(sc => CINEMA[sc.id]);
+    this.length = base + withScene.reduce((s2, sc) => s2 + span(sc), 0);
+    // each place's stretch, spread along the ride in task order: [a, b) clear of everything
+    this.slots = cinema.map((sc, k) => { const has = !!CINEMA[sc.id], mid = this.length * (k + 1) / (cinema.length + 1), len = has ? span(sc) : 0; return { ...sc, has, a: mid - len / 2, b: mid + len / 2, lead: 10, dur: SCENE_SECONDS, scene: null, played: false }; }).filter(q => q.has);
+    this.cine = null;
     this.react = pace === 'challenge' ? 1.15 : 1.5; // seconds between things that need a move
     this.lane = 1; this.x = 0; this.y = 0; this.vy = 0; this.duckT = 0; this.stumbleT = 0; this.blinkT = 0; this.flakes = 0; this.snowballs = 0; this.spelled = ''; this.finished = false; this.time = 0;
     this.hintDone = new Set();
 
     const scene = this.scene = new Scene(); scene.background = new Color(T.fog); scene.fog = new Fog(T.fog, 18, 60);
-    scene.add(new HemisphereLight('#e4e8ff', '#8a7fc0', 1.25));
-    const sun = new DirectionalLight('#fff0dc', 1.9); sun.position.set(-6, 12, 4); scene.add(sun);
+    const hemi = this.hemi = new HemisphereLight('#e4e8ff', '#8a7fc0', 1.25); scene.add(hemi);
+    const sun = this.sun = new DirectionalLight('#fff0dc', 1.9); sun.position.set(-6, 12, 4); scene.add(sun, sun.target);
     this.camera = new PerspectiveCamera(58, 1, 0.3, 120);
     this.mats = { vc: new MeshLambertMaterial({ vertexColors: true }) };
     // the track: snow ground with three trodden lanes, banks either side
@@ -129,7 +138,9 @@ export class SledRun {
     const flat = this.T.sea ? 0 : 1, end = this.length + 12;
     let x = 0, z = 0;
     for (let i = 0; i <= N; i++) {
-      const ramp = Math.max(0, Math.min(1, (i - 18) / 45, (end - i) / 45)), e = ramp * ramp * (3 - 2 * ramp); // straight at the start and the finish
+      let ramp = Math.max(0, Math.min(1, (i - 18) / 45, (end - i) / 45));
+      for (const q of this.slots || []) ramp = Math.min(ramp, Math.max(0, Math.min(1, (q.a - 30 - i) / 30, (i - q.b - 10) / 30))); // straight and flat through a scene's stretch
+      const e = ramp * ramp * (3 - 2 * ramp); // straight at the start and the finish
       P.th[i] = e * (0.85 * Math.sin(i / 37 + r(1)) + 0.5 * Math.sin(i / 16 + r(2)) + 0.18 * Math.sin(i / 7.5 + r(3)));
       P.h[i] = e * flat * (1.5 * Math.sin(i / 43 + r(4)) + 0.7 * Math.sin(i / 17 + r(5)));
       P.x[i] = x; P.z[i] = z; x += Math.sin(P.th[i]); z -= Math.cos(P.th[i]);
@@ -164,10 +175,10 @@ export class SledRun {
       if (colorOf) g.setAttribute('color', new Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
     };
     const half = LANE * 1.5 + 0.4;
-    this.scene.add(new Mesh(ribbon([-half, half], null, () => 1, 0.03), new MeshLambertMaterial({ map: groundTex })));
+    const track = new Mesh(ribbon([-half, half], null, () => 1, 0.03), new MeshLambertMaterial({ map: groundTex })); track.receiveShadow = true; this.scene.add(track); // shadows only show in a scene's light
     const sea = T.sea ? '#79acd8' : '#f2f5fd';
     const field = ribbon([-19, -11, -6, -half, half, 6, 11, 19], lat => (lat < -6.5 ? sea : '#f2f5fd'), a => (a <= 6 ? 1 : a >= 11 ? 0 : 1 - (a - 6) / 5));
-    this.scene.add(new Mesh(field, new MeshLambertMaterial({ vertexColors: true })));
+    const fieldM = new Mesh(field, new MeshLambertMaterial({ vertexColors: true })); fieldM.receiveShadow = true; this.scene.add(fieldM);
     let minH = 0, cx = 0, cz = 0; for (let i = 0; i <= N; i++) { minH = Math.min(minH, P.h[i]); cx += P.x[i] / (N + 1); cz += P.z[i] / (N + 1); }
     const base = new Mesh(new PlaneGeometry(900, 900), new MeshLambertMaterial({ color: T.sea ? '#a9c7e6' : '#eef2fb' })); base.rotation.x = -Math.PI / 2; base.position.set(cx, minH - 0.4, cz); this.scene.add(base);
     const bankGeo = bake([[Sp(1, 10, 5), SNOW, 0, 0, 0, 0, 0, 0, 0.7, 0.45, 3.2]]), n = Math.floor(N / 5), banks = new InstancedMesh(bankGeo, this.mats.vc, n * 2), o = new Object3D();
@@ -188,9 +199,14 @@ export class SledRun {
   plan() {
     const rng = this.rng, L = this.length, items = this.items, gap = () => this.vmax * this.react * (0.95 + rng() * 0.5);
     const wordGap = (L - 110) / Math.max(1, this.words.length - 1); // the rare word snowflakes, evenly from near the start to near the end
-    let d = 26, wordK = 0, nextWord = 40, spellAt = this.spell ? L * 0.38 : Infinity, spellI = 0;
+    // each word snowflake has its spot; one that falls in a scene's stretch moves just before it
+    const spots = this.words.map((_, k) => { let at = 40 + k * wordGap; const q = this.slots.find(q2 => at >= q2.a - 8 && at < q2.b + 4); if (q) at = q.a - 14 > 30 ? q.a - 14 : q.b + 6; return at; });
+    let d = 26, wordK = 0, spellAt = this.spell ? L * 0.38 : Infinity, spellI = 0;
     const kinds = ['car', 'snowman', 'crate', 'fence', 'line', 'branch', 'awning', 'gull'];
     while (d < L - 30) {
+      const clear = this.slots.find(q => d >= q.a - 8 && d < q.b); if (clear) { d = clear.b; continue; } // a scene's stretch stays clear
+      // a rare golden word snowflake at its spot (each word once), between the letter gates too
+      if (wordK < this.words.length && d >= spots[wordK]) { items.push({ kind: 'word', d, lane: Math.floor(rng() * 3), word: this.words[wordK++], y: 0.9 }); d += this.vmax * 0.9; }
       // spelling gates: one row of three letters, the next letter of the word in one lane
       if (d >= spellAt && spellI < this.spell.en.length) {
         const ch = this.spell.en[spellI].toLowerCase(), lane = Math.floor(rng() * 3), abc = 'abcdefghijklmnopqrstuvwxyz'.replace(ch, '');
@@ -198,8 +214,6 @@ export class SledRun {
         for (let l = 0; l < 3; l++) items.push({ kind: 'letter', d, lane: l, ch: l === lane ? ch : wrong.pop(), right: l === lane, idx: spellI });
         spellI++; d += this.vmax * 1.7; continue;
       }
-      // a rare golden word snowflake now and then (each word once)
-      if (d >= nextWord && wordK < this.words.length) { items.push({ kind: 'word', d, lane: Math.floor(rng() * 3), word: this.words[wordK++], y: 0.9 }); nextWord += wordGap; d += this.vmax * 0.9; }
       // an obstacle (harder mix as the run goes on)
       const prog = d / L, pick = kinds[Math.floor(rng() * Math.min(kinds.length, 3 + Math.floor(prog * 6)))];
       const o = OBST[pick];
@@ -227,6 +241,7 @@ export class SledRun {
       if (T.sea && s < 0) continue;
       const kind = T.props[Math.floor(rnd(k, s + 3) * T.props.length)], m = this.mesh(kind === 'house' ? 'house' + (k % 4) : kind);
       const off = kind === 'house' ? 7 + rnd(k, s) * 2 : 4.3 + rnd(s, k) * 1.4, d = k * T.gap + rnd(k, s * 7) * 1.5;
+      if (this.slots.some(q => d > q.a - 4 && d < q.b + 4)) { m.visible = false; continue; } // nothing between the camera and a scene
       this.put(m, d, s * off, 0, kind === 'house' ? (s > 0 ? -Math.PI / 2 : Math.PI / 2) : rnd(k, s) * 6);
     }
     // the outpost at the end of the run: a big landmark and a banner over the track
@@ -236,9 +251,9 @@ export class SledRun {
   }
 
   // ---------- input ----------
-  move(dir) { if (this.finished) return; this.lane = Math.max(0, Math.min(2, this.lane + dir)); }
-  jump() { if (this.finished || this.y > 0.05 || this.duckT > 0.2) return; this.vy = 7.4; this.on.sound?.('dodge'); }
-  duck() { if (this.finished) return; this.duckT = 0.65; if (this.y > 0.05) this.vy = -9; }
+  move(dir) { if (this.finished || this.cine) return; this.lane = Math.max(0, Math.min(2, this.lane + dir)); }
+  jump() { if (this.finished || this.cine || this.y > 0.05 || this.duckT > 0.2) return; this.vy = 7.4; this.on.sound?.('dodge'); }
+  duck() { if (this.finished || this.cine) return; this.duckT = 0.65; if (this.y > 0.05) this.vy = -9; }
 
   spark(x, y, z, n, col, power = 3) { const c = new Color(col), w = this.at(this.dist + z, x, y); x = w.x; y = w.y; z = w.z; for (let k = 0; k < n; k++) { if (this.sparks.length > 110) this.sparks.shift(); const a = this.rng() * 6.28; this.sparks.push({ x, y, z, vx: Math.cos(a) * power * this.rng(), vy: 1 + this.rng() * power, vz: Math.sin(a) * power * this.rng(), t: 0.6, c }); } }
 
@@ -254,7 +269,9 @@ export class SledRun {
   update(dt) {
     if (this.finished) { this.time += dt; this.v = Math.max(0, this.v - dt * 8); this.dist += this.v * dt; this.place(); return; }
     this.time += dt;
-    const target = this.stumbleT > 0 ? 3.5 : this.vmax;
+    this.updateCinema(dt);
+    const target = this.cine ? this.vmax * 0.6 : this.stumbleT > 0 ? 3.5 : this.vmax;
+    if (this.cine) this.lane = 1;
     this.v += (target - this.v) * Math.min(1, dt * (this.stumbleT > 0 ? 4 : 0.5));
     this.stumbleT = Math.max(0, this.stumbleT - dt); this.blinkT = Math.max(0, this.blinkT - dt); this.duckT = Math.max(0, this.duckT - dt);
     this.dist += this.v * dt;
@@ -279,6 +296,35 @@ export class SledRun {
     if (this.dist >= this.length + 4) { this.finished = true; this.on.done?.({ flakes: this.flakes, snowballs: this.snowballs, spelled: this.spelled, word: this.spell }); }
     this.on.progress?.(Math.min(1, this.dist / this.length));
     this.place(dt);
+  }
+
+  // ---------- the places on the way: a cinematic scene beside a clear stretch ----------
+  updateCinema(dt) {
+    for (const q of this.slots) {
+      if (!q.scene && !q.played && this.dist > q.a - 90) { // build it a little before, beside the track
+        const sc = q.scene = CINEMA[q.id].build({ sound: (n, o) => this.on.sound?.(n, o) }), mid = q.a + q.lead + (this.vmax * 0.6 * q.dur) / 2, th = this.heading(mid);
+        this.at(mid, -TRACK_Z, 0, sc.group.position); sc.group.rotation.y = Math.PI / 2 - th; this.scene.add(sc.group); sc.group.updateMatrixWorld(true);
+        sc.tick(0, 0);
+      }
+      if (q.scene && !q.played && !this.cine && this.dist >= q.a + q.lead) { this.cine = { q, t: 0, ready: false }; this.lightFor(q.scene); this.on.cinema?.({ phase: 'start', id: q.id, title: q.title, task: q.task, part: q.part, welcome: CINEMA[q.id].welcome }); }
+      if (q.played && q.scene && this.dist > q.b + 20) { this.scene.remove(q.scene.group); q.scene.dispose(); q.scene = null; }
+    }
+    const c = this.cine; if (!c) return;
+    c.t += dt; c.q.scene.tick(c.t, dt);
+    if (!c.ready && c.t > c.q.dur - 1.0) { c.ready = true; this.on.cinema?.({ phase: 'ready', id: c.q.id }); this.on.hint?.('GET READY!'); }
+    if (c.t >= c.q.dur) { c.q.played = true; this.cine = null; this.lightFor(null); this.on.cinema?.({ phase: 'end', id: c.q.id }); }
+  }
+  // tap during a scene: straight to its last second (the camera swings back)
+  skipCine() { const c = this.cine; if (c && c.t < c.q.dur - 1.0) c.t = c.q.dur - 1.0; }
+  // a scene's own light: a low warm sun with long shadows over the place; back to the ride's after
+  lightFor(sc) {
+    const sun = this.sun, hemi = this.hemi;
+    if (!this.light0) this.light0 = { col: sun.color.clone(), int: sun.intensity, pos: sun.position.clone(), sky: hemi.color.clone() };
+    if (!sc) { const L0 = this.light0; sun.color.copy(L0.col); sun.intensity = L0.int; sun.position.copy(L0.pos); sun.target.position.set(0, 0, 0); hemi.color.copy(L0.sky); sun.castShadow = false; return; }
+    const c = sc.group.position, d = new Vector3(...sc.light.dir).applyAxisAngle(new Vector3(0, 1, 0), sc.group.rotation.y).normalize();
+    sun.color.set(sc.light.sun); sun.intensity = sc.light.intensity; hemi.color.set(sc.light.sky);
+    sun.target.position.copy(c); sun.position.copy(c).addScaledVector(d, 30);
+    sun.castShadow = true; Object.assign(sun.shadow.camera, { left: -20, right: 20, top: 20, bottom: -20, near: 1, far: 80 }); sun.shadow.camera.updateProjectionMatrix(); sun.shadow.mapSize.set(1024, 1024); sun.shadow.bias = -0.0006;
   }
 
   collect(it) {
@@ -334,6 +380,13 @@ export class SledRun {
     const look = this.at(d + 7, this.x * 0.3, 0.9 + this.y * 0.4); look.lerp(new Vector3(sp.x + Math.sin(ct) * 7, sp.y + 0.9 + this.y * 0.4, sp.z - Math.cos(ct) * 7), 0.5);
     // the camera leans with the bank, gently: a smoothed roll, so it never jerks
     const roll = this.bankAt(d + 4) * 0.45; this.camRoll = this.camRoll === undefined ? roll : this.camRoll + (roll - this.camRoll) * Math.min(1, dt * 2.5);
+    const c = this.cine;
+    if (c) { // a place on the way: the camera swings to the scene's shots, and back for the last second
+      const sc = c.q.scene, T = c.q.dur, [sp, sl] = this.reduceMotion ? sc.wide : shotAt(sc, c.t);
+      const w = this.reduceMotion ? (c.t < T - 0.6 ? 1 : 0) : Math.min(1, c.t / 0.9, (T - c.t) / 1.0), k = w * w * (3 - 2 * w);
+      const P = sc.group.localToWorld(new Vector3(...sp)), Lk = sc.group.localToWorld(new Vector3(...sl));
+      this.camera.position.lerp(P, k); look.lerp(Lk, k); this.camRoll *= 1 - k;
+    }
     this.camera.lookAt(look); this.camera.rotateZ(this.camRoll);
     // sparks
     let n = 0;
@@ -359,5 +412,5 @@ export class SledRun {
   letterMesh(ch) { const m = new Mesh(SHAPES.letter(), [new MeshLambertMaterial({ color: '#ffffff' }), new MeshLambertMaterial({ color: '#ffffff' }), new MeshLambertMaterial({ color: '#ffffff' }), new MeshLambertMaterial({ color: '#ffffff' }), new MeshBasicMaterial({ map: letterTex(ch, '#7cc4f0') }), new MeshBasicMaterial({ map: letterTex(ch, '#7cc4f0') })]); this.scene.add(m); return m; }
 
   resize(w, h) { this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); }
-  dispose() { this.scene.traverse(o => { if (o.isMesh || o.isSprite) { o.geometry?.dispose?.(); const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const m of ms) { m?.map?.dispose?.(); m?.dispose?.(); } } }); }
+  dispose() { for (const q of this.slots || []) q.scene?.dispose(); this.scene.traverse(o => { if (o.isMesh || o.isSprite) { o.geometry?.dispose?.(); const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const m of ms) { m?.map?.dispose?.(); m?.dispose?.(); } } }); }
 }
