@@ -16,7 +16,7 @@ export const STAGES = [
     places: { answer: { id: 'boulevard', title: 'Boulevard Park' }, sort: { id: 'archery', title: 'Archery Ground' }, match: { id: 'kizilay', title: 'Kızılay Square' }, build: { id: 'sururi', title: 'Sururi Park' }, listen: { id: 'pier', title: 'The Pier' } } },
   // Arena 2: up the Golden Horn from its mouth; the Final Showdown at Miniatürk, among the models
   { id: 'golden-horn', arena: 2, outpost: 'golden-horn', family: 'match', parts: [['listen', 'sort'], ['build', 'answer', 'match']], fights: 'long', title: 'The Golden Horn', ride: { theme: 'goldenhorn', seconds: 50, spell: true, flakes: 5 }, newRival: 'lobber',
-    places: { listen: { id: 'karakoy', title: 'Karaköy Bridge and Pier' }, sort: { id: 'bankalar', title: 'Bankalar Caddesi' }, build: { id: 'tersane', title: 'Tersane İstanbul' }, answer: { id: 'aynalikavak', title: 'Aynalıkavak Pavilion' }, match: { id: 'miniaturk', title: 'Miniatürk' } } },
+    places: { listen: { id: 'karakoy', title: 'Karaköy Pier' }, sort: { id: 'bankalar', title: 'Bankers Street' }, build: { id: 'tersane', title: 'Tersane İstanbul' }, answer: { id: 'aynalikavak', title: 'Aynalıkavak Pavilion' }, match: { id: 'miniaturk', title: 'Miniatürk' } } },
 ];
 // the place each task family belongs to in Arena 1 (the stages' own `places` say it for each arena)
 export const PLACE_OF = { answer: 'Boulevard Park', sort: 'Archery Ground', match: 'Kızılay Square', build: 'Sururi Park', listen: 'The Pier' };

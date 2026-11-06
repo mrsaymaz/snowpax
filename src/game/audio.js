@@ -164,7 +164,7 @@ const TRACKS = {
 // ---------- the Golden Horn's places (about 7 s each) ----------
 // Karaköy: a ferry's horn, then a lilting 6/8 tune on an accordion-like reed in D minor over lapping water
 const KARAKOY = [[4, 74, 3], [7, 72, 1.5], [8.5, 70, 1.5], [10, 69, 4], [16, 70, 2], [18, 72, 2], [20, 74, 2], [22, 77, 4], [28, 76, 2], [30, 74, 2], [32, 72, 3], [35, 70, 1.5], [36.5, 69, 1.5], [38, 67, 2], [40, 69, 8]];
-// Bankalar Caddesi: a stately march in B flat: brass chords, a tuba, coins clinking on the beat
+// Bankers Street: a stately march in B flat: brass chords, a tuba, coins clinking on the beat
 const BANK_CH = [[0, [58, 62, 65]], [8, [55, 58, 63]], [16, [53, 58, 62]], [24, [53, 57, 60]], [32, [55, 58, 63]], [40, [58, 62, 65, 70]]];
 const BANK_MEL = [[0, 70, 3], [3, 70, 1], [4, 72, 4], [8, 74, 3], [11, 72, 1], [12, 70, 4], [16, 74, 3], [19, 75, 1], [20, 77, 4], [24, 76, 3], [27, 74, 1], [28, 72, 4], [32, 75, 3], [35, 74, 1], [36, 72, 2], [38, 70, 2], [40, 70, 8]];
 // Tersane: a shipyard work song in A minor: hammer on anvil, a low pulse, a confident whistle

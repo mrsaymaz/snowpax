@@ -7,8 +7,8 @@ the opening round, Part 1, "They strike back!", Part 2, the Final Showdown, resu
 
 | Part | Place | Task | On the outpost and on the ride |
 |---|---|---|---|
-| 1 | Karaköy Bridge and Pier | Listening | the bridge on stone piers with its row of fishermen's rods and buckets, the ferry pier hall with its clock, a ferry at the quay (a clear blue morning) |
-| 1 | Bankalar Caddesi | Sorting | the street of grand old banks: the great stone bank building (today Salt Galata, shown without its sign), rusticated ground floor, columns, lit arched windows, the bronze door, a balustrade under snow (bright noon) |
+| 1 | Karaköy Pier | Listening | the bridge on stone piers with its row of fishermen's rods and buckets, the ferry pier hall with its clock, a ferry at the quay (a clear blue morning) |
+| 1 | Bankers Street (Bankalar Caddesi) | Sorting | the street of grand old banks: the great stone bank building (today Salt Galata, shown without its sign), rusticated ground floor, columns, lit arched windows, the bronze door, a balustrade under snow (bright noon) |
 | 2 | Tersane İstanbul | Builder | the old shipyard and its new open-air promenade: the restored brick workshop with tall arched windows and its chimney, a dry dock with a ship and a working crane, a glass canopy over a café terrace and a lit shop front, string lights (golden afternoon); shops never carry real names |
 | 2 | Aynalıkavak Pavilion | Answer | the waterside pavilion on its arched stone base, a tall main floor with paired windows and a row of small coloured arched windows above, wide eaves on brackets, a hipped roof, a double stair, cypresses, a pool; behind it the frozen Golden Horn and the far shore with lit windows, gulls and sunset clouds (pink sunset) |
 | 2 | Miniatürk | Matching | the park of little models on snowy lawns: an old stone tower, a tower on a rock in the sea, a clock tower, a little bridge, the big sign at the back; no models of places of worship (dusk, the lamps lit) |
@@ -36,8 +36,8 @@ item per question, pair or card; right first time or not; a miss glows the right
 
 | Place | Task | The scene |
 |---|---|---|
-| Karaköy Bridge and Pier | Listening | Under the bridge on the frozen Golden Horn (its railing, lamps and the row of fishermen's rods above, the ferry in the ice, the pier hall, the far shore). Fish peek out of holes in the ice, each with a word. Hear the word ("Hear it again" sits high, clear of the holes), cast your line to that fish: it leaps out onto the ice in a sparkle; the wrong one dives with a splash. |
-| Bankalar Caddesi | Sorting | In front of the great stone bank (columns, lit arched windows, the bronze door, plane trees, lamps). Round steel vault doors with brass wheels stand on legs, one per category. Pick a card, then its vault: a gold coin spins in and the wheel turns; a wrong one clinks off the rim. |
+| Karaköy Pier | Listening | Under the bridge on the frozen Golden Horn (its railing, lamps and the row of fishermen's rods above, the ferry in the ice, the pier hall, the far shore). Fish peek out of holes in the ice, each with a word. Hear the word ("Hear it again" sits high, clear of the holes), cast your line to that fish: it leaps out onto the ice in a sparkle; the wrong one dives with a splash. |
+| Bankers Street | Sorting | In front of the great stone bank (columns, lit arched windows, the bronze door, plane trees, lamps). Round steel vault doors with brass wheels stand on legs, one per category. Pick a card, then its vault: a gold coin spins in and the wheel turns; a wrong one clinks off the rim. |
 | Tersane İstanbul | Builder | The old shipyard: a ship in the dry dock (red bottom, navy hull, portholes, a mast with the team's flag), the brick workshop with its arched windows and chimney, the promenade's glass canopy and café tables. The crane does the building: each tapped plank slides to the quay edge, the hook lifts it, swings over and lowers it onto the deck. A wrong plank wobbles where it lies while the hook gives a shake, and the coach points to the glowing one. Spelling lays ice letters the same way. (With reduced motion the planks go straight to the deck.) |
 | Aynalıkavak Pavilion | Answer | The pavilion's front at sunset, modelled on the real one: an arched stone base, a tall main floor with paired windows, a band of small coloured arched windows above, wide eaves on brackets, a hipped roof, the double stair down to the pool, cypresses; the sky behind is filled by the frozen Golden Horn and the far shore with lit windows, gulls and clouds. The answers are on its mirror-bright windows: snowball the right one and it flashes like a mirror in the sun; a wrong one gets a splat of snow. |
 | Miniatürk | Matching | A snowy lawn inside a hedge among the models (a round stone tower, a tower on a rock in a pond, a clock tower, a little suspension bridge, the big sign): the matching game on little cream signs, a golden path between each pair. |
@@ -53,8 +53,8 @@ shows on the sled ride, and again, a little softer, when the place's task opens 
 
 | Place | Theme |
 |---|---|
-| Karaköy Bridge and Pier | a ferry's horn, then a lilting 6/8 tune on two accordion-like reeds a hair apart, in D minor, over the lapping of the water; a gull |
-| Bankalar Caddesi | a stately march in B flat: brass chords, an oom-pah tuba, a trumpet tune, a soft drum, coins clinking on the off-beat |
+| Karaköy Pier | a ferry's horn, then a lilting 6/8 tune on two accordion-like reeds a hair apart, in D minor, over the lapping of the water; a gull |
+| Bankers Street | a stately march in B flat: brass chords, an oom-pah tuba, a trumpet tune, a soft drum, coins clinking on the off-beat |
 | Tersane İstanbul | a shipyard work song in A minor: a low pulse, hammer on anvil (clang-clang), a confident whistled tune |
 | Aynalıkavak Pavilion | a slow, breathy ney-like reed in Uşşak makam (with its half-flat second) over a drone, a soft frame drum, glassy shimmers like mirrors catching the light |
 | Miniatürk | a little toy parade in G: piccolo and glockenspiel, a clockwork tick, a toy drum, a bouncy bass |

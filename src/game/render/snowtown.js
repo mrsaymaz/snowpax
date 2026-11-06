@@ -669,7 +669,7 @@ export function buildSnowtown(ctx) {
       K.add(rbox(0.72, 0.1, 0.92, 0.03), bronze, x, 0.16, fz + 0.03); K.add(new TorusGeometry(0.36, 0.07, 6, 14, Math.PI), stoneD, x, 1.08, fz + 0.05); K.add(new CircleGeometry(0.34, 14, 0, Math.PI), M('glow', '#ffcf7a'), x, 1.08, fz + 0.04); // the great bronze door
       for (let k = 0; k < 2; k++) K.add(rbox(1.5 - k * 0.3, 0.42, 0.08, 0.02), stoneD, x, k * 0.08, fz + 0.3 - k * 0.1);
       for (const s2 of [-1, 1]) { K.add(new CylinderGeometry(0.045, 0.06, 1.4, 8), M('metal', '#2b3556'), x + s2 * 1.25, 0.7, fz + 0.55); lantern(x + s2 * 1.25, 1.45, fz + 0.55, s2 < 0); }
-      const sg = sign('Bankalar Caddesi', 1.8); sg.position.set(x, 1.28, fz + 0.12); group.add(sg);
+      const sg = sign('Bankers Street', 1.8); sg.position.set(x, 1.28, fz + 0.12); group.add(sg);
       flagAt(lm.outpost, x, 4.95, bz); lights.push([x, 1.0, fz + 0.9]); life.perches.push([x - 1.8, 4.1, fz + 0.12], [x + 1.8, 4.1, fz + 0.12], [x, 4.25, fz]);
     } else if (lm.type === 'tersane') { // TERSANE İSTANBUL: the old shipyard on the water: a restored brick workshop with tall arched windows and its chimney, a dry dock with a ship, a crane, and the new open-air promenade: glass canopies, café terraces, lit shop fronts
       const [x, z] = centre(lm), brick = M('stone', '#b8735a'), brickD = M('stone', '#8f5644'), slate = M('metal', '#5d6f9e'), stoneL = M('stone', '#e6ddd0'), yellow = M('metal', '#e8a10a'), glassC = M('glow', '#d6ecff', { transparent: true, opacity: 0.42, depthWrite: false });

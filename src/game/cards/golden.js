@@ -1,6 +1,6 @@
 // Task stations for Arena 2, the Golden Horn (staged 3D sets, like the first arena's):
-//   Karaköy Bridge and Pier · Listening – hear the word, cast your line to the fish that has it
-//   Bankalar Caddesi · Sorting           – toss each gold coin card into its category's vault door
+//   Karaköy Pier · Listening – hear the word, cast your line to the fish that has it
+//   Bankers Street · Sorting           – toss each gold coin card into its category's vault door
 //   Tersane İstanbul · Builder           – build the ship's hull in the dry dock, plank by plank
 //   Aynalıkavak Pavilion · Answer        – snowball the mirrored window with the right answer
 //   Miniatürk · Matching                 – match the little signs across the park of models
@@ -51,7 +51,7 @@ function chooser(ctx, { onRight, onWrong, glow, answerText }) {
   return pick;
 }
 
-// ======================= Karaköy Bridge and Pier · Listening =======================
+// ======================= Karaköy Pier · Listening =======================
 // Under the bridge, on the frozen Golden Horn: fishing holes in the ice, a fish peeking from each
 // with a word. Hear the word, then cast your line to the fish that has it: it leaps out onto the
 // ice in a sparkle. The wrong one dives with a splash.
@@ -133,7 +133,7 @@ export function karakoyListen(ctx) {
   });
 }
 
-// ======================= Bankalar Caddesi · Sorting =======================
+// ======================= Bankers Street · Sorting =======================
 // In front of the great stone bank: round steel vault doors on stands, one per category. Each card is
 // a gold coin: pick it, then tap its vault door; the coin flies in and the door's wheel spins.
 export function bankalarStation(s, { color = '#f5b616' } = {}) {
@@ -146,7 +146,7 @@ export function bankalarStation(s, { color = '#f5b616' } = {}) {
   for (let k = 0; k < 10; k++) { const x = -7.2 + k * 1.6; add(P, new CylinderGeometry(0.18, 0.2, 3.4, 12), stone, x, 3.5, -5.85); for (const y of [2.6, 4.2]) if (k < 9) { add(P, new PlaneGeometry(0.62, 0.9), glass, x + 0.8, y, -5.98); add(P, new CircleGeometry(0.31, 12, 0, Math.PI), glass, x + 0.8, y + 0.45, -5.97); } }
   add(P, new BoxGeometry(1.6, 2.2, 0.1), L('#8a6a3a'), 0, 1.1, -5.84); add(P, new TorusGeometry(0.8, 0.12, 6, 16, Math.PI), stoneD, 0, 2.2, -5.8);
   for (const x of [-2.6, 2.6]) add(P, new PlaneGeometry(0.8, 1.0), glass, x, 0.9, -5.79);
-  sign(P, 'Bankalar Caddesi', 3.2, 0, 1.75, -5.7);
+  sign(P, 'Bankers Street', 3.2, 0, 1.75, -5.7);
   for (const x of [-9.5, 9.5]) { add(P, new CylinderGeometry(0.3, 0.42, 4, 10), L('#7a5236'), x, 2, -3.5); add(P, new SphereGeometry(1.7, 12, 10), L('#e9eef8'), x, 4.8, -3.5); }
   for (const x of [-5.5, 5.5]) { add(P, new CylinderGeometry(0.06, 0.08, 3.0, 8), L('#2b3556'), x, 1.5, -3.6); add(P, new BoxGeometry(0.34, 0.46, 0.34), new MeshBasicMaterial({ color: '#ffe3a0' }), x, 3.2, -3.6); }
   mounds(P, [[-7.5, 2.2, 1.0], [7.6, 2.4, 1.1]], snowM);
@@ -273,7 +273,7 @@ export function tersaneStation(s, { color = '#f5b616' } = {}) {
   const step = dt => {
     if (!job) return start();
     const ph = job.plan || (job.plan = phases(job)), [T2, goal, gy, act] = ph[job.phase];
-    job.t += dt; const k = E(Math.min(1, job.t / T2)), f = job.from;
+    job.t += dt * (1 + Math.min(2, jobs.length * 0.5)); const k = E(Math.min(1, job.t / T2)), f = job.from; // planks waiting on the quay: the crane works faster
     ang = f.a + turn(f.a, goal.a) * k; rad = f.r + (goal.r - f.r) * k; hy = f.y + (gy - f.y) * k;
     if (job.held) { const h = hookAt(); job.mesh.position.set(h.x, h.y - H2 - 0.04, h.z); job.mesh.rotation.y = job.rot0 * (1 - Math.min(1, job.t / 0.4)); }
     if (job.t < T2) return;

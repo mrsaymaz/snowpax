@@ -17,7 +17,7 @@ test('one stage per arena (Kasımpaşa, the Golden Horn): five places\' task fam
   assert.deepEqual(STAGES.map(s => [s.id, s.arena]), [['kasimpasa', 1], ['golden-horn', 2]]);
   assert.deepEqual(STAGES[0].parts, [['answer', 'sort'], ['match', 'build', 'listen']]);
   assert.deepEqual(STAGES[1].parts, [['listen', 'sort'], ['build', 'answer', 'match']]);
-  assert.deepEqual(Object.values(STAGES[1].places).map(p => p.title).sort(), ['Aynalıkavak Pavilion', 'Bankalar Caddesi', 'Karaköy Bridge and Pier', 'Miniatürk', 'Tersane İstanbul']);
+  assert.deepEqual(Object.values(STAGES[1].places).map(p => p.title).sort(), ['Aynalıkavak Pavilion', 'Bankers Street', 'Karaköy Pier', 'Miniatürk', 'Tersane İstanbul']);
   for (const st of STAGES) {
     assert.equal(st.outpost, def.outposts.find(o => o.id === st.id).id);
     const all = st.parts.flat(); assert.equal(new Set(all).size, 5);

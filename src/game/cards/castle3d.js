@@ -67,7 +67,7 @@ function build3d(ctx, { kind, pieces, expected, sayAtEnd, revealText, revealTr, 
   const carrier = s.set?.carry && !ctx.reduceMotion ? s.set : null;
   const lay = (it, i, fast = false) => {
     it.used = true; it.mesh.material = mat; it.el.classList.remove('show'); it.el.classList.add('placed'); it.el.disabled = true;
-    const landed = () => { ghosts[i].visible = false; s.puff(it.mesh, 8); };
+    const landed = () => { ghosts[i].visible = false; it.el.classList.add('landed'); s.puff(it.mesh, 8); };
     if (carrier && !fast) { carrier.carry(it.mesh, [slots[i].x, slots[i].y, slots[i].z], landed); return; }
     it.mesh.rotation.y = 0;
     s.fly(it.mesh, [slots[i].x, slots[i].y, slots[i].z], { T: 0.5, lift: 1.3, spin: ice ? 0.6 : 0.15, done: landed });

@@ -150,21 +150,36 @@ export class WorldTasks {
     const head = document.querySelector('#taskcard'), hr = head && !head.hidden ? head.getBoundingClientRect() : null;
     const top = Math.max(6, hr && hr.height ? hr.bottom + 6 : 6), cap = this.caption.hidden ? null : this.caption.getBoundingClientRect(), bottom = (cap && cap.height ? cap.top : H) - 6;
     const area = items.reduce((a, it) => a + it.w * it.h, 0), sc = Math.max(0.72, Math.min(1, Math.sqrt(0.3 * W * Math.max(100, bottom - top) / Math.max(1, area))));
-    for (const it of items) { it.w *= sc; it.h *= sc; }
+    for (const it of items) { it.w *= sc; it.h *= sc; it.s = sc; }
     const M = 6, clampIt = it => { it.x = Math.max(it.w / 2 + M, Math.min(W - it.w / 2 - M, it.x)); it.y = Math.max(top + it.h / 2, Math.min(bottom - it.h / 2, it.y)); };
-    items.forEach(clampIt);
+    // The pieces already laid in a course (a built word or sentence) keep their order: they are spread
+    // along their row, in the order of the blocks under them, and the rest move round them.
+    const row = items.filter(it => it.L.el.matches('.wt-brick.landed, .wt-brick.given')).sort((p, q) => p.x - q.x);
+    if (row.length) {
+      const cx = row.reduce((a, it) => a + it.x, 0) / row.length, gap = 2;
+      for (let i = 1; i < row.length; i++) row[i].x = Math.max(row[i].x, row[i - 1].x + (row[i - 1].w + row[i].w) / 2 + gap);
+      const span = row.at(-1).x + row.at(-1).w / 2 - (row[0].x - row[0].w / 2), fit = Math.min(1, (W - 2 * M) / Math.max(1, span));
+      if (fit < 1) for (const it of row) { it.x = cx + (it.x - cx) * fit; it.w *= fit; it.h *= fit; it.s *= fit; } // a long word on a narrow screen: the course shrinks to fit
+      const mid = (row[0].x - row[0].w / 2 + row.at(-1).x + row.at(-1).w / 2) / 2; let shift = cx - mid;
+      const lo = row[0].x - row[0].w / 2 + shift, hi = row.at(-1).x + row.at(-1).w / 2 + shift; if (lo < M) shift += M - lo; else if (hi > W - M) shift -= hi - (W - M);
+      const y = Math.max(top + row[0].h / 2, Math.min(bottom - row[0].h / 2, row.reduce((a, it) => a + it.y, 0) / row.length));
+      for (const it of row) { it.x += shift; it.y = y; it.fixed = true; }
+    }
+    items.forEach(it => { if (!it.fixed) clampIt(it); });
     for (let iter = 0; iter < 10; iter++) {
       let moved = false;
       for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
-        const a = items[i], b = items[j], ox = (a.w + b.w) / 2 + M - Math.abs(a.x - b.x), oy = (a.h + b.h) / 2 + M - Math.abs(a.y - b.y);
+        const a = items[i], b = items[j]; if (a.fixed && b.fixed) continue;
+        const ox = (a.w + b.w) / 2 + M - Math.abs(a.x - b.x), oy = (a.h + b.h) / 2 + M - Math.abs(a.y - b.y);
         if (ox <= 0 || oy <= 0) continue; moved = true;
-        if (ox < oy) { const d = ox / 2 * (Math.sign(a.x - b.x) || -1); a.x += d; b.x -= d; } else { const d = oy / 2 * (Math.sign(a.y - b.y) || -1); a.y += d; b.y -= d; } // apart along the shorter way, keeping their order
+        const ka = a.fixed ? 0 : b.fixed ? 2 : 1, kb = 2 - ka; // a fixed piece does not move: the other takes the whole push
+        if (ox < oy) { const d = ox / 2 * (Math.sign(a.x - b.x) || -1); a.x += d * ka; b.x -= d * kb; } else { const d = oy / 2 * (Math.sign(a.y - b.y) || -1); a.y += d * ka; b.y -= d * kb; } // apart along the shorter way
       }
-      items.forEach(clampIt); if (!moved) break;
+      items.forEach(it => { if (!it.fixed) clampIt(it); }); if (!moved) break;
     }
     for (const it of items) {
       const L = it.L, k = L.sx == null ? 1 : Math.min(1, dt * 14); L.sx = L.sx == null ? it.x : L.sx + (it.x - L.sx) * k; L.sy = L.sy == null ? it.y : L.sy + (it.y - L.sy) * k; // eased, so nothing jitters
-      L.el.style.transform = `translate(${L.sx.toFixed(1)}px, ${L.sy.toFixed(1)}px) translate(-50%, -50%)${sc < 0.999 ? ` scale(${sc.toFixed(3)})` : ''}`;
+      L.el.style.transform = `translate(${L.sx.toFixed(1)}px, ${L.sy.toFixed(1)}px) translate(-50%, -50%)${it.s < 0.999 ? ` scale(${it.s.toFixed(3)})` : ''}`;
     }
   }
 }

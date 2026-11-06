@@ -14,7 +14,7 @@
 import {
   Group, Mesh, MeshBasicMaterial, MeshLambertMaterial, SphereGeometry, CircleGeometry, PlaneGeometry, BoxGeometry, ConeGeometry, CylinderGeometry,
   BufferGeometry, Float32BufferAttribute, Points, PointsMaterial, Sprite, SpriteMaterial, CanvasTexture, SRGBColorSpace, AdditiveBlending, BackSide,
-  DoubleSide, Color, Vector3, InstancedMesh, Object3D, TorusGeometry,
+  DoubleSide, Color, Vector3, InstancedMesh, Object3D, TorusGeometry, LineSegments, LineBasicMaterial,
 } from 'three';
 import { buildTileArena } from '../tilemap.mjs';
 import { buildVillage } from './village.js';
@@ -141,20 +141,96 @@ function townscape(g, L, { seed = 3, sea = false }) {
   kinds.forEach(([gm, cc], k) => { const L2 = lists[k]; if (!L2.length) return; const im = new InstancedMesh(gm, new MeshLambertMaterial({ color: '#ffffff' }), L2.length); L2.forEach((q, n) => { o.position.set(q.x, q.y - 0.2, q.z); o.rotation.set(0, R() * 6, 0); o.scale.set(q.s, q.s * (k === 1 ? 1.4 : 1), q.s); o.updateMatrix(); im.setMatrixAt(n, o.matrix); im.setColorAt(n, new Color(cc).lerp(hor, far(q.r))); }); im.instanceColor.needsUpdate = true; g.add(im); });
   { const trunk = new CylinderGeometry(0.13, 0.18, 1.5, 6); trunk.translate(0, 0.75, 0); const L2 = lists[2], im = new InstancedMesh(trunk, new MeshLambertMaterial({ color: '#7a5a46' }), Math.max(1, L2.length)); L2.forEach((q, n) => { o.position.set(q.x, q.y - 0.2, q.z); o.rotation.set(0, 0, 0); o.scale.setScalar(q.s); o.updateMatrix(); im.setMatrixAt(n, o.matrix); }); im.count = L2.length; g.add(im); } // the round trees' trunks
   { const capG = new ConeGeometry(0.62, 0.9, 7); capG.translate(0, 2.55, 0); const L2 = lists[0], im = new InstancedMesh(capG, new MeshLambertMaterial({ color: '#f6f8ff' }), Math.max(1, L2.length)); L2.forEach((q, n) => { o.position.set(q.x, q.y - 0.2, q.z); o.rotation.set(0, 0, 0); o.scale.setScalar(q.s); o.updateMatrix(); im.setMatrixAt(n, o.matrix); }); im.count = L2.length; g.add(im); } // snow on the pines
-  // the old stone tower on the highest hill
-  let best = null; for (let k = 0; k < 60; k++) { const side = k % 2 ? 1 : -1, a = side * (0.55 + (k >> 1) * 0.02), r = 150 + (k % 5) * 6, /* off to one side and far, never right behind the place */ x = PLACE.x + Math.sin(a) * r, z = PLACE.z - Math.cos(a) * r, h = hH(x, z); if (h > 0 && (!best || h > best.h)) best = { x, z, h }; }
-  if (best) {
-    const stone = new MeshLambertMaterial({ color: new Color('#d9cfc3').lerp(hor, 0.35) }), slate = new MeshLambertMaterial({ color: new Color('#5d5f86').lerp(hor, 0.3) }), dark = new MeshBasicMaterial({ color: new Color('#3d4363').lerp(hor, 0.3) }), glowW = new MeshBasicMaterial({ color: '#ffd27a' });
-    const T = new Group(); T.position.set(best.x, best.h - 0.5, best.z); T.scale.setScalar(0.85); T.rotation.y = Math.atan2(PLACE.x - best.x, PLACE.z - best.z); g.add(T);
-    const part = (gm, m, y) => { const ms = new Mesh(gm, m); ms.position.y = y; T.add(ms); return ms; };
-    part(new CylinderGeometry(5.4, 6, 4, 20), stone, 2); part(new CylinderGeometry(4.2, 4.6, 30, 20), stone, 19);
-    part(new CylinderGeometry(4.9, 4.9, 0.8, 20), stone, 34.4); part(new TorusGeometry(4.9, 0.18, 6, 28), slate, 35).rotation.x = Math.PI / 2;
-    part(new CylinderGeometry(4.3, 4.3, 4.6, 20), stone, 37.2);
-    for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2, wm = new Mesh(new PlaneGeometry(0.9, 2.2), L.dusk ? glowW : dark); wm.position.set(Math.sin(a) * 4.32, 37.2, Math.cos(a) * 4.32); wm.rotation.y = a; T.add(wm); }
-    for (const y of [12, 20, 28]) for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + y, wm = new Mesh(new PlaneGeometry(0.7, 1.4), dark); wm.position.set(Math.sin(a) * 4.42, y, Math.cos(a) * 4.42); wm.rotation.y = a; T.add(wm); }
-    part(new ConeGeometry(4.7, 10, 20), slate, 44.5); part(new ConeGeometry(4.0, 3.2, 20), new MeshLambertMaterial({ color: '#f6f8ff' }), 41.9); part(new CylinderGeometry(0.08, 0.08, 3, 6), slate, 51);
-  }
+  return hH;
 }
+// ---------- the real skyline, a little larger than life ----------
+// Each place looks out at what is really there from it, placed by its true bearing and made a bit
+// bigger and clearer, so a child knows the view: Galata Tower on its hill, the old city's ridge of
+// domes and minarets across the water (scenery only), the bridges over the Golden Horn, the red
+// brick school on the hill at Fener, the towers of Şişli far off, the cypress hill above Eyüp.
+// An item: { kind, a (bearing from the view's middle, + to the right), r (distance), s (size) }.
+function skyline(g, L, hH, items = []) {
+  const hor = new Color(L.fog || L.horizon), lit = (L.dusk || 0) > 0.3, R = rng(17);
+  const haze = (c, r, k = 0.28) => new Color(c).lerp(hor, Math.min(0.55, Math.max(0, (r - 50) / 300) * k * 3));
+  const M = (c, r, k) => new MeshLambertMaterial({ color: haze(c, r, k) }), B = (c, r, k) => new MeshBasicMaterial({ color: haze(c, r, k) });
+  const glow = new MeshBasicMaterial({ color: '#ffd27a' });
+  const where = (a, r) => { const x = PLACE.x + Math.sin(a) * r, z = PLACE.z - Math.cos(a) * r; return [x, Math.max(0, hH(x, z)), z]; };
+  const put = (gm, m, x, y, z, root) => { const o = new Mesh(gm, m); o.position.set(x, y, z); root.add(o); return o; };
+  const root = (x, y, z, s, face = true) => { const T = new Group(); T.position.set(x, y, z); T.scale.setScalar(s); if (face) T.rotation.y = Math.atan2(PLACE.x - x, PLACE.z - z); g.add(T); return T; };
+  const minaret = (T, x, z, h, stone, lead) => { put(new CylinderGeometry(0.55, 0.65, h, 10), stone, x, h / 2, z, T); for (const f of [0.62, 0.82]) put(new CylinderGeometry(0.95, 0.75, 0.5, 10), stone, x, h * f, z, T); put(new ConeGeometry(0.62, 5, 10), lead, x, h + 2.5, z, T); };
+  const build = {
+    // Galata Tower: the round stone tower, its gallery and the tall pointed cap
+    galata({ a, r, s = 1 }) {
+      const [x, y, z] = where(a, r), T = root(x, y - 0.5, z, s * 0.85), stone = M('#d9cfc3', r, 0.6), slate = M('#5d5f86', r, 0.5), dark = B('#3d4363', r, 0.5);
+      const part = (gm, m, py) => put(gm, m, 0, py, 0, T);
+      part(new CylinderGeometry(5.4, 6, 4, 20), stone, 2); part(new CylinderGeometry(4.2, 4.6, 30, 20), stone, 19);
+      part(new CylinderGeometry(4.9, 4.9, 0.8, 20), stone, 34.4); part(new TorusGeometry(4.9, 0.18, 6, 28), slate, 35).rotation.x = Math.PI / 2;
+      part(new CylinderGeometry(4.3, 4.3, 4.6, 20), stone, 37.2);
+      for (let k = 0; k < 12; k++) { const q = k / 12 * Math.PI * 2, wm = new Mesh(new PlaneGeometry(0.9, 2.2), lit ? glow : dark); wm.position.set(Math.sin(q) * 4.32, 37.2, Math.cos(q) * 4.32); wm.rotation.y = q; T.add(wm); }
+      for (const py of [12, 20, 28]) for (let k = 0; k < 6; k++) { const q = k / 6 * Math.PI * 2 + py, wm = new Mesh(new PlaneGeometry(0.7, 1.4), dark); wm.position.set(Math.sin(q) * 4.42, py, Math.cos(q) * 4.42); wm.rotation.y = q; T.add(wm); }
+      part(new ConeGeometry(4.7, 10, 20), slate, 44.5); part(new ConeGeometry(4.0, 3.2, 20), new MeshLambertMaterial({ color: '#f6f8ff' }), 41.9); part(new CylinderGeometry(0.08, 0.08, 3, 6), slate, 51);
+      if (lit) { const halo = new Sprite(new SpriteMaterial({ map: glowTex(), color: '#ffcf8a', transparent: true, opacity: 0.5, depthWrite: false, blending: AdditiveBlending, fog: false })); halo.position.set(0, 37, 0); halo.scale.setScalar(26); T.add(halo); }
+    },
+    // the old city's ridge across the water: a great domed silhouette on the hilltop with its four
+    // minarets, smaller domes along the slope, houses packed below (scenery, seen from afar)
+    ridge({ a, r, s = 1, n = 3, span = 0.5 }) {
+      const stone = M('#ece4d6', r, 0.55), lead = M('#8790ab', r, 0.5);
+      for (let k = 0; k < n; k++) {
+        const big = k === Math.floor(n / 2), q = a + (n === 1 ? 0 : (k / (n - 1) - 0.5) * span), rr = r + (big ? 8 : (k % 2) * 10), [x, y, z] = where(q, rr), T = root(x, y - 0.8, z, s * (big ? 1.25 : 0.8));
+        put(new BoxGeometry(18, 8, 18), stone, 0, 4, 0, T);
+        for (const [dx, dz] of [[-6, 0], [6, 0], [0, -6], [0, 6]]) { const hd = put(new SphereGeometry(4.2, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), lead, dx, 8, dz, T); hd.scale.y = 0.8; }
+        put(new CylinderGeometry(6.6, 7.2, 3, 20), stone, 0, 9.5, 0, T); const d = put(new SphereGeometry(6.8, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), lead, 0, 11, 0, T); d.scale.y = 0.9; put(new CylinderGeometry(0.15, 0.15, 2.5, 6), lead, 0, 18.5, 0, T);
+        const mh = big ? 30 : 24; for (const [mx, mz] of big ? [[-11, -11], [11, -11], [-11, 11], [11, 11]] : [[-11, 10], [11, 10]]) minaret(T, mx, mz, mh, stone, lead);
+      }
+      // the packed old houses on the slopes below, warm with lamps at dusk
+      const box = new BoxGeometry(1, 1, 1), im = new InstancedMesh(box, new MeshLambertMaterial({ color: '#ffffff' }), 90), o = new Object3D(), cols = ['#efdcc4', '#e6cbb8', '#d9d2e6', '#f1e3c8', '#e3c4b4'];
+      for (let k = 0; k < 90; k++) { const q = a + (R() - 0.5) * (span + 0.35), rr = r - 14 + R() * 26, [x, y, z] = where(q, rr), h = 4 + R() * 6; o.position.set(x, y + h / 2 - 0.5, z); o.rotation.set(0, R() * 0.6, 0); o.scale.set(5 + R() * 4, h, 5); o.updateMatrix(); im.setMatrixAt(k, o.matrix); im.setColorAt(k, haze(cols[k % 5], rr, 0.5)); }
+      im.instanceColor.needsUpdate = true; g.add(im);
+    },
+    // a bridge across the water at distance r, from bearing a0 to a1: 'galata' (low, on piers, lamps
+    // and a row of fishing rods), 'metro' (two tall white pylons, fans of cables), 'highway' (high on pillars)
+    bridge({ type = 'galata', r, a0 = -0.9, a1 = 0.9, y0 = 0 }) {
+      const z = PLACE.z - r, x0 = PLACE.x + Math.tan(a0) * r, x1 = PLACE.x + Math.tan(a1) * r, len = x1 - x0, cx = (x0 + x1) / 2;
+      const deckY = type === 'highway' ? 20 : type === 'metro' ? 11 : 4.5, grey = M(type === 'metro' ? '#eef0f6' : '#a9a5bd', r, 0.5), dark = M('#4b4f6e', r, 0.5);
+      put(new BoxGeometry(len, 1.6, 7), grey, cx, deckY + y0, z, g); put(new BoxGeometry(len, 0.3, 6.6), M('#f6f8ff', r, 0.3), cx, deckY + y0 + 0.95, z, g); // the deck under snow
+      const step = type === 'galata' ? 16 : type === 'highway' ? 28 : 34;
+      for (let x = x0 + step / 2; x < x1; x += step) put(new BoxGeometry(type === 'highway' ? 3 : 2.2, deckY + 1, 4.5), grey, x, (deckY + y0) / 2 - 0.5, z, g);
+      if (type === 'galata') {
+        for (let x = x0 + 4; x < x1; x += 8) { put(new CylinderGeometry(0.15, 0.2, 5, 6), dark, x, deckY + y0 + 3.4, z + 3.2, g); put(new BoxGeometry(0.7, 0.8, 0.7), lit ? glow : M('#fff1c8', r, 0.3), x, deckY + y0 + 6.2, z + 3.2, g); }
+        const rod = new CylinderGeometry(0.04, 0.06, 5, 4); rod.rotateX(0.9); const rods = new InstancedMesh(rod, dark, 60), o = new Object3D(); let k = 0; for (let x = x0 + 2; x < x1 && k < 60; x += len / 60, k++) { o.position.set(x, deckY + y0 + 3, z + 4.5); o.updateMatrix(); rods.setMatrixAt(k, o.matrix); } rods.count = k; g.add(rods); // the fishermen's rods over the rail
+      }
+      if (type === 'metro') for (const f of [0.38, 0.62]) {
+        const px = x0 + len * f, top = deckY + y0 + 44; put(new BoxGeometry(2.2, top, 2.2), grey, px, top / 2, z, g);
+        const pts = []; for (let k = 1; k <= 8; k++) for (const sd of [-1, 1]) pts.push(px, top - k * 1.6, z, px + sd * k * 7.5, deckY + y0 + 1, z);
+        const geo = new BufferGeometry(); geo.setAttribute('position', new Float32BufferAttribute(pts, 3)); g.add(new LineSegments(geo, new LineBasicMaterial({ color: haze('#ffffff', r, 0.4) })));
+      }
+    },
+    // the red brick school with its domed tower on the hill at Fener: a castle in brick
+    redschool({ a, r, s = 1 }) {
+      const [x, y, z] = where(a, r), T = root(x, y - 0.6, z, s), brick = M('#b4473a', r, 0.4), trim = M('#efe2d0', r, 0.4), lead = M('#6f748f', r, 0.4), win = lit ? glow : B('#4a3a44', r, 0.4);
+      put(new BoxGeometry(34, 14, 12), brick, 0, 7, 0, T); put(new BoxGeometry(35, 1, 13), trim, 0, 14.4, 0, T);
+      for (let k = 0; k < 9; k++) put(new BoxGeometry(2, 1.6, 0.6), brick, -16 + k * 4, 15.6, 6.2, T); // battlements
+      for (const fl of [3.5, 8, 12]) for (let k = 0; k < 10; k++) if (Math.abs(k - 4.5) > 1) put(new PlaneGeometry(1.2, 2.2), win, -14.5 + k * 3.2, fl, 6.05, T);
+      put(new BoxGeometry(10, 22, 12.5), brick, 0, 11, 0.4, T); put(new CylinderGeometry(4.2, 4.6, 5, 16), brick, 0, 24.5, 0.4, T);
+      const d = put(new SphereGeometry(4.5, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), lead, 0, 27, 0.4, T); d.scale.y = 1.15; put(new CylinderGeometry(0.15, 0.15, 3, 6), lead, 0, 33, 0.4, T);
+      for (const sd of [-1, 1]) { put(new CylinderGeometry(2.4, 2.6, 18, 12), brick, sd * 17, 9, 0, T); put(new ConeGeometry(3, 4, 12), lead, sd * 17, 20, 0, T); }
+    },
+    // the tall towers of the business district, far off on the horizon, lit at dusk
+    towers({ a, r, s = 1, n = 9, span = 0.3 }) {
+      const glass = tex(32, 128, (x2, w, h) => { x2.fillStyle = '#7c8db0'; x2.fillRect(0, 0, w, h); for (let yy = 4; yy < h; yy += 6) for (let xx = 3; xx < w; xx += 6) { x2.fillStyle = lit && Math.random() < 0.55 ? '#ffd68a' : '#9fb2d4'; x2.fillRect(xx, yy, 3, 3); } });
+      for (let k = 0; k < n; k++) { const q = a + (k / (n - 1) - 0.5) * span + (R() - 0.5) * 0.03, rr = r + R() * 30, [x, y, z] = where(q, rr), h = (40 + R() * 70) * s, w = (7 + R() * 6) * s; const m = new MeshBasicMaterial({ map: glass, color: haze('#ffffff', rr, 0.5) }); put(new BoxGeometry(w, h, w), m, x, y + h / 2 - 1, z, g); if (k % 3 === 0) put(new CylinderGeometry(0.2, 0.2, 10 * s, 6), M('#c8cede', rr, 0.5), x, y + h + 4 * s, z, g); }
+    },
+    // a hill of tall dark cypresses (the old hillside above Eyüp)
+    cypresses({ a, r, n = 160, span = 0.4 }) {
+      const cyp = new CylinderGeometry(0.1, 1.1, 9, 7); cyp.translate(0, 4.5, 0); const im = new InstancedMesh(cyp, new MeshLambertMaterial({ color: '#ffffff' }), n), o = new Object3D();
+      for (let k = 0; k < n; k++) { const q = a + (R() - 0.5) * span, rr = r + (R() - 0.5) * 40, [x, y, z] = where(q, rr); o.position.set(x, y - 0.3, z); o.scale.setScalar(0.8 + R() * 0.7); o.updateMatrix(); im.setMatrixAt(k, o.matrix); im.setColorAt(k, haze('#2a4a40', rr, 0.4)); }
+      im.instanceColor.needsUpdate = true; g.add(im);
+    },
+  };
+  for (const it of items) build[it.kind]?.(it);
+}
+let glowT0 = null;
+const glowTex = () => glowT0 || (glowT0 = tex(64, 64, (x, S) => { const gr = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, S, S); }));
 function gulls(g, n = 7, seed = 5) {
   const R = rng(seed), m = new MeshLambertMaterial({ color: '#f7f8fc', side: DoubleSide }), list = [];
   for (let k = 0; k < n; k++) {
@@ -173,11 +249,11 @@ function snowfall(g, n = 900) {
 }
 
 // ---------- a scene: the neighbourhood, the layer over it, the light and the shots ----------
-function vista({ hood, light, shots, wide, extra = null }) {
+function vista({ hood, light, shots, wide, far = [], extra = null }) {
   return ({ camera = null } = {}) => {
     const g = new Group(), world = neighbourhood(hood); g.add(world.group);
     world.group.traverse(o => { if (o.isMesh && !o.material?.transparent) o.castShadow = o.receiveShadow = true; });
-    sky(g, { ...light, seed: hood.seed }); townscape(g, light, { seed: hood.seed, sea: !!hood.sea });
+    sky(g, { ...light, seed: hood.seed }); const hH = townscape(g, light, { seed: hood.seed, sea: !!hood.sea }); skyline(g, light, hH, far);
     const flyGulls = gulls(g), snowing = snowfall(g), more = extra?.(g) || null;
     world.setDusk?.(light.dusk || 0);
     const focus = new Vector3();
@@ -205,6 +281,7 @@ const boulevard = vista({
     move(5.0, 7.2, [at(-1, 11, 15), at(0, 3.2, 0)], [at(-1, 17.5, 25), at(0, 2.4, -1)]), // up the middle of the avenue, over the park and the town
   ],
   wide: [at(-11, 11, 20), at(0, 3, -1)],
+  far: [{ kind: 'ridge', a: -0.25, r: 205, s: 1.3, n: 3, span: 0.45 }, { kind: 'galata', a: 0.42, r: 150, s: 1.4 }], // down the valley: the old city's domes across the water, Galata Tower on its hill
 });
 // Archery Ground (bright late afternoon, long shadows): the archers' lodge with its lead domes and
 // golden bow, the old record stones in a row, straw targets, pennants, houses round the ground.
@@ -220,6 +297,7 @@ const archery = vista({
     move(5.0, 7.2, [at(5, 7, 13), at(0, 2, -1)], [at(12, 15, 22), at(0, 1.4, -3)]), // the ground and the town beyond
   ],
   wide: [at(4, 10, 21), at(0, 2, -1)],
+  far: [{ kind: 'ridge', a: 0.12, r: 215, s: 1.5, n: 3, span: 0.6 }, { kind: 'galata', a: -0.5, r: 165, s: 1.35 }], // from the hilltop ground: down over the Golden Horn to the old city, Galata Tower to the left
 });
 // Kızılay Square (a lavender afternoon, the lamps coming on): the tiled fountain kiosk in the middle
 // of the square, simit, tea and roasted-corn stalls, plane trees, the houses all round.
@@ -234,6 +312,7 @@ const kizilay = vista({
     move(5.0, 7.2, [at(-4, 5, 10), at(0, 2, 0)], [at(-9, 15, 18), at(0, 1.4, -1)]), // up over the square
   ],
   wide: [at(-7, 12, 18), at(0, 2, 0)],
+  far: [{ kind: 'galata', a: 0.12, r: 130, s: 1.5 }, { kind: 'towers', a: -0.55, r: 235, n: 7, span: 0.28 }], // up the hill to Galata Tower; the city's tall towers far off
 });
 // Sururi Park (golden hour): the snow castle being built, slides and swings, the giant snowman with
 // its ladder, a corn stall, pines all round.
@@ -248,6 +327,7 @@ const sururi = vista({
     move(5.0, 7.2, [at(0, 9, 12), at(0, 2.6, -1)], [at(0, 17, 22), at(0, 1.6, -3)]), // high over the park
   ],
   wide: [at(0, 12, 20), at(0, 2.5, -1)],
+  far: [{ kind: 'towers', a: 0.28, r: 240, n: 9, span: 0.35 }, { kind: 'cypresses', a: -0.45, r: 120, n: 120 }, { kind: 'galata', a: -0.85, r: 170, s: 1.2 }], // the towers of Şişli lit by the low sun, a cypress hill
 });
 // The Pier (sunset, the lamps lit): the admiral and his lion on the quay, the frozen Golden Horn
 // behind with a ferry stuck in the ice, the wooden pier and the ferry building, the far shore.
@@ -262,11 +342,12 @@ const pier = vista({
     move(5.0, 7.2, [at(2, 5, 8), at(0, 1.2, -10)], [at(6, 12, 16), at(0, 0.8, -26)]), // out over the frozen Golden Horn
   ],
   wide: [at(4, 10, 16), at(0, 1.5, -8)],
+  far: [{ kind: 'ridge', a: 0.05, r: 165, s: 1.5, n: 3, span: 0.7 }, { kind: 'bridge', type: 'metro', r: 112, a0: -0.82, a1: -0.12 }], // across the Golden Horn: the old city's ridge of domes, the bridges to the left
 });
 
 
 // ---------- Arena 2: up the Golden Horn, from a bright morning at its mouth to dusk at Miniatürk ----------
-// Karaköy Bridge and Pier (a clear blue morning, mist on the water): the bridge with its row of
+// Karaköy Pier (a clear blue morning, mist on the water): the bridge with its row of
 // fishermen's rods, the pier hall, ferries in the ice, the far shore.
 const karakoy = vista({
   hood: { landmark: 'karakoy', seed: 61, flag: '#2d6fb5', sea: 11, trees: 'xTx', plazaR: 5, props: [
@@ -279,8 +360,9 @@ const karakoy = vista({
     move(5.0, 7.2, [at(2, 5, 8), at(0, 1.2, -10)], [at(5, 12, 16), at(0, 0.8, -26)]), // up and out over the frozen water
   ],
   wide: [at(3, 9, 15), at(0, 1.5, -6)],
+  far: [{ kind: 'bridge', type: 'galata', r: 70, a0: -0.95, a1: 0.95 }, { kind: 'bridge', type: 'metro', r: 112, a0: -0.65, a1: 0.55 }, { kind: 'ridge', a: -0.2, r: 168, s: 1.6, n: 3, span: 0.8 }], // Galata Bridge right across with its rods and lamps, the metro bridge beyond, the old city's domes
 });
-// Bankalar Caddesi (bright noon): the street of grand old banks, the great stone bank building at
+// Bankers Street (bright noon): the street of grand old banks, the great stone bank building at
 // its heart with its columns and bronze door, lamps, a simit and a tea stall, plane trees.
 const bankalar = vista({
   hood: { landmark: 'bankalar', seed: 71, flag: '#7a1f1f', trees: 'TvTT', plazaR: 5, props: [
@@ -293,6 +375,7 @@ const bankalar = vista({
     move(5.0, 7.2, [at(-3, 6, 9), at(0, 2.5, 0)], [at(-7, 14, 18), at(0, 1.8, -1)]), // over the rooftops of the street
   ],
   wide: [at(-6, 11, 18), at(0, 2.5, 0)],
+  far: [{ kind: 'galata', a: 0.02, r: 78, s: 1.5 }, { kind: 'towers', a: 0.62, r: 265, n: 6, span: 0.22 }], // Galata Tower right at the top of the street
 });
 // Tersane İstanbul (golden afternoon): the old shipyard on the water: the brick workshop and its
 // chimney, the dry dock with a ship, the crane, the new promenade under its glass canopy.
@@ -306,6 +389,7 @@ const tersane = vista({
     move(5.0, 7.2, [at(3, 7, 9), at(0, 2.4, -1)], [at(7, 15, 18), at(0, 1.4, -6)]), // up past the crane over the water
   ],
   wide: [at(4, 10, 16), at(0, 2, -2)],
+  far: [{ kind: 'redschool', a: -0.22, r: 150, s: 1.4 }, { kind: 'ridge', a: 0.22, r: 168, s: 1.3, n: 2, span: 0.45 }, { kind: 'bridge', type: 'metro', r: 100, a0: -0.95, a1: -0.3 }], // across the water: the red school on the hill at Fener, domes on the ridge, the metro bridge to the left
 });
 // Aynalıkavak Pavilion (pink sunset): the pavilion on its stone base, wide eaves, mirror-bright
 // windows catching the sunset, cypresses and the pool, the Golden Horn behind.
@@ -319,11 +403,12 @@ const aynalikavak = vista({
     move(5.0, 7.2, [at(-2, 5, 7), at(0, 1.4, -6)], [at(-5, 12, 15), at(0, 0.8, -22)]), // over the roof to the water
   ],
   wide: [at(-5, 9, 15), at(0, 1.5, -4)],
+  far: [{ kind: 'redschool', a: 0.08, r: 150, s: 1.45 }, { kind: 'ridge', a: -0.45, r: 175, s: 1.2, n: 2, span: 0.4 }, { kind: 'cypresses', a: 0.55, r: 160, n: 90, span: 0.3 }], // straight across: Fener and Balat, the red school on its hill
 });
 // Miniatürk (dusk, the lamps lit): the park of little models on snowy lawns, the big sign, giant
 // snowmen among the models, the town's lights coming on beyond.
 const miniaturk = vista({
-  hood: { landmark: 'miniaturk', seed: 101, flag: '#7a1f1f', trees: 'xTxv', plazaR: 5, props: [
+  hood: { landmark: 'miniaturk', seed: 101, flag: '#7a1f1f', sea: 8, trees: 'xTxv', plazaR: 5, props: [
     { type: 'giant-snowman', i: CX - 9, j: CZ - 3, w: 2, h: 2 }, { type: 'giant-snowman', i: CX + 7, j: CZ - 3, w: 2, h: 2 },
     { type: 'stall', kind: 'corn', i: CX - 9, j: CZ + 3, w: 2, h: 1 }, { type: 'stall', kind: 'chestnut', i: CX + 7, j: CZ + 3, w: 2, h: 1 }] },
   light: { sun: '#e8c8ff', intensity: 1.5, sky: '#d8d0f0', ground: '#7f78b2', dir: [-0.5, 0.25, -0.83], top: '#4c5aa8', horizon: '#d9b8d8', far: '#8f86b4', fog: '#d4c2dc', sunDisc: '#ffb0a0', sunSize: 80, dusk: 0.95 },
@@ -333,6 +418,7 @@ const miniaturk = vista({
     move(5.0, 7.2, [at(3, 5, 7), at(0, 1.0, 0)], [at(7, 13, 16), at(0, 0.8, -2)]), // up over the park and the giant snowmen
   ],
   wide: [at(4, 9, 14), at(0, 1, 0)],
+  far: [{ kind: 'bridge', type: 'highway', r: 98, a0: -0.92, a1: 0.92 }, { kind: 'cypresses', a: -0.05, r: 165, n: 220, span: 0.7 }], // the Haliç highway bridge high over the water, the cypress hill above Eyüp
 });
 
 // The scenes, by place; each one's welcome is read aloud with its name card.
@@ -342,8 +428,8 @@ export const CINEMA = {
   kizilay: { title: 'Kızılay Square', welcome: 'Welcome to Kızılay Square!', build: kizilay },
   sururi: { title: 'Sururi Park', welcome: 'Welcome to Sururi Park!', build: sururi },
   pier: { title: 'The Pier', welcome: 'Welcome to the Pier!', build: pier },
-  karakoy: { title: 'Karaköy Bridge and Pier', welcome: 'Welcome to Karaköy!', build: karakoy },
-  bankalar: { title: 'Bankalar Caddesi', welcome: 'Welcome to Bankalar Caddesi!', build: bankalar },
+  karakoy: { title: 'Karaköy Pier', welcome: 'Welcome to Karaköy!', build: karakoy },
+  bankalar: { title: 'Bankers Street', welcome: 'Welcome to Bankers Street!', build: bankalar },
   tersane: { title: 'Tersane İstanbul', welcome: 'Welcome to Tersane İstanbul!', build: tersane },
   aynalikavak: { title: 'Aynalıkavak Pavilion', welcome: 'Welcome to Aynalıkavak Pavilion!', build: aynalikavak },
   miniaturk: { title: 'Miniatürk', welcome: 'Welcome to Miniatürk!', build: miniaturk },
