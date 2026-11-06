@@ -609,3 +609,13 @@ body.cinema .rh-btns, body.cinema .rh-spell, body.cinema .rh-top { opacity: 0; p
 .rh-cine.show small { animation: cineIn 0.7s 0.15s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes cineIn { from { opacity: 0; transform: translateY(14px) scale(0.96); letter-spacing: 0.2em; } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .rh-cine.show b, .rh-cine.show small { animation: none; } #runhud::before, #runhud::after { transition: none; } }
+
+/* the arrival at the carousel (the finale of the ride in): letterbox bars, the name card, no HUD */
+.intro-ui { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
+.intro-ui[hidden] { display: none; }
+.intro-ui .ib { position: fixed; left: 0; right: 0; height: 9vh; background: #0d1226; }
+.intro-ui .ib.top { top: 0; } .intro-ui .ib.bottom { bottom: 0; }
+.intro-ui .rh-cine { color: #fff6dc; }
+.intro-ui .ic-line { display: block; margin: 8px auto 0; max-width: 86vw; font-size: 16px; font-style: italic; font-weight: 700; color: #ffffff; text-shadow: 0 2px 0 #2b1d10, 0 4px 12px rgba(0,0,0,0.4); white-space: normal; }
+body.intro #hud, body.intro #coach, body.intro #stars, body.intro #lives, body.intro #attack, body.intro #super, body.intro #joy-base, body.intro #newrival,
+body.intro #banner, body.intro #seizebtn, body.intro #feed, body.intro #hunt, body.intro #fx-layer { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.3s; }

@@ -19,7 +19,8 @@ import { BrawlFx } from './render/brawlfx.js';
 import { CUT } from './render/cutout.js';
 import { AutoQuality, guessLevel, LEVELS } from './quality.js';
 import { Sticks } from './sticks.js';
-import { unlockAudio, play, setSound } from './audio.js';
+import { unlockAudio, play, setSound, music, stopMusic } from './audio.js';
+import { speech } from './speech.js';
 import { OutpostFlow, assignFlakeWords } from './outpostflow.js';
 import { ensureUnit, startRun } from '../rules/progress.mjs';
 import { StageRunner } from './stagerun.js';
@@ -175,6 +176,34 @@ async function startGame(myTeam, kit, pace) {
   const off = new Vector3(0, 17.6, 16.0); let zoom = 1, shake = 0;
   const focus = new Vector3(player.x, 0, player.z - 1.2);
   let stages = null; // set below once the HUD exists
+  // ---------- the finale of the ride in: arriving at the carousel ----------
+  // The camera comes in high over the real field, sweeps low round the carousel as it turns (its
+  // landmarks pass the camera in task order, the rival team in front of it), then drops behind
+  // the team at the south end, where the stage begins. Letterbox bars, the name card, Mr.
+  // Saymaz's welcome, a cheeky fairground waltz, a cheer. Nothing moves in the fight meanwhile.
+  let intro = null; const seenIntro = new Set();
+  const introCard = (() => {
+    const el = document.createElement('div'); el.className = 'intro-ui'; el.hidden = true;
+    el.innerHTML = '<i class="ib top"></i><i class="ib bottom"></i><div class="rh-cine"><small></small><b></b><span class="ic-line"></span><span class="rh-skip" hidden>Tap to skip</span></div>';
+    document.body.appendChild(el); return el;
+  })();
+  const smooth01 = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+  function startIntro(z, { title, kicker, line, onDone }) {
+    const id = 'arrive-' + z.id, dur = reduceMotion ? 3.2 : 8.4;
+    intro = { z, t: 0, dur, onDone, skippable: seenIntro.has(id) }; seenIntro.add(id);
+    document.body.classList.add('intro'); introCard.hidden = false;
+    const card = introCard.querySelector('.rh-cine'); card.querySelector('small').textContent = kicker; card.querySelector('b').textContent = title; card.querySelector('.ic-line').textContent = ''; card.querySelector('.rh-skip').hidden = !intro.skippable;
+    card.classList.remove('show'); card.hidden = false; void card.offsetWidth; setTimeout(() => { if (intro) card.classList.add('show'); }, 700); setTimeout(() => { if (intro) card.hidden = true; }, 4300); // then the carousel alone
+    setTimeout(() => { if (intro) { card.querySelector('.ic-line').textContent = `"${line}"`; speech.say(line); } }, 1600);
+    world.carousel?.setRate(reduceMotion ? 0.16 : 0.55); music('carousel'); play('whoosh');
+    return dur * 1000;
+  }
+  function endIntro() {
+    if (!intro) return; const done = intro.onDone; intro = null;
+    document.body.classList.remove('intro'); introCard.hidden = true; world.carousel?.setRate(0.16); stopMusic('carousel', 0.8); play('cheer');
+    done?.();
+  }
+  addEventListener('pointerdown', () => { if (intro?.skippable && intro.t < intro.dur - 2) intro.t = intro.dur - 2; }); // a tap skips to the drop behind the team
   function resize() {
     const w = innerWidth, h = innerHeight, a = w / h; camera.aspect = a;
     // portrait (phones held upright): a wider lens and a little further back, so the narrow screen
@@ -235,7 +264,7 @@ async function startGame(myTeam, kit, pace) {
   const fireworks = z => { if (reduceMotion) return; for (const col of [myCol, '#ffffff', '#ffd166', '#7cc4f0']) fx.emit(z.x, 3.5, z.z, 40, col, 6, 1.4, 1.2); };
   stages = flow ? new StageRunner({
     match, flow, unit, unitProgress, save, writeSave, pace, rng, team: myTeam, kit, reduceMotion,
-    ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play,
+    ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play, intro: (z, o) => startIntro(z, o),
       snapCamera: () => { focus.set(player.x, 0, player.z - 1.2); camShift = 0; },
       showWall: cells => showWall(cells), onGone: list => { dropSnowmen(list); dropGoneKids(); }, recruited: (c, R) => fx.number(c.x, c.z, `${c.name} · ${R.name}`, 'word'), rebuildWorld: z => rebuildWorld(z), markRival: z => world.setOwner(z.id, rivCol), fireworks,
       seizeButton: on => { $('#seizebtn').hidden = !on; },
@@ -442,7 +471,7 @@ async function startGame(myTeam, kit, pace) {
     LOOK.time.value += dt;
     if (paused) { draw(stages?.mode === 'sled' ? stages.sled.scene : scene, stages?.mode === 'sled' ? stages.sled.camera : camera); return; }
     if (stages?.mode === 'sled') { stages.update(dt); draw(stages.sled.scene, stages.sled.camera); return; } // the sled journey has its own scene
-    const live = !pose && countdown <= 0 && (!stages || stages.mode === 'outpost');
+    const live = !pose && !intro && countdown <= 0 && (!stages || stages.mode === 'outpost');
     if (!pose && countdown > 0) {
       countdown -= dt; const n = Math.ceil(countdown);
       if (n !== lastCount) { lastCount = n; if (n > 0) { banner(String(n), 'count', 0.9); play('tap'); } else { banner('SNOW!', 'go', 1.1); play('superReady'); } }
@@ -542,7 +571,8 @@ async function startGame(myTeam, kit, pace) {
     // views
     for (const [id, k] of kids) {
       const c = k.c, visible = !c.benched && (c.side === 'home' || sim.canSee(player, c) || c.frozen);
-      k.update(dt, { visible, reduceMotion, groundY: groundH(c.x, c.z) });
+      k.update(dt, { visible: visible || (!!intro && !c.benched), reduceMotion, groundY: groundH(c.x, c.z) });
+      if (intro) { k.bar.visible = false; k.ring.visible = false; if (k.innerRing) k.innerRing.visible = false; } // the arrival: no bars or rings in the shot
     }
     tickCrates(dt); tickWaiting(dt); buildUI.tick();
     for (const k of kids.values()) if (k.popT !== undefined && k.popT < 1) { k.popT = Math.min(1, k.popT + dt * 2.5); const q = k.popT, o = q < 1 ? 1 + Math.sin(q * Math.PI) * 0.3 : 1; k.root.scale.setScalar(Math.max(0.01, q * o)); }
@@ -567,6 +597,16 @@ async function startGame(myTeam, kit, pace) {
     camY += (groundH(player.x, player.z) - camY) * Math.min(1, dt * 4);
     camera.position.set(focus.x + off.x * zf + (Math.random() - 0.5) * j, off.y * zf + camY, focus.z + off.z * zf + (Math.random() - 0.5) * j);
     camera.lookAt(focus.x, camY, focus.z); camera.updateMatrixWorld();
+    if (intro) { // the arrival: scripted shots, blended into the game's own camera for the last two seconds
+      intro.t += rdt; const I = intro, C = I.z, t = I.t, P = new Vector3(), L = new Vector3();
+      if (reduceMotion) { P.set(C.x, 19, C.z + 30); L.set(C.x, 1, C.z + 3); }
+      else if (t < 3.0) { const k = smooth01(t / 3); P.set(C.x + 3 * k, 27 - 12 * k, C.z + 58 - 33 * k); L.set(C.x, 2 * k, C.z + 9 - 9 * k); } // high over the field and the rooftops
+      else { const k = smooth01((t - 3) / 3.4), a = 0.95 - 1.5 * k, r = 12.5 - 1.6 * k; P.set(C.x + Math.sin(a) * r, 4.6 + 1.0 * k, C.z + Math.cos(a) * r); L.set(C.x, 1.5, C.z); } // low round the turning carousel, its landmarks passing
+      const out = reduceMotion ? (t > I.dur - 0.4 ? 1 : 0) : smooth01((t - (I.dur - 2)) / 2), look = new Vector3(focus.x, camY, focus.z);
+      camera.position.lerpVectors(P, camera.position.clone(), out); camera.lookAt(L.lerp(look, out)); camera.updateMatrixWorld();
+      const gullsOn = t < 2.8 || t >= I.dur; for (const m of [life?.gBody, life?.gWingL, life?.gWingR]) if (m) m.visible = gullsOn; // no gull flying into the lens on the low arc
+      if (t >= I.dur) endIntro();
+    }
     sun.position.set(focus.x + sunDir[0], sunDir[1], focus.z + sunDir[2]); sun.target.position.set(focus.x, 0, focus.z - 2); sun.target.updateMatrixWorld();
     world.tick(dt, focus, reduceMotion, camera); showdownView.tick(dt); worldTasks?.tick(rdt);
     edgeMarks();
@@ -637,7 +677,7 @@ async function startGame(myTeam, kit, pace) {
     }
   }
   const screenOf = c => { const v = new Vector3(c.x, groundH(c.x, c.z) + (c.role === 'minion' ? 0.7 : 0.75), c.z).project(camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight }; };
-  globalThis.__snowpax = { match, sim, player, quality, renderer, world, life, flow, stages, scene, snowmen, screenOf, worldTasks };
+  globalThis.__snowpax = { match, sim, player, quality, renderer, world, life, flow, stages, scene, snowmen, screenOf, worldTasks, intro: () => intro };
   if (stages) stages.showMap();
 }
 

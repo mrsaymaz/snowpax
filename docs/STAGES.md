@@ -79,12 +79,32 @@ neighbourhood under its own sky and light. They are views, not tasks: no people,
 | Sururi Park | in past the slide to the snow castle, swings and the giant snowman; round the towers; high over the park |
 | The Pier | the admiral and his lion against the sunset, signal flags on their ropes; round the statue; out over the frozen Golden Horn, the ferry in the ice and the far shore |
 
+### The finale: arriving at the carousel
+
+When the ride ends, the camera arrives over the real Kasımpaşa field before the student takes
+over (`startIntro` in `brawl.js`, about 8 s): letterbox bars, the name card ("ARENA 1 · THE
+OUTPOST / Kasımpaşa") for about 4 s, and Mr. Saymaz's line read aloud with its subtitle: "Welcome
+to Kasımpaşa! Let's take it back!".
+- **0–3 s:** high over the field and the rooftops, coming in from the south: the snowbank fence,
+  the cover, the camp's children waiting, and at the far end the carousel ringed in the rivals'
+  colour, the rival team lined up in front of it.
+- **3–6.4 s:** low round the carousel as it turns faster than usual, its five landmarks passing
+  the camera in task order under the KASIMPAŞA sign.
+- **The last 2 s:** the camera glides down into the game's own view behind the team at the south
+  end; a cheer, and the stage begins (the camp's coach line and the banner wait until then).
+- **Music:** a cheeky fairground waltz in D minor on a little organ (oom-pah-pah).
+- Nothing in the fight moves meanwhile; health bars, rings, the HUD and the town's gulls (on the
+  low arc) stay out of the shot. The rival team goes back to its camp afterwards (no rivals on the
+  field during the camp). A tap skips to the last 2 s once it has been seen this session; with
+  reduce motion, one held wide shot.
+
 ## The stage, start to finish
 
 1. **The arena card:** "Arena 1 · Kasımpaşa", the stars for the stage (of 3) and the first-try
    score against the 80% goal.
 2. **The sled ride in** (50 s of riding plus the places' scenes, `sledrun.js`, the Kasımpaşa
-   theme: kiosks, plane trees, targets, snow castles; see "The places on the way" above). Swipe or use the arrow keys or the buttons: left and right steer, up jumps
+   theme: kiosks, plane trees, targets, snow castles; see "The places on the way" above), ending
+   with the arrival at the carousel (see "The finale" above). Swipe or use the arrow keys or the buttons: left and right steer, up jumps
    (buried cars, snowmen, crates with sleeping cats, fences), down ducks (laundry lines, branches,
    awnings, gulls); ramps give big jumps with snowballs up high. Collect **snowballs** (lots) and
    **5 golden word snowflakes**, spread along the track: each shows an English word with its

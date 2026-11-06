@@ -57,6 +57,8 @@ export function play(type, { near = 1, freq = 660 } = {}) {
     case 'chime': bellAt(ctx.currentTime, freq, 0.07 * v, 0.45); break;
     // a golden word snowflake: a sparkling run up and a warm glow under it
     case 'flake': [1, 1.25, 1.5, 2, 2.5, 3].forEach((m, i) => bellAt(ctx.currentTime + i * 0.055, 784 * m, 0.06, 0.6)); tone(392, 0.5, 0.07, 'triangle', 1.5); noise(0.5, 5000, 9000, 0.05, 'highpass'); break;
+    // the team cheers: a burst of voices (filtered noise that swells and fades) and a whistle
+    case 'cheer': for (const [d, f] of [[0, 900], [60, 1300], [140, 700]]) setTimeout(() => noise(1.1, f, f * 1.6, 0.16, 'bandpass'), d); setTimeout(() => tone(1800, 0.25, 0.05, 'sine', 1.35), 250); break;
     case 'capture': [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.22, 0.16, 'triangle'), i * 110)); break;
   }
 }
@@ -106,7 +108,18 @@ const BOULEVARD = { mel: [[0, 67, 2], [2, 71, 2], [4, 74, 2], [6, 79, 2], [8, 78
 const KIZILAY = { mel: [[0, 69, 2], [2, 71, 2], [4, 72, 2], [6, 74, 2], [8, 76, 4], [12, 74, 2], [14, 72, 2], [16, 71, 2], [18, 72, 2], [20, 74, 4], [24, 72, 2], [26, 71, 2], [28, 69, 4], [32, 68, 2], [34, 69, 2], [36, 71, 2], [38, 68, 2], [40, 69, 8]], bass: [[0, 45], [8, 52], [16, 50], [24, 52], [32, 44], [40, 45]] };
 const SURURI = { mel: [[0, 72, 1], [2, 76, 1], [4, 79, 1], [6, 76, 1], [8, 77, 2], [10, 76, 1], [12, 74, 2], [16, 72, 1], [18, 76, 1], [20, 79, 1], [22, 84, 1], [24, 81, 2], [28, 79, 2], [32, 77, 1], [34, 76, 1], [36, 74, 1], [38, 71, 1], [40, 72, 6]], bass: [[0, 36], [4, 43], [8, 36], [12, 43], [16, 41], [20, 36], [24, 43], [28, 36], [32, 41], [36, 43], [40, 36]] };
 const PIER = { mel: [[4, 76, 4], [12, 80, 4], [20, 78, 4], [28, 73, 4], [36, 75, 4], [42, 76, 6]], chords: [[0, [64, 68, 71]], [12, [61, 64, 68]], [24, [57, 61, 64]], [36, [59, 63, 66]]] };
+// the arrival at the carousel: a cheeky fairground waltz in D minor on a little organ (oom-pah-pah)
+const CAROUSEL = [[0, 69, 3], [3, 70, 3], [6, 69, 3], [9, 65, 3], [12, 62, 6], [18, 65, 3], [21, 69, 3], [24, 74, 6], [30, 73, 3], [33, 70, 3],
+  [36, 69, 3], [39, 70, 3], [42, 69, 3], [45, 64, 3], [48, 61, 6], [54, 64, 3], [57, 67, 3], [60, 73, 6], [66, 70, 3], [69, 69, 3], [72, 74, 12]];
+const CAROUSEL_BASS = [50, 50, 46, 45, 50, 50, 45, 50], CAROUSEL_CH = [[62, 65, 69], [62, 65, 69], [58, 62, 65], [57, 61, 64], [62, 65, 69], [62, 65, 69], [57, 61, 64], [62, 65, 69]];
 const TRACKS = {
+  carousel: { bpm: 150, steps: 84, loop: false, step(k, t, sp, dest) {
+    const bar = Math.floor(k / 12) % 8, inBar = k % 12;
+    if (inBar === 0) synth(t, hz(CAROUSEL_BASS[bar] - 12), sp * 3, { gain: 0.12, attack: 0.005, release: 0.15, dest });
+    if (inBar === 4 || inBar === 8) for (const n of CAROUSEL_CH[bar]) synth(t, hz(n), sp * 2, { type: 'square', gain: 0.014, attack: 0.005, release: 0.08, cutoff: 1600, dest });
+    for (const [at0, n, len] of CAROUSEL) if (at0 === k) { synth(t, hz(n + 12), sp * len * 0.85, { type: 'square', gain: 0.035, attack: 0.01, release: 0.12, cutoff: 2600, dest }); synth(t, hz(n), sp * len * 0.85, { type: 'triangle', gain: 0.04, attack: 0.01, release: 0.12, dest }); }
+    if (inBar === 0 && bar % 2 === 0) bellAt(t, hz(86), 0.02, 0.4, dest); // a little bell on the turn
+  } },
   // Boulevard Park: a music box over a soft plucked bass (G major)
   boulevard: { bpm: 100, steps: 48, loop: false, step(k, t, sp, dest) {
     for (const [, n, len] of at(BOULEVARD.mel, k)) { bellAt(t, hz(n + 12), 0.05, 0.4 + len * 0.12, dest); bellAt(t, hz(n), 0.018, 0.5, dest); }

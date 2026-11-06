@@ -163,7 +163,12 @@ export class StageRunner {
     sim.held.home = [{ x: home[0].x, z: home[0].z }]; sim.spawns.home = sim.held.home.slice();
     this.ui.snapCamera?.();
     this.flow.setStage(z); this.drawLives();
-    this.ui.banner(st.title.toUpperCase(), 'go', 1.6);
+    // the finale of the ride in: the camera arrives at the carousel first, the rival team lined up in front of it
+    const lineUp = this.plan && z.battlefield ? this.sim.chars.filter(c => c.side === 'rival' && c.role !== 'minion').slice(0, 3) : [];
+    lineUp.forEach((c, k) => Object.assign(c, { benched: false, x: z.x + (k - 1) * 2.3, z: z.z + 6.4 + (k === 1 ? 0.5 : 0), face: 0, frozen: 0, thaw: 0, vx: 0, vz: 0, travel: null }));
+    const wait = this.ui.intro ? this.ui.intro(z, { title: st.title, kicker: 'Arena 1 · The outpost', line: `Welcome to ${st.title}! Let's take it back!`, onDone: () => { for (const c of lineUp) this.bench(c); } }) || 0 : 0;
+    this.introWait = wait;
+    setTimeout(() => { if (this.mode === 'outpost') this.ui.banner(st.title.toUpperCase(), 'go', 1.6); }, wait);
     this.ui.hush?.(); // a calm arrival: nothing left over from the ride
     if (st.newRival && RIVAL_INFO[st.newRival]) { if (this.plan) this.pendingRival = st.newRival; else this.newRival(st.newRival); } // with a plan: shown at the first build moment, before the fight
     // first a fight: clear the first wave of snowmen, then seize the outpost with English (with a
@@ -222,7 +227,7 @@ export class StageRunner {
       const gender = (k + (this.rng() < 0.5 ? 0 : 1)) % 2 ? 'girl' : 'boy', names = KID_NAMES[gender].filter(n => !taken.has(n)), name = names[Math.floor(this.rng() * names.length)]; taken.add(name);
       this.sim.addRecruitSpot({ id: 'k' + k, role, name, look: makeLook(gender, this.rng), x: at[0], z: at[1] });
     });
-    setTimeout(() => { if (this.phase === 'camp') this.ui.coach('Neighbourhood kids want to join your team! Walk up to each one and answer their question. A right answer first time and they join (and you get a ❄).', 6); }, 1600);
+    setTimeout(() => { if (this.phase === 'camp') this.ui.coach('Neighbourhood kids want to join your team! Walk up to each one and answer their question. A right answer first time and they join (and you get a ❄).', 6); }, 1600 + (this.introWait || 0)); // after the arrival
   }
   updateCamp(dt) {
     this.tCamp += dt;

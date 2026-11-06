@@ -698,9 +698,10 @@ export function buildSnowtown(ctx) {
       const pad = new Mesh(new CircleGeometry(0.85, 24), glowM); pad.rotation.x = -Math.PI / 2; pad.position.y = 0.03; seat.add(pad);
       return { type, seat, angle: a, flag, glowM, lit: null };
     });
-    let spin = 0, want = null, t = 0;
+    let spin = 0, want = null, t = 0, rate = 0.16;
     return {
       root, seats,
+      setRate(r) { rate = r; }, // how fast it turns by itself (the arrival finale turns it up)
       // where a seat is in the world now (for its snowballs)
       seatPos(k) { const s2 = seats[k]; if (!s2) return null; const a = s2.angle + spin; return { x: cx + Math.sin(a) * 1.95, z: cz + Math.cos(a) * 1.95 }; },
       face(k) { const s2 = seats[k]; if (!s2) { want = null; return; } let w = -s2.angle; while (w - spin > Math.PI) w -= Math.PI * 2; while (w - spin < -Math.PI) w += Math.PI * 2; want = w; },
@@ -708,7 +709,7 @@ export function buildSnowtown(ctx) {
       reset() { want = null; for (const s2 of seats) { s2.lit = null; s2.glowM.opacity = 0; if (s2.flag) s2.flag.material.color.set('#ffffff'); } },
       tick(dt) {
         t += dt;
-        if (want === null) spin += dt * 0.16; // turning slowly
+        if (want === null) spin += dt * rate; // turning slowly
         else { spin += (want - spin) * Math.min(1, dt * 2.2); if (Math.abs(want - spin) < 0.002) spin = want; }
         deck.rotation.y = spin;
         for (const s2 of seats) { if (!s2.lit) continue; s2.flash = Math.max(0, (s2.flash || 0) - dt); s2.glowM.opacity = 0.55 + Math.sin(t * 3 + s2.angle) * 0.12 + s2.flash * 0.3; }
