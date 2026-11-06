@@ -29,6 +29,20 @@ ferry and a pier; fish, simit, tea and chestnut stalls behind the home spawn. It
 the Final Showdown with the captain, two shield snowmen and three rival kids). Played in golden
 light.
 
-**Still to come:** the task scenes are the first arena's (the treehouse for Answer, the archers'
-lodge for Sorting and so on); each Golden Horn place gets its own scene next. The places' music
-also borrows the first arena's themes for now.
+## The task scenes (`cards/golden.js`)
+
+Each place's English task opens in its own staged 3D set, scored exactly like the flat card (one
+item per question, pair or card; right first time or not; a miss glows the right one):
+
+| Place | Task | The scene |
+|---|---|---|
+| Karaköy Bridge and Pier | Listening | Under the bridge on the frozen Golden Horn (its railing, lamps and the row of fishermen's rods above, the ferry in the ice, the pier hall, the far shore). Fish peek out of holes in the ice, each with a word. Hear the word ("Hear it again" sits high, clear of the holes), cast your line to that fish: it leaps out onto the ice in a sparkle; the wrong one dives with a splash. |
+| Bankalar Caddesi | Sorting | In front of the great stone bank (columns, lit arched windows, the bronze door, plane trees, lamps). Round steel vault doors with brass wheels stand on legs, one per category. Pick a card, then its vault: a gold coin spins in and the wheel turns; a wrong one clinks off the rim. |
+| Tersane İstanbul | Builder | The old shipyard: a ship in the dry dock (red bottom, navy hull, portholes, a mast with the team's flag), the brick workshop with its arched windows and chimney, two cranes, the promenade's glass canopy and café tables. The sentence is built onto the deck plank by plank; spelling lays ice letters the same way. |
+| Aynalıkavak Pavilion | Answer | The pavilion's front at sunset: stone base, wide eaves on brackets, cypresses, the pool. The answers are on its mirror-bright windows: snowball the right one and it flashes like a mirror in the sun; a wrong one gets a splat of snow. |
+| Miniatürk | Matching | A snowy lawn inside a hedge among the models (a round stone tower, a tower on a rock in a pond, a clock tower, a little suspension bridge, the big sign): the matching game on little cream signs, a golden path between each pair. |
+
+The flow uses a place's own scene when it has one (`places` on the stage, `WORLD_SCENES` in
+`cards/scenes.js`), otherwise the task family's first-arena scene.
+
+**Still to come:** the places' music borrows the first arena's themes.

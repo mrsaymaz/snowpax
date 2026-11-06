@@ -21,6 +21,7 @@ import { AutoQuality, guessLevel, LEVELS } from './quality.js';
 import { Sticks } from './sticks.js';
 import { unlockAudio, play, setSound, music, stopMusic } from './audio.js';
 import { speech } from './speech.js';
+import { karakoyStation, bankalarStation, tersaneStation, aynalikavakStation, miniaturkStation } from './cards/golden.js';
 import { drawLogo, Hero, lessonPicker, unitsOf } from './startui.js';
 import { OutpostFlow, assignFlakeWords } from './outpostflow.js';
 import { ensureUnit, startRun } from '../rules/progress.mjs';
@@ -274,7 +275,8 @@ async function startGame(myTeam, kit, pace) {
   $('#flakes b').textContent = save.snowflakes || 0; $('#flakes').hidden = !arena.world || !!unit; // in the stages, ❄ is the Snow Shop money (the #stars pill)
   const banner = (text, cls = '', sec = 1.6) => { const b = $('#banner'); b.textContent = text; b.className = 'show ' + cls; clearTimeout(banner.t); banner.t = setTimeout(() => { b.className = ''; }, sec * 1000); };
   // English tasks as task stations (?scenes=basic for the plain cards): a staged 3D set opens for the task, like Languini's stations
-  const worldTasks = arena.world ? new WorldTasks({ layer: $('#wt-layer'), player, reduceMotion, sound: (n, o) => play(n, o), stations: { sururi: s => castleStation(s, { color: myCol }), boulevard: s => treehouseStation(s, { color: myCol }), archery: s => archeryStation(s, { color: myCol }), kizilay: s => fountainStation(s, { color: myCol }), waterfront: s => bellStation(s, { color: myCol }), recruit: s => talkStation(s, { color: myCol }), shop: s => shopStation(s, { color: myCol }) } }) : null;
+  const worldTasks = arena.world ? new WorldTasks({ layer: $('#wt-layer'), player, reduceMotion, sound: (n, o) => play(n, o), stations: { sururi: s => castleStation(s, { color: myCol }), boulevard: s => treehouseStation(s, { color: myCol }), archery: s => archeryStation(s, { color: myCol }), kizilay: s => fountainStation(s, { color: myCol }), waterfront: s => bellStation(s, { color: myCol }), recruit: s => talkStation(s, { color: myCol }), shop: s => shopStation(s, { color: myCol }),
+    karakoy: s => karakoyStation(s, { color: myCol }), bankalar: s => bankalarStation(s, { color: myCol }), tersane: s => tersaneStation(s, { color: myCol }), aynalikavak: s => aynalikavakStation(s, { color: myCol }), miniaturk: s => miniaturkStation(s, { color: myCol }) } }) : null;
   const flow = unit ? new OutpostFlow({
     sim, player, unit, unitProgress, save, writeSave, pace, rng, root: $('#taskcard'), familyOverride: params.get('family'), world: worldTasks, worldColor: myCol,
     ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play, fx, fireworks: z => { if (reduceMotion) return; for (const col of [myCol, '#ffffff', '#ffd166', '#7cc4f0']) fx.emit(z.x, 3.5, z.z, 40, col, 6, 1.4, 1.2); } },

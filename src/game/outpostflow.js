@@ -14,6 +14,7 @@ import { recordItem, holdOutpost, accuracyOf } from '../rules/progress.mjs';
 import { Visit, stepSeconds, cocoaQuestion, flakeWords, talkQuestion } from './visit.mjs';
 import { FAMILY_STATION, ROLES } from './fights.mjs';
 import { TaskCard } from './taskcard.js';
+import { hasWorldTheme } from './cards/scenes.js';
 import { speech } from './speech.js';
 
 export const OUTPOST_THEME = {
@@ -74,7 +75,8 @@ export class OutpostFlow {
     if (v.families && this.mode === 'seize' && this.placeShown !== v.family) { this.placeShown = v.family; this.ui.onPlaceStart?.(v.family); } // the carousel turns to the place
     if (v.families) { // each family in its own place's activity
       const place = this.zone.places?.[v.family]?.title || PLACE_OF[v.family];
-      this.card.setCoach(`${place ? place + ' · ' : ''}${FAMILY_NAME[v.family]}${v.coach ? ': ' + v.coach : ''}`); this.card.show(step, { theme: FAMILY_STATION[v.family] || this.zone.id }); return;
+      const own = this.zone.places?.[v.family]?.id, theme = own && hasWorldTheme(own) ? own : FAMILY_STATION[v.family] || this.zone.id; // the place's own scene (the Golden Horn's), else the family's
+      this.card.setCoach(`${place ? place + ' · ' : ''}${FAMILY_NAME[v.family]}${v.coach ? ': ' + v.coach : ''}`); this.card.show(step, { theme }); return;
     }
     this.card.setCoach(v.coach || ''); this.card.show(step);
   }

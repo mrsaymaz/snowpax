@@ -35,7 +35,7 @@ function build3d(ctx, { kind, pieces, expected, sayAtEnd, revealText, revealTr, 
   // labels first, to size the bricks to their words
   const ppm = s.pxPerMeter();
   const mat = ice ? new MeshStandardMaterial({ color: '#c4ecff', roughness: 0.15, metalness: 0, transparent: true, opacity: 0.9, emissive: new Color('#2a6c9a'), emissiveIntensity: 0.12 })
-    : new MeshLambertMaterial({ color: '#f7fbff', emissive: new Color('#000000') });
+    : new MeshLambertMaterial({ color: s.set.brickColor || '#f7fbff', emissive: new Color('#000000') }); // snow bricks (the castle) or wooden planks (the shipyard)
   const glowM = mat.clone(); glowM.emissive = new Color('#ffcf3c'); glowM.emissiveIntensity = 0.55;
   const items = shuffle(pieces, ctx.rng).map(p => {
     const el = s.label(esc(p.text), { cls: 'wt-brick ' + (ice ? 'ice' : 'snow'), onTap: () => tap(item) });
@@ -104,7 +104,7 @@ export function castleWorldOrder(ctx) {
     kind: 'order', pieces: st.blocks.map(b => ({ text: b.text, key: key(b) })), expected: blockOrder(st.blocks).map(b => ({ text: b.text, key: key(b) })),
     caption: `${esc(st.prompt || 'Build the sentence.')}${st.hintTr ? ` <span class="tr">${esc(st.hintTr)}</span>` : ''}`,
     sayAtEnd: st.text, revealText: st.text, revealTr: st.meaningTr,
-    wrongCoach: 'Not that brick yet. Which block comes next? Look for the glowing one!',
+    wrongCoach: `Not that ${ctx.world.set.pieceName || 'brick'} yet. Which block comes next? Look for the glowing one!`,
   });
 }
 export function castleWorldSpell(ctx) {

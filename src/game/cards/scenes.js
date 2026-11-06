@@ -6,6 +6,7 @@ import { castleOrderScene, castleSpellScene } from './castle.js';
 import { castleWorldOrder, castleWorldSpell } from './castle3d.js';
 import { treehouseChoice, archerySort, fountainMatch, bellListen } from './stations.js';
 import { recruitTalk } from './talk.js';
+import { karakoyListen, bankalarSort, tersaneOrder, tersaneSpell, aynalikavakChoice, miniaturkMatch } from './golden.js';
 
 export const DEFAULT_SCENES = { choice: choiceScene, listen: listenScene, match: matchScene, sort: sortScene, order: orderScene, spell: spellScene };
 
@@ -23,6 +24,12 @@ export const WORLD_SCENES = {
   kizilay: { match: fountainMatch },
   waterfront: { listen: bellListen },
   recruit: { choice: recruitTalk }, // a neighbourhood child asks you face to face (the camp)
+  // Arena 2, the Golden Horn (golden.js)
+  karakoy: { listen: karakoyListen },
+  bankalar: { sort: bankalarSort },
+  tersane: { order: tersaneOrder, spell: tersaneSpell },
+  aynalikavak: { choice: aynalikavakChoice },
+  miniaturk: { match: miniaturkMatch },
 };
 
 let basicOnly = false;
@@ -32,4 +39,5 @@ export function sceneFor(kind, theme) {
   return (!basicOnly && LANDMARK_SCENES[theme]?.[kind]) || DEFAULT_SCENES[kind] || null;
 }
 
+export const hasWorldTheme = theme => !!WORLD_SCENES[theme];
 export function worldSceneFor(kind, theme) { return (!basicOnly && WORLD_SCENES[theme]?.[kind]) || null; }

@@ -216,13 +216,14 @@ export function fountainStation(s, { color = '#f5b616' } = {}) {
   const A = actor(s, P, { at: [-5.0, 0, 2.6], face: Math.PI - 0.9, scale: 0.9 });
   let t = 0; return { tick: dt => { t += dt; K.tick(dt); A?.tick(dt); if (!s.reduceMotion) wave(t); }, K, A, colors: [color, '#ffffff', '#ffd166', '#7cc4f0'] };
 }
-export function fountainMatch(ctx) {
+// opts (another set using the same matching): tile colour, the colours tiles turn when matched
+export function fountainMatch(ctx, opts = {}) {
   const s = ctx.world, st = ctx.step, K = s.set.K, A = s.set.A;
   const T = tall(); frameFor(s, { eye: [0, 9.2, 10.6], look: [0, 0.1, -0.5] }, { eye: [0, 7.4, 8.2], look: [0, 0.1, 0.25] }, { eye: [0, 11.5, 5.6], look: [0, 0.1, -0.7], width: 42 });
   s.say(esc(st.prompt));
   const right = shuffle(st.right, ctx.rng), n = st.left.length, zs = Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * (T ? 1.75 : 1.25));
   const tileHTML = t => (t.pic ? `<img src="${esc(t.pic)}" alt="${esc(t.alt || '')}">` : `<span ${t.lang === 'tr' ? 'lang="tr"' : ''}>${esc(t.text)}</span>`);
-  const tileM = new MeshStandardMaterial({ color: '#f2fbff', roughness: 0.2, transparent: true, opacity: 0.95 });
+  const tileM = new MeshStandardMaterial({ color: opts.tile || '#f2fbff', roughness: opts.tile ? 0.6 : 0.2, transparent: true, opacity: 0.95 });
   const els = new Map(), tiles = new Map();
   const mk = (t, side, i) => {
     const m = new Mesh(new RoundedBoxGeometry(T ? 1.9 : 2.3, 0.14, 0.95, 2, 0.05), tileM.clone()); m.position.set((side === 'L' ? -1 : 1) * (T ? 1.5 : 2.15), 0.34, zs[i]); m.castShadow = true; s.step.add(m);
@@ -246,7 +247,7 @@ export function fountainMatch(ctx) {
     els.get(sel.id).classList.remove('sel'); sel = null;
     if (st.pairs[lid] === rid) {
       done.add(lid); trail(lid, rid, '#ffcf3c', true);
-      for (const x of [lid, rid]) { els.get(x).classList.add('right'); els.get(x).classList.remove('show'); tiles.get(x).material.color.set(['#9be0d8', '#a9c8f0', '#ffe6a8', '#f6c7dc'][done.size % 4]); }
+      for (const x of [lid, rid]) { els.get(x).classList.add('right'); els.get(x).classList.remove('show'); tiles.get(x).material.color.set((opts.matched || ['#9be0d8', '#a9c8f0', '#ffe6a8', '#f6c7dc'])[done.size % 4]); }
       ctx.item(srcOf(lid), !missed.has(lid)); A?.cheer(); ctx.sound('note', { freq: 523 + done.size * 110 }); K.burst(tiles.get(rid).position.clone().setY(0.6), undefined, 12, 1.4);
       if (done.size === st.left.length) { ctx.sound('capture'); ctx.finish(900); }
     } else {
