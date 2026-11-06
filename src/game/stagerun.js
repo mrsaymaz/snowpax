@@ -14,6 +14,7 @@ import { makeLook } from './looks.mjs';
 import { SledRun } from './sledrun.js';
 import { THEME_ICON } from './taskcard.js';
 import { speech } from './speech.js';
+import { music, stopMusic, duckMusic, hasMusic } from './audio.js';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -71,7 +72,7 @@ export class StageRunner {
       on: {
         cinema: e => this.cinema(e),
         crash: lost => { this.ui.play('hit'); const left = this.lives.lose(); this.drawRunHud(); this.toast(lost ? `Ouch! −${lost} snowballs` : 'Ouch!'); if (!left) this.outOfLives(); },
-        count: () => this.drawRunHud(), sound: k => this.ui.play(k),
+        count: () => this.drawRunHud(), sound: (k, o) => this.ui.play(k, o),
         word: w => { this.toast(`+1 ❄  ${w.en} = ${w.tr}`, 'word'); speech.say(w.en); },
         spell: (sofar, right) => { this.drawRunHud(); if (sofar.length === spell.en.length) { const ok = !this.sled.missedLetters; this.toast(ok ? `You spelled ${spell.en.toUpperCase()}! +1 ❄` : `The word was ${spell.en.toUpperCase()} (${spell.tr})`, 'word'); if (ok) this.sled.flakes += 1; speech.say(spell.en); } },
         hint: text => this.ui.banner(text, 'super', 1.1),
@@ -85,6 +86,7 @@ export class StageRunner {
       <div class="rh-cine" hidden><small></small><b></b><span class="rh-skip" hidden>Tap to skip</span></div>
       <div class="rh-btns"><button type="button" data-k="left" aria-label="Left">◀</button><button type="button" data-k="duck" aria-label="Duck">▼</button><button type="button" data-k="jump" aria-label="Jump">▲</button><button type="button" data-k="right" aria-label="Right">▶</button></div>`;
     this.spell = spell; this.drawRunHud();
+    music('sled'); // the sleigh-ride tune, all the way in
     this.ui.coach(this.ridesDone === 0 ? `Sled into ${st.title}! Swipe left and right to steer, up to jump, down to duck. Grab the snowballs, and catch the rare golden snowflakes: each one is a ❄ for the Snow Shop!` : `Sled into ${st.title}! Catch the golden snowflakes for the Snow Shop!`, 6);
   }
   // a place on the way: letterbox bars, its name card, its welcome read aloud
@@ -96,7 +98,13 @@ export class StageRunner {
       clearTimeout(this.cineT); this.cineT = setTimeout(() => { card.hidden = false; card.classList.remove('show'); void card.offsetWidth; card.classList.add('show'); this.cineT = setTimeout(() => { card.hidden = true; }, 3400); }, 900); // the name card, then the scene alone
       clearTimeout(this.sayT); this.sayT = setTimeout(() => { if (this.sled?.cine) speech.say(e.welcome); }, 1300);
       this.ui.play('whoosh');
-    } else { card.hidden = true; card.classList.remove('show'); clearTimeout(this.cineT); document.body.classList.remove('cinema'); (this.seenCinema ||= new Set()).add(e.id); }
+      if (hasMusic(e.id)) { duckMusic('sled', 0.18, 0.6); music(e.id); } // the place's own theme over the ride's tune, turned down
+      return;
+    }
+    // the camera swings back ('ready', also on a skip), then the ride goes on ('end')
+    card.hidden = true; card.classList.remove('show'); clearTimeout(this.cineT); document.body.classList.remove('cinema'); (this.seenCinema ||= new Set()).add(e.id);
+    if (e.phase === 'ready') stopMusic(e.id, 0.8);
+    if (e.phase === 'end') duckMusic('sled', 1, 1.2);
   }
   drawRunHud() {
     const h = $('#runhud'); if (!h || h.hidden || !this.sled) return;
@@ -109,7 +117,7 @@ export class StageRunner {
   // ---------- arriving at the outpost ----------
   arrive() {
     const st = this.cur, sim = this.sim, z = sim.zones.find(q => q.id === st.outpost), grid = this.match.grid;
-    this.save.snowflakes = (this.save.snowflakes || 0) + this.runFlakes; this.writeSave(this.save);
+    this.save.snowflakes = (this.save.snowflakes || 0) + this.runFlakes; this.writeSave(this.save); stopMusic(null, 1.2);
     this.ui.rebuildWorld?.(z); // v2 look: build only this stage's area
     this.lit = []; this.seatT = 2; this.seatK = 0; this.ui.carousel?.reset();
     this.mode = 'outpost'; document.body.classList.remove('sledding'); $('#runhud').hidden = true; $('#hud').hidden = false;
@@ -402,7 +410,7 @@ export class StageRunner {
     $('#results').onclick = e => { const b = e.target.closest('[data-go]'); if (!b) return; $('#results').hidden = true; if (b.dataset.go === 'next' && next) this.start(next); else if (b.dataset.go === 'again') this.start(st); else this.showMap(); };
   }
   outOfLives() {
-    const was = this.mode; this.mode = 'out';
+    const was = this.mode; this.mode = 'out'; stopMusic(null, 0.6);
     if (was === 'outpost') this.cleanup(true);
     $('#outoflives').innerHTML = `<div class="rs-card"><h2>Out of lives!</h2><p>No problem: your English answers still count. Let's try ${esc(this.cur.title)} again!</p><div class="rs-btns"><button type="button" class="play-btn" data-go="again">Try again</button><button type="button" class="menu-btn" data-go="map">Arena</button></div></div>`;
     $('#outoflives').hidden = false; $('#hud').hidden = true; $('#runhud').hidden = true;

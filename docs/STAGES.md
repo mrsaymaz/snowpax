@@ -40,8 +40,13 @@ scene of it, alive (`render/cinema.js`, about 7 s each). Archery Ground is built
 the other four follow the same pattern.
 - **A clear stretch:** the track runs straight and flat, with no obstacles, words or letters; the
   sled slows to 60% and rides itself (no steering needed).
-- **The camera:** it swings from behind the sled into the scene's shots (cuts, like a film), and
-  swings back for the last second. Letterbox bars come in; the run's buttons and counters fade.
+- **The camera:** it first turns its head from the track towards the place (a wide look at it),
+  then glides into the scene's shots (cuts, like a film); for the last second it glides back
+  behind the sled and turns forward.
+- **Music** (synthesized in `audio.js`, no downloaded audio): the ride has a looping sleigh-ride
+  tune (D major, sleigh bells, a soft drum, bass, warm chords, a toy-flute melody). Each place's
+  scene has its own short theme over the ride's tune turned down; Archery Ground's is a saz-like
+  tune in Hicaz over a drone with a frame drum (düm tek). The tune fades out on arrival. Letterbox bars come in; the run's buttons and counters fade.
 - **The name card** at about 1 s ("SORTING · PART 1 / Archery Ground"), for 3.4 s, and the
   welcome read aloud ("Welcome to Archery Ground!"). "GET READY!" as the camera swings back.
 - **Tap to skip** a scene already seen this session. With reduce motion: one held wide shot and
@@ -83,7 +88,8 @@ A right answer in a scene sends a little ❄ flying into the progress bar.
    (buried cars, snowmen, crates with sleeping cats, fences), down ducks (laundry lines, branches,
    awnings, gulls); ramps give big jumps with snowballs up high. Collect **snowballs** (lots) and
    **5 golden word snowflakes**, spread along the track: each shows an English word with its
-   Turkish meaning, reads it aloud and is **+1 ❄**. On the spelling letters (a word given in
+   Turkish meaning, reads it aloud and is **+1 ❄**. Every snowball rings a little bell, a step
+   higher up the scale while a run of them goes on; a word snowflake plays a sparkling run. On the spelling letters (a word given in
    Turkish), spelling it right is +1 ❄ more. A crash costs a life. The first ride says "JUMP!" or
    "DUCK!" before each new kind of obstacle.
 3. **The camp:** three neighbourhood children wait at the home end in plain beige coats. Walk up
@@ -191,6 +197,14 @@ bush in the middle lane, ice on the flanks, cover on the rival line.
 - **Colour:** the battlefield floor is lilac-tinted packed snow, so plain white means wall or out
   of bounds; ice is glassy blue.
 - During the stage there are no blizzards or sun bursts, so the light stays steady.
+
+## Task scenes on a phone
+
+The answers, tiles and bricks in a task's 3D scene are labels pinned to things in it. On a narrow
+screen the pinned spots can be closer than the labels are wide, so every frame the labels are
+pushed apart (along the shorter way, keeping their order), kept below the task card and above
+the caption at the bottom, and shrunk a little when the screen is crowded (`tick` in
+`render/worldtask.js`). The castle's ice letters are as wide as their labels.
 
 ## Calm fights
 

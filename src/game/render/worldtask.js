@@ -136,13 +136,35 @@ export class WorldTasks {
     }
     for (const f of s.stepTicks) f(dt);
     for (const tw of [...s.tweens]) { tw.t += dt; const k = Math.min(1, tw.t / tw.T); tw.run(k); if (k >= 1) { s.tweens.splice(s.tweens.indexOf(tw), 1); tw.done?.(); } }
-    const v = new Vector3(), W = innerWidth, H = innerHeight, show = performance.now() >= s.showAt, camera = s.camera;
+    const v = new Vector3(), W = innerWidth, H = innerHeight, show = performance.now() >= s.showAt, camera = s.camera, items = [];
     for (const L of s.labels) {
       if (L.obj) { v.copy(L.at); L.obj.localToWorld(v); } else { v.copy(L.at); s.group.localToWorld(v); }
       v.project(camera);
       const on = show && v.z < 1 && Math.abs(v.x) < 1.2 && Math.abs(v.y) < 1.2;
       L.el.style.opacity = on ? '' : '0'; L.el.style.pointerEvents = on ? '' : 'none';
-      L.el.style.transform = `translate(${((v.x + 1) / 2 * W).toFixed(1)}px, ${((1 - v.y) / 2 * H).toFixed(1)}px) translate(-50%, -50%)`;
+      const x = (v.x + 1) / 2 * W, y = (1 - v.y) / 2 * H;
+      if (on) items.push({ L, x, y, w: L.el.offsetWidth, h: L.el.offsetHeight }); else L.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%)`;
+    }
+    // On a small screen labels pinned to nearby things would overlap: push them apart, keep them
+    // below the task card and above the caption, and shrink them a little when the screen is crowded.
+    const head = document.querySelector('#taskcard'), hr = head && !head.hidden ? head.getBoundingClientRect() : null;
+    const top = Math.max(6, hr && hr.height ? hr.bottom + 6 : 6), cap = this.caption.hidden ? null : this.caption.getBoundingClientRect(), bottom = (cap && cap.height ? cap.top : H) - 6;
+    const area = items.reduce((a, it) => a + it.w * it.h, 0), sc = Math.max(0.72, Math.min(1, Math.sqrt(0.3 * W * Math.max(100, bottom - top) / Math.max(1, area))));
+    for (const it of items) { it.w *= sc; it.h *= sc; }
+    const M = 6, clampIt = it => { it.x = Math.max(it.w / 2 + M, Math.min(W - it.w / 2 - M, it.x)); it.y = Math.max(top + it.h / 2, Math.min(bottom - it.h / 2, it.y)); };
+    items.forEach(clampIt);
+    for (let iter = 0; iter < 10; iter++) {
+      let moved = false;
+      for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
+        const a = items[i], b = items[j], ox = (a.w + b.w) / 2 + M - Math.abs(a.x - b.x), oy = (a.h + b.h) / 2 + M - Math.abs(a.y - b.y);
+        if (ox <= 0 || oy <= 0) continue; moved = true;
+        if (ox < oy) { const d = ox / 2 * (Math.sign(a.x - b.x) || -1); a.x += d; b.x -= d; } else { const d = oy / 2 * (Math.sign(a.y - b.y) || -1); a.y += d; b.y -= d; } // apart along the shorter way, keeping their order
+      }
+      items.forEach(clampIt); if (!moved) break;
+    }
+    for (const it of items) {
+      const L = it.L, k = L.sx == null ? 1 : Math.min(1, dt * 14); L.sx = L.sx == null ? it.x : L.sx + (it.x - L.sx) * k; L.sy = L.sy == null ? it.y : L.sy + (it.y - L.sy) * k; // eased, so nothing jitters
+      L.el.style.transform = `translate(${L.sx.toFixed(1)}px, ${L.sy.toFixed(1)}px) translate(-50%, -50%)${sc < 0.999 ? ` scale(${sc.toFixed(3)})` : ''}`;
     }
   }
 }

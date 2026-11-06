@@ -17,6 +17,7 @@ import { Kid } from './render/kids.js';
 import { CINEMA, shotAt, TRACK_Z, SCENE_SECONDS } from './render/cinema.js';
 
 const LANE = 1.8, LANES = [-LANE, 0, LANE];
+const CHIME = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24]; // a major pentatonic run up from D, in semitones
 const rnd = (a, b = 0) => { let h = Math.imul((a * 73856093) ^ (b * 19349663), 2654435761); h ^= h >>> 13; h = Math.imul(h, 1597334677); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 
 // bake simple parts into one vertex-coloured geometry: [geometry, colour, x, y, z, rx, ry, rz, sx, sy, sz]
@@ -328,8 +329,12 @@ export class SledRun {
   }
 
   collect(it) {
-    if (it.kind === 'word') { this.flakes += 1; this.on.word?.(it.word); this.spark(LANES[it.lane], 1, 0, 30, '#ffd166', 3); this.on.sound?.('sparkle'); }
-    else { this.snowballs += 1; this.spark(LANES[it.lane], it.y, 0, 5, '#ffffff', 1.5); if (this.snowballs % 5 === 0) this.on.sound?.('pickup'); }
+    if (it.kind === 'word') { this.flakes += 1; this.on.word?.(it.word); this.spark(LANES[it.lane], 1, 0, 30, '#ffd166', 3); this.on.sound?.('flake'); }
+    else { // a chime for every snowball, a step up the scale while the run of them goes on
+      this.snowballs += 1; this.spark(LANES[it.lane], it.y, 0, 5, '#ffffff', 1.5);
+      this.chimeK = this.time - (this.chimeT ?? -9) < 0.7 ? Math.min(CHIME.length - 1, this.chimeK + 1) : 0; this.chimeT = this.time;
+      this.on.sound?.('chime', { freq: 587.3 * 2 ** (CHIME[this.chimeK] / 12) });
+    }
     this.on.count?.();
   }
   letter(it) {
@@ -382,10 +387,12 @@ export class SledRun {
     const roll = this.bankAt(d + 4) * 0.45; this.camRoll = this.camRoll === undefined ? roll : this.camRoll + (roll - this.camRoll) * Math.min(1, dt * 2.5);
     const c = this.cine;
     if (c) { // a place on the way: the camera swings to the scene's shots, and back for the last second
-      const sc = c.q.scene, T = c.q.dur, [sp, sl] = this.reduceMotion ? sc.wide : shotAt(sc, c.t);
-      const w = this.reduceMotion ? (c.t < T - 0.6 ? 1 : 0) : Math.min(1, c.t / 0.9, (T - c.t) / 1.0), k = w * w * (3 - 2 * w);
+      const sc = c.q.scene, T = c.q.dur, [sp, sl] = this.reduceMotion ? sc.wide : shotAt(sc, c.t), E = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+      // in: the camera turns its head to the place first, then glides to the shot; out: back the other way
+      const kLook = this.reduceMotion ? (c.t < T - 0.6 ? 1 : 0) : Math.min(E(c.t / 0.55), E((T - c.t) / 0.45));
+      const kPos = this.reduceMotion ? kLook : Math.min(E((c.t - 0.2) / 0.85), E((T - c.t - 0.25) / 0.75));
       const P = sc.group.localToWorld(new Vector3(...sp)), Lk = sc.group.localToWorld(new Vector3(...sl));
-      this.camera.position.lerp(P, k); look.lerp(Lk, k); this.camRoll *= 1 - k;
+      this.camera.position.lerp(P, kPos); look.lerp(Lk, kLook); this.camRoll *= 1 - kLook;
     }
     this.camera.lookAt(look); this.camera.rotateZ(this.camRoll);
     // sparks

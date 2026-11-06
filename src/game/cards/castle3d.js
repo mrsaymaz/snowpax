@@ -39,7 +39,7 @@ function build3d(ctx, { kind, pieces, expected, sayAtEnd, revealText, revealTr, 
   const glowM = mat.clone(); glowM.emissive = new Color('#ffcf3c'); glowM.emissiveIntensity = 0.55;
   const items = shuffle(pieces, ctx.rng).map(p => {
     const el = s.label(esc(p.text), { cls: 'wt-brick ' + (ice ? 'ice' : 'snow'), onTap: () => tap(item) });
-    const w = ice ? 0.44 : Math.max(0.55, s.measure(el).w / ppm + 0.16);
+    const w = ice ? Math.max(0.44, s.measure(el).w / ppm + 0.06) : Math.max(0.55, s.measure(el).w / ppm + 0.16); // as wide as its label, so letters never overlap on a phone
     const mesh = new Mesh(new RoundedBoxGeometry(w, H, D, 2, 0.06), mat); mesh.castShadow = true; s.step.add(mesh);
     el._pin.obj = mesh; el._pin.at.set(0, 0, D / 2 + 0.02);
     const item = { p, el, mesh, w, used: false }; return item;
