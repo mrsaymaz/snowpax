@@ -1,7 +1,7 @@
 // Arena 1 (Kasımpaşa) as one stage: the sled ride into the neighbourhood, then its one outpost,
 // taken in two parts: Part 1 is the tasks of two places (Boulevard Park, Archery Ground), Part 2
 // the other three (Kızılay Square, Sururi Park, the Pier), with fights and the Snow Shop between,
-// and the Final Showdown at the end. Later arenas (İstiklal Street, …) are one stage each in the
+// and the Final Showdown at the end. Later arenas (The Golden Horn, The Big City) are one stage each in the
 // same way. Rules only (no DOM), tested in node.
 import { CONFIG } from '../config.js';
 
