@@ -244,7 +244,49 @@ export function tersaneStation(s, { color = '#f5b616' } = {}) {
   add(ws, new BoxGeometry(9, 4, 3), brick, 0, 2, 0); const roof = add(ws, new ConeGeometry(5.4, 1.6, 4), L('#5d6f9e'), 0, 4.8, 0, Math.PI / 4); roof.scale.z = 0.4; const rs = add(ws, new ConeGeometry(5.2, 1.3, 4), snowM, 0, 4.95, 0, Math.PI / 4); rs.scale.z = 0.38;
   for (let k = 0; k < 6; k++) { const x = -3.6 + k * 1.45; add(ws, new PlaneGeometry(0.7, 1.8), new MeshBasicMaterial({ color: '#ffd98a' }), x, 1.8, 1.51); add(ws, new CircleGeometry(0.35, 12, 0, Math.PI), new MeshBasicMaterial({ color: '#ffd98a' }), x, 2.7, 1.51); }
   add(ws, new CylinderGeometry(0.35, 0.45, 6.5, 12), L('#8f5644'), -4, 3.25, -1);
-  for (const [x, z, a] of [[7.2, -4, 1], [-8.4, -3.5, -1]]) { add(P, new BoxGeometry(0.5, 7, 0.5), yellow, x, 3.5, z); const jib = add(P, new BoxGeometry(5, 0.3, 0.3), yellow, x - a * 2.2, 7.1, z); jib.castShadow = true; add(P, new BoxGeometry(0.8, 0.8, 0.8), L('#3d4a6b'), x, 7.0, z); add(P, new CylinderGeometry(0.02, 0.02, 3, 4), L('#2b3556'), x - a * 4.4, 5.6, z); }
+  // the shipyard crane behind the dock: it does the building, lifting each plank you tap off the quay
+  // on its hook and lowering it onto the ship (a wrong one is lifted, swings, and is put back)
+  const CR = { x: 0, z: -3.1, y: 5.4 }, crane = new Group(); crane.position.set(CR.x, 0, CR.z); P.add(crane);
+  const dark = L('#2b3556');
+  add(crane, new BoxGeometry(0.9, 0.5, 0.9), stone, 0, 0.25, 0);
+  for (const [sx, sz] of [[-0.22, -0.22], [0.22, -0.22], [-0.22, 0.22], [0.22, 0.22]]) add(crane, new BoxGeometry(0.08, CR.y - 0.5, 0.08), yellow, sx, CR.y / 2 + 0.25, sz);
+  for (let k = 0; k < 9; k++) { const b = add(crane, new BoxGeometry(0.5, 0.05, 0.05), yellow, 0, 0.8 + k * 0.52, 0.22); b.rotation.z = k % 2 ? 0.6 : -0.6; const b2 = add(crane, new BoxGeometry(0.05, 0.05, 0.5), yellow, 0.22, 0.8 + k * 0.52, 0); b2.rotation.x = k % 2 ? 0.6 : -0.6; }
+  const slew = new Group(); slew.position.y = CR.y; crane.add(slew); // turns about the tower
+  add(slew, new BoxGeometry(0.7, 0.55, 0.8), L('#3d4a6b'), 0, 0.3, -0.1); add(slew, new PlaneGeometry(0.4, 0.26), new MeshBasicMaterial({ color: '#ffd98a' }), 0, 0.35, 0.31);
+  const jib = add(slew, new BoxGeometry(0.26, 0.24, 9.4), yellow, 0, 0.12, 4.4); add(slew, new BoxGeometry(0.28, 0.06, 9.4), snowM, 0, 0.27, 4.4);
+  add(slew, new BoxGeometry(0.24, 0.22, 2.4), yellow, 0, 0.12, -1.4); add(slew, new BoxGeometry(0.6, 0.6, 0.6), stone, 0, -0.1, -2.4); // the counter-jib and its weight
+  const trolley = new Group(); slew.add(trolley); add(trolley, new BoxGeometry(0.34, 0.14, 0.34), dark, 0, -0.07, 0);
+  const cable = new Mesh(new CylinderGeometry(0.012, 0.012, 1, 4), dark); P.add(cable);
+  const hook = new Group(); P.add(hook); add(hook, new BoxGeometry(0.3, 0.16, 0.2), L('#e0463c'), 0, 0.08, 0); { const h = add(hook, new TorusGeometry(0.09, 0.025, 6, 12, Math.PI * 1.4), dark, 0, -0.06, 0); h.rotation.z = Math.PI * 0.8; }
+  let ang = 0.4, rad = 4.2, hy = 4.4, job = null; const jobs = [], idle = [];
+  const target = (x, z) => { const dx = x - CR.x, dz = z - CR.z; return { a: Math.atan2(dx, dz), r: Math.max(1.2, Math.hypot(dx, dz)) }; };
+  const turn = (a0, a1) => { let d = a1 - a0; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
+  const E = k => k * k * (3 - 2 * k);
+  const hookAt = () => new Vector3(CR.x + Math.sin(ang) * rad, hy, CR.z + Math.cos(ang) * rad);
+  const start = () => { if (job || !jobs.length) { if (!job && !jobs.length) while (idle.length) idle.shift()(); return; } job = jobs.shift(); job.t = 0; job.phase = 0; job.from = { a: ang, r: rad, y: hy }; };
+  const H2 = 0.22; // half a plank's height: the hook rides just above it
+  const phases = j => { // each phase: [seconds, angle/radius target, hook height]
+    const p = target(j.mesh.position.x, j.mesh.position.z), up = Math.max(4.2, (j.to?.[1] || 2) + 1.3);
+    if (j.back) return [[0.32, p, j.mesh.position.y + H2 + 0.2], [0.12, p, j.mesh.position.y + H2 + 0.04, 'grab'], [0.25, p, j.mesh.position.y + 1.4], [0.3, { a: p.a + 0.25, r: p.r }, j.mesh.position.y + 1.4], [0.3, p, j.mesh.position.y + H2 + 0.04, 'drop']];
+    const q = target(j.to[0], j.to[2]);
+    return [[0.32, p, j.mesh.position.y + H2 + 0.2], [0.12, p, j.mesh.position.y + H2 + 0.04, 'grab'], [0.22, p, up], [0.42, q, up], [0.24, q, j.to[1] + H2 + 0.04, 'drop']];
+  };
+  const step = dt => {
+    if (!job) return start();
+    const ph = job.plan || (job.plan = phases(job)), [T2, goal, gy, act] = ph[job.phase];
+    job.t += dt; const k = E(Math.min(1, job.t / T2)), f = job.from;
+    ang = f.a + turn(f.a, goal.a) * k; rad = f.r + (goal.r - f.r) * k; hy = f.y + (gy - f.y) * k;
+    if (job.held) { const h = hookAt(); job.mesh.position.set(h.x, h.y - H2 - 0.04, h.z); job.mesh.rotation.y = job.rot0 * (1 - Math.min(1, job.t / 0.4)) + (job.back ? Math.sin(job.t * 9) * 0.1 : 0); }
+    if (job.t < T2) return;
+    if (act === 'grab') { job.held = true; job.rot0 = job.mesh.rotation.y; job.home = job.mesh.position.clone(); s.sound?.('tap'); }
+    if (act === 'drop') { job.held = false; if (job.back) { job.mesh.position.copy(job.home); job.mesh.rotation.y = job.rot0; } else { job.mesh.position.set(...job.to); job.mesh.rotation.y = 0; } s.sound?.('thunk'); job.done?.(); }
+    job.phase++; job.t = 0; job.from = { a: ang, r: rad, y: hy };
+    if (job.phase >= ph.length) { job = null; start(); }
+  };
+  const place = () => { // the trolley, the cable and the hook follow the crane every frame
+    slew.rotation.y = ang; trolley.position.z = rad; const h = hookAt(), top = CR.y - 0.12;
+    hook.position.copy(h); hook.rotation.y = ang; cable.position.set(h.x, (top + h.y + 0.16) / 2, h.z); cable.scale.y = Math.max(0.05, top - h.y - 0.16);
+  };
   const canopy = new Group(); canopy.position.set(5.2, 0, 2.6); P.add(canopy);
   for (const [x, z] of [[-1.4, -1], [1.4, -1], [-1.4, 1], [1.4, 1]]) add(canopy, new CylinderGeometry(0.05, 0.05, 2.4, 6), L('#3d4a6b'), x, 1.2, z);
   add(canopy, new BoxGeometry(3.2, 0.06, 2.4), new MeshStandardMaterial({ color: '#d6ecff', transparent: true, opacity: 0.45 }), 0, 2.4, 0);
@@ -257,8 +299,12 @@ export function tersaneStation(s, { color = '#f5b616' } = {}) {
   let t = 0;
   return {
     base, top: base, courses: 0, flag: fl, flagLow: 7.4, flagTop: 8.4, raise() {}, brickColor: '#e2b07a', pieceName: 'plank',
+    carry(mesh, to, done) { jobs.push({ mesh, to, done }); start(); },
+    carryBack(mesh) { if (jobs.some(j => j.mesh === mesh) || job?.mesh === mesh) return; jobs.push({ mesh, back: true }); start(); },
+    idle(fn) { if (!job && !jobs.length) fn(); else idle.push(fn); },
+    hurry() { const all = [job, ...jobs].filter(Boolean); job = null; jobs.length = 0; for (const j of all) { if (!j.back) { j.mesh.position.set(...j.to); j.mesh.rotation.y = 0; j.done?.(); } else if (j.home) j.mesh.position.copy(j.home); } while (idle.length) idle.shift()(); },
     A, K, colors: [color, '#ffffff', '#ffd166', '#7cc4f0'],
-    tick(dt) { t += dt; K.tick(dt); A?.tick(dt); if (!s.reduceMotion) fl.rotation.y = Math.sin(t * 3) * 0.15; mast.position.y = 4.3; },
+    tick(dt) { t += dt; K.tick(dt); A?.tick(dt); step(dt); place(); if (!s.reduceMotion) fl.rotation.y = Math.sin(t * 3) * 0.15; mast.position.y = 4.3; },
   };
 }
 export const tersaneOrder = castleWorldOrder, tersaneSpell = castleWorldSpell;
@@ -267,32 +313,50 @@ export const tersaneOrder = castleWorldOrder, tersaneSpell = castleWorldSpell;
 // The pavilion's front, its windows bright as mirrors: each answer is on a window. Snowball the right
 // one: it flashes like a mirror in the sun, with a sparkle. A wrong one gets a splat of snow.
 export function aynalikavakStation(s, { color = '#f5b616' } = {}) {
-  const K = stage(s, { ground: '#e6e4f0', top: '#9a8ad0', mid: '#f0d6dc', bottom: '#fff1e6', fog: '#f2e2e6', sun: '#ffd2b0' }), { P, snowM } = K;
-  const white = L('#fbf6ec'), wood = L('#8a5a3c'), stone = L('#bdb4c8');
-  add(P, new BoxGeometry(13, 1.0, 3), stone, 0, 0.5, -3.6); add(P, new BoxGeometry(12, 3.6, 2.6), white, 0, 2.8, -3.7);
-  add(P, new BoxGeometry(13.6, 0.22, 3.2), wood, 0, 4.72, -3.7); // shallower eaves: the facade stays in the light const roof = add(P, new ConeGeometry(8.6, 2.2, 4), L('#7a6f9e'), 0, 5.9, -3.6, Math.PI / 4); roof.scale.z = 0.4; const rs = add(P, new ConeGeometry(8.2, 1.9, 4), snowM, 0, 6.12, -3.6, Math.PI / 4); rs.scale.z = 0.38;
-  for (let k = 0; k < 12; k++) add(P, new BoxGeometry(0.1, 0.5, 0.1), wood, -6.6 + k * 1.2, 4.4, -2.2); // the eave brackets
-  // the pavilion's mirrors: a long row of bright little windows under the eaves, and pilasters
-  const mirror = new MeshStandardMaterial({ color: '#f4f8ff', roughness: 0.25, metalness: 0.1, emissive: new Color('#d9e6ff'), emissiveIntensity: 0.5 });
-  for (let k = 0; k < 14; k++) { const x = -5.85 + k * 0.9; add(P, new BoxGeometry(0.62, 0.5, 0.06), wood, x, 4.12, -2.39); add(P, new PlaneGeometry(0.5, 0.38), mirror, x, 4.12, -2.35); }
-  for (let k = 0; k < 7; k++) add(P, new BoxGeometry(0.16, 2.9, 0.12), L('#ece4d4'), -5.7 + k * 1.9, 2.45, -2.36);
-  for (const x of [-5.4, 5.4]) for (const y of [2.0, 3.5]) { add(P, new BoxGeometry(0.9, 0.08, 0.1), wood, x, y - 0.55, -2.38); add(P, new PlaneGeometry(0.75, 0.95), new MeshBasicMaterial({ color: '#f2e6ff' }), x, y, -2.38); } // the end windows
-  for (let k = 0; k < 3; k++) add(P, new BoxGeometry(2.6 - k * 0.3, 0.2, 0.6), stone, 0, 0.1 + k * 0.2, -1.6 - k * 0.3);
-  const pool = add(P, new BoxGeometry(5, 0.2, 1.6), stone, 0, 0.1, 1.2); add(P, new BoxGeometry(4.6, 0.04, 1.2), new MeshStandardMaterial({ color: '#a9d6ff', roughness: 0.1, metalness: 0.2 }), 0, 0.21, 1.2); pool.receiveShadow = true;
-  for (const [x, z] of [[-7.8, -1.5], [7.8, -1.5], [-9.4, -4.2], [9.4, -4.2], [-6.4, 2], [6.4, 2]]) { add(P, new CylinderGeometry(0.08, 0.6, 3.8, 10), L('#2f5a4a'), x, 1.95, z); add(P, new ConeGeometry(0.2, 0.5, 8), snowM, x, 3.8, z); }
-  sign(P, 'Aynalıkavak Pavilion', 2.8, 0, 0.42, 2.03); // on the pool's front edge, below the windows
-  const A = actor(s, P, { at: [-3.4, 0, 3.6], face: Math.PI - 0.5 });
-  let t = 0; return { tick: dt => { t += dt; K.tick(dt); A?.tick(dt); }, K, A, colors: [color, '#ffffff', '#ffd166', '#f3a6c8'] };
+  const K = stage(s, { ground: '#e6e4f0', top: '#8a7ec8', mid: '#f0cfd6', bottom: '#ffe6d6', fog: '#f2dfe2', sun: '#ffd2b0' }), { P, snowM } = K;
+  const wall = L('#f6ece0'), wood = L('#7a5a46'), stone = L('#bdb4c8'), roofM = L('#8f94ab'), glassL = new MeshStandardMaterial({ color: '#f4f8ff', roughness: 0.25, metalness: 0.1, emissive: new Color('#d9e6ff'), emissiveIntensity: 0.5 });
+  const W = 12.4, Z = -3.7, fz = Z + 1.3;
+  // the stone base where the garden slopes, with arched openings
+  add(P, new BoxGeometry(W + 0.6, 1.2, 2.9), stone, 0, 0.6, Z);
+  for (let k = 0; k < 9; k++) { if (k === 4) continue; const ax = -5.2 + k * 1.3; add(P, new CircleGeometry(0.32, 14, 0, Math.PI), new MeshBasicMaterial({ color: '#3d4363' }), ax, 0.62, fz + 0.16); add(P, new PlaneGeometry(0.64, 0.5), new MeshBasicMaterial({ color: '#3d4363' }), ax, 0.37, fz + 0.161); }
+  // the main floor: pale walls, tall windows in pairs below, a row of small arched coloured windows above
+  add(P, new BoxGeometry(W, 3.0, 2.6), wall, 0, 2.7, Z);
+  add(P, new BoxGeometry(W + 0.1, 0.1, 2.7), wood, 0, 3.32, Z); // the string course
+  for (let k = 0; k < 16; k++) { if (k === 7 || k === 8) continue; const x = -5.6 + k * 0.75 + (k % 2 ? -0.08 : 0.08); add(P, new BoxGeometry(0.5, 1.4, 0.06), wood, x, 2.3, fz + 0.01); add(P, new PlaneGeometry(0.4, 1.28), glassL, x, 2.3, fz + 0.05); }
+  const COL = ['#5d8fd8', '#e0584a', '#f2c14e', '#5bb36a'];
+  for (let k = 0; k < 24; k++) { const x = -5.75 + k * 0.5, m = new MeshBasicMaterial({ color: COL[k % 4] }); add(P, new PlaneGeometry(0.26, 0.3), m, x, 3.72, fz + 0.02); add(P, new CircleGeometry(0.13, 12, 0, Math.PI), m, x, 3.87, fz + 0.021); }
+  add(P, new BoxGeometry(1.3, 2.0, 0.08), wood, 0, 2.2, fz + 0.02); add(P, new PlaneGeometry(1.1, 1.8), new MeshBasicMaterial({ color: '#ffd98a' }), 0, 2.15, fz + 0.07); // the door
+  // the wide eaves on brackets, the grey hipped roof under snow
+  add(P, new BoxGeometry(W + 2.2, 0.2, 4.6), wood, 0, 4.3, Z);
+  for (let k = 0; k < 14; k++) { const b = add(P, new BoxGeometry(0.1, 0.1, 0.9), wood, -6.2 + k * 0.95, 4.05, fz + 0.35); b.rotation.x = 0.6; }
+  { const r = add(P, new ConeGeometry(1, 1.6, 4), roofM, 0, 5.2, Z, Math.PI / 4); r.scale.set(W * 0.78, 1, 2.6); const sc = add(P, new ConeGeometry(1, 1.25, 4), snowM, 0, 5.38, Z, Math.PI / 4); sc.scale.set(W * 0.7, 1, 2.3); }
+  // the double stair rising to the door from both sides, a landing in front of it
+  add(P, new BoxGeometry(2.0, 1.2, 1.0), stone, 0, 0.6, fz + 0.5);
+  for (const sd of [-1, 1]) for (let k = 0; k < 6; k++) add(P, new BoxGeometry(0.5, 0.2, 0.9), stone, sd * (1.25 + k * 0.42), 1.1 - k * 0.2, fz + 0.5);
+  for (const sd of [-1, 1]) add(P, new BoxGeometry(2.8, 0.08, 0.06), wood, sd * 2.4, 1.15, fz + 0.96).rotation.z = sd * 0.42;
+  // the garden: a pool, cypresses, lamps; beyond, the frozen Golden Horn and the far shore at sunset
+  add(P, new BoxGeometry(5, 0.2, 1.6), stone, 0, 0.1, 1.6); add(P, new BoxGeometry(4.6, 0.04, 1.2), new MeshStandardMaterial({ color: '#a9d6ff', roughness: 0.1, metalness: 0.2 }), 0, 0.21, 1.6);
+  for (const [x, z] of [[-7.6, -1.6], [7.6, -1.6], [-8.6, -4.8], [8.6, -4.8], [-6.6, 2.2], [6.6, 2.2], [-4.2, -6.4], [3.6, -6.6]]) { add(P, new CylinderGeometry(0.08, 0.62, 4.2, 10), L('#2f5a4a'), x, 2.1, z); add(P, new ConeGeometry(0.2, 0.5, 8), snowM, x, 4.15, z); }
+  for (const x of [-3.2, 3.2]) { add(P, new CylinderGeometry(0.05, 0.07, 1.6, 8), L('#2b3556'), x, 0.8, 2.6); add(P, new BoxGeometry(0.3, 0.38, 0.3), new MeshBasicMaterial({ color: '#ffe3a0' }), x, 1.75, 2.6); }
+  const sea = add(P, new PlaneGeometry(60, 12), new MeshStandardMaterial({ color: '#c8b8d8', roughness: 0.2, metalness: 0.1 }), 0, 0.03, -13); sea.rotation.x = -Math.PI / 2;
+  farShore(P, -21);
+  for (let k = 0; k < 14; k++) { const x = -14 + k * 2.1, h = 1.4 + ((k * 31) % 5) * 0.4, y = 1.6 + Math.sin(k * 0.8) * 0.5; for (const wy of [0.5, 1.1]) if ((k + wy * 10) % 3 > 0.5) add(P, new PlaneGeometry(0.3, 0.32), new MeshBasicMaterial({ color: '#ffd27a' }), x - 0.3 + (k % 2) * 0.5, y + wy * h * 0.6, -20.18 - (k % 3) * 0.8); } // lit windows on the far shore
+  const clouds = [];
+  for (const [x, y, w] of [[-9, 9.5, 7], [-1, 11, 9], [8, 9, 6], [13, 11.5, 5]]) { const c = new Mesh(new PlaneGeometry(w, w * 0.32), new MeshBasicMaterial({ color: '#ffdccf', transparent: true, opacity: 0.85, fog: false, depthWrite: false })); c.position.set(x, y, -24); P.add(c); clouds.push(c); }
+  const gulls = []; for (let k = 0; k < 3; k++) { const g = new Group(); for (const sd of [-1, 1]) { const w2 = new Mesh(new PlaneGeometry(0.5, 0.1), new MeshBasicMaterial({ color: '#4a4f6e', side: DoubleSide })); w2.position.x = sd * 0.24; g.add(w2); } g.position.set(-6 + k * 5, 7 + k * 0.6, -9); P.add(g); gulls.push(g); }
+  sign(P, 'Aynalıkavak Pavilion', 2.8, 0, 0.42, 2.43);
+  const A = actor(s, P, { at: [-3.4, 0, 3.8], face: Math.PI - 0.5 });
+  let t = 0; return { tick: dt => { t += dt; K.tick(dt); A?.tick(dt); if (s.reduceMotion) return; gulls.forEach((g, k) => { g.position.x += dt * 0.6; if (g.position.x > 12) g.position.x = -12; g.children.forEach((w2, j) => { w2.rotation.z = (j ? -1 : 1) * Math.sin(t * 6 + k) * 0.4; }); }); clouds.forEach((c, k) => { c.position.x += dt * 0.08 * (k % 2 ? 1 : -1); }); }, K, A, colors: [color, '#ffffff', '#ffd166', '#f3a6c8'] };
 }
 export function aynalikavakChoice(ctx) {
   const s = ctx.world, st = ctx.step, K = s.set.K, A = s.set.A;
-  const T = tall(); frameFor(s, { eye: [0, 3.0, 11.8], look: [0, 2.6, -1] }, { eye: [0, 3.2, 12.8], look: [0, 2.4, -1] }, { eye: [0, 2.6, 12.2], look: [0, 1.7, -1.8], width: 48 }); // portrait: the whole facade, its sign below
+  const T = tall(); frameFor(s, { eye: [0, 3.2, 12.4], look: [0, 2.9, -1.5] }, { eye: [0, 3.4, 13.2], look: [0, 2.7, -1.5] }, { eye: [0, 3.0, 12.4], look: [0, 2.6, -2.0], width: 50 }); // portrait: the whole facade, the Golden Horn and the far shore above it
   s.say(caption(st));
   const els = st.options.map((o, i) => s.label(esc(o), { cls: 'wt-opt', onTap: () => pick(i) }));
   const ws = els.map(el => sized(s, el, 1.5, 0.35)), xs = T ? st.options.map((o, i) => (i % 2 ? 0.95 : -0.95)) : row(ws, 0.3);
   const mirrorM = () => new MeshStandardMaterial({ color: '#f4f8ff', roughness: 0.25, metalness: 0.1, emissive: new Color('#d9e6ff'), emissiveIntensity: 0.55 }); // bright as a mirror catching the sky
   const wins = st.options.map((o, i) => {
-    const w = T ? 1.7 : ws[i], g = new Group(); g.position.set(T ? 0 : xs[i], T ? 3.95 - i * 0.95 : 3.0, -2.32); s.step.add(g); // portrait: one above another, straight down the middle
+    const w = T ? 1.7 : ws[i], g = new Group(); g.position.set(T ? 0 : xs[i], T ? 3.15 - i * 0.92 : 2.4, -2.32); s.step.add(g); // on the tall windows of the main floor // portrait: one above another, straight down the middle
     const frame = new Mesh(new BoxGeometry(w + 0.16, 1.0, 0.08), L('#8a5a3c')); g.add(frame);
     const glass = new Mesh(new PlaneGeometry(w, 0.86), mirrorM()); glass.position.z = 0.05; g.add(glass);
     const bar = new Mesh(new BoxGeometry(0.05, 0.86, 0.04), L('#8a5a3c')); bar.position.z = 0.06; g.add(bar);

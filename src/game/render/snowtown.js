@@ -696,20 +696,25 @@ export function buildSnowtown(ctx) {
       for (let k = 0; k < 9; k++) glows.push([x - 2.0 + k * 0.5, 1.48 - Math.sin(k / 8 * Math.PI) * 0.08, pz + 0.6, 0.35]);
       const sg = sign('Tersane İstanbul', 1.8); sg.position.set(x, 1.86, pz + 0.6); group.add(sg);
       flagAt(lm.outpost, wx0 + 0.6, 3.6, wz0); lights.push([x - 1.05, 0.8, pz + 0.7]); life.perches.push([wx0, 2.3, wz0], [cx - 1.8, 3.65, cz2], [dx, 1.35, dz - 0.6]);
-    } else if (lm.type === 'aynalikavak') { // AYNALIKAVAK PAVILION: an Ottoman waterside pavilion on a stone base, wide eaves, rows of mirror-bright windows, cypresses and a pool in the garden
-      const [x, z] = centre(lm), white = M('plaster', '#f6f1e6'), trimW = M('wood', '#8a5a3c'), roofM = M('shingle', '#7a6f9e'), stone = M('stone', '#bdb4c8'), mirror = M('glow', '#dcefff'), bz = z - 0.55, fz = bz + 1.1;
-      K.add(rbox(3.7, 2.7, 0.56, 0.05), stone, x, 0, bz); K.add(rbox(3.25, 2.25, 1.22, 0.04), white, x, 0.56, bz);
-      for (let k = 0; k < 7; k++) for (const wy of [0.92, 1.38]) { const wx = x - 1.35 + k * 0.45; K.add(rbox(0.34, 0.04, 0.42, 0.01), trimW, wx, wy - 0.21, fz + 0.01); K.add(new PlaneGeometry(0.26, 0.34), mirror, wx, wy, fz + 0.04); }
-      for (const s2 of [-1, 1]) for (let k = 0; k < 4; k++) { const wz = bz - 0.75 + k * 0.5; K.add(new PlaneGeometry(0.26, 0.34), mirror, x + s2 * 1.63, 1.15, wz, 0, s2 * Math.PI / 2); }
-      K.add(rbox(4.3, 3.3, 0.12, 0.04), trimW, x, 1.76, bz);
-      { const r2 = new ConeGeometry(2.65, 0.85, 4); r2.rotateY(Math.PI / 4); r2.scale(1, 1, 0.72); K.add(r2, roofM, x, 2.3, bz); const s3 = new ConeGeometry(2.4, 0.74, 4); s3.rotateY(Math.PI / 4); s3.scale(1, 1, 0.72); K.add(s3, mSnow, x, 2.4, bz); }
-      K.add(new SphereGeometry(0.08, 8, 6), M('glow', '#e8b84a'), x, 2.78, bz);
-      for (let k = 0; k < 3; k++) K.add(rbox(1.1 - k * 0.12, 0.3, 0.18, 0.02), stone, x, k * 0.18, fz + 0.5 - k * 0.22);
-      K.add(rbox(1.7, 0.85, 0.14, 0.05), stone, x, 0, z + 1.55); K.add(rbox(1.5, 0.65, 0.02, 0.01), M('glow', '#a9d6ff'), x, 0.14, z + 1.55); K.add(new CylinderGeometry(0.05, 0.08, 0.3, 8), stone, x, 0.24, z + 1.55);
-      for (const [cx, cz] of [[-1.95, 1.35], [1.95, 1.35], [-2.0, -1.6], [2.0, -1.6]]) { K.add(new CylinderGeometry(0.03, 0.34, 2.0, 8), M('plaster', '#2f5a4a'), x + cx, 1.05, z + cz); K.add(new ConeGeometry(0.12, 0.3, 8), mSnow, x + cx, 2.0, z + cz); }
-      for (const s2 of [-1, 1]) { K.add(new CylinderGeometry(0.035, 0.045, 0.7, 8), M('metal', '#2b3556'), x + s2 * 0.75, 0.35, fz + 0.95); lantern(x + s2 * 0.75, 0.72, fz + 0.95, s2 < 0); } // lamps on posts at the foot of the steps
-      const sg = sign('Aynalıkavak Pavilion', 1.9); sg.position.set(x, 0.3, fz + 0.18); group.add(sg);
-      flagAt(lm.outpost, x, 3.95, bz); lights.push([x, 1.3, fz + 1.0]); life.perches.push([x - 1.5, 2.0, bz], [x + 1.5, 2.0, bz]);
+    } else if (lm.type === 'aynalikavak') { // AYNALIKAVAK PAVILION: a long, low Ottoman waterside pavilion: a stone base where the garden slopes, pale walls, tall paired windows below and a row of small arched coloured-glass windows above, a grey hipped roof with very wide eaves, a double stair to the door, cypresses
+      const [x, z] = centre(lm), wall = M('plaster', '#f3e8dc'), trimW = M('wood', '#7a5a46'), roofM = M('metal', '#8a8fa6'), stone = M('stone', '#b8b0c2'), glassL = M('glow', '#e8f0ff'), W = 3.9, D = 1.9, bz = z - 0.65, fz = bz + D / 2;
+      K.add(rbox(W + 0.2, D + 0.2, 0.62, 0.04), stone, x, 0, bz); // the stone base
+      for (let k = 0; k < 5; k++) { if (k === 2) continue; const ax = x - 1.5 + k * 0.75; K.add(new CircleGeometry(0.16, 12, 0, Math.PI), M('glow', '#3d4363'), ax, 0.3, fz + 0.11); K.add(new PlaneGeometry(0.32, 0.22), M('glow', '#3d4363'), ax, 0.19, fz + 0.111); } // arched openings in the base
+      K.add(rbox(W, D, 1.32, 0.03), wall, x, 0.62, bz);
+      K.add(rbox(W + 0.06, D + 0.06, 0.06, 0.01), trimW, x, 1.36, bz); // a string course between the two rows
+      for (let k = 0; k < 8; k++) { if (k === 3 || k === 4) continue; const wx = x - 1.65 + k * 0.47; K.add(rbox(0.3, 0.04, 0.5, 0.01), trimW, wx, 0.74, fz + 0.005); K.add(new PlaneGeometry(0.24, 0.44), glassL, wx, 0.99, fz + 0.03); } // tall windows, in pairs
+      const COL = ['#5d8fd8', '#e0584a', '#f2c14e', '#5bb36a'];
+      for (let k = 0; k < 11; k++) { const wx = x - 1.75 + k * 0.35, c = M('glow', COL[k % 4]); K.add(new PlaneGeometry(0.16, 0.14), c, wx, 1.54, fz + 0.03); K.add(new CircleGeometry(0.08, 10, 0, Math.PI), c, wx, 1.61, fz + 0.031); } // the coloured upper windows
+      for (const s2 of [-1, 1]) for (let k = 0; k < 3; k++) { const wz = bz - 0.6 + k * 0.6; K.add(new PlaneGeometry(0.24, 0.44), glassL, x + s2 * (W / 2 + 0.01), 0.99, wz, 0, s2 * Math.PI / 2); }
+      K.add(rbox(0.8, 0.06, 0.62, 0.01), trimW, x, 0.62, fz + 0.01); K.add(new PlaneGeometry(0.66, 0.56), M('glow', '#ffd98a'), x, 0.95, fz + 0.03); // the door
+      K.add(rbox(W + 1.0, D + 1.0, 0.1, 0.03), trimW, x, 1.94, bz); // the wide eaves
+      { const r2 = new ConeGeometry(1, 0.62, 4); r2.rotateY(Math.PI / 4); r2.scale(W * 0.82, 1, D * 0.98); K.add(r2, roofM, x, 2.35, bz); const s3 = new ConeGeometry(1, 0.5, 4); s3.rotateY(Math.PI / 4); s3.scale(W * 0.74, 1, D * 0.88); K.add(s3, mSnow, x, 2.44, bz); }
+      for (const s2 of [-1, 1]) { for (let k = 0; k < 4; k++) K.add(rbox(0.5, 0.26, 0.12, 0.02), stone, x + s2 * (0.85 - k * 0.12), k * 0.15, fz + 0.38 - k * 0.04); } // the double stair
+      K.add(rbox(0.9, 0.36, 0.62, 0.02), stone, x, 0, fz + 0.28);
+      for (const [cx, cz] of [[-2.0, 1.3], [2.0, 1.3], [-2.05, -1.55], [2.05, -1.55], [-1.6, -1.75]]) { K.add(new CylinderGeometry(0.03, 0.3, 2.1, 8), M('plaster', '#2f5a4a'), x + cx, 1.1, z + cz); K.add(new ConeGeometry(0.1, 0.26, 8), mSnow, x + cx, 2.12, z + cz); }
+      for (const s2 of [-1, 1]) { K.add(new CylinderGeometry(0.035, 0.045, 0.7, 8), M('metal', '#2b3556'), x + s2 * 1.25, 0.35, fz + 0.75); lantern(x + s2 * 1.25, 0.72, fz + 0.75, s2 < 0); }
+      const sg = sign('Aynalıkavak Pavilion', 1.9); sg.position.set(x, 0.35, fz + 1.05); group.add(sg);
+      flagAt(lm.outpost, x + 1.7, 3.1, bz); lights.push([x, 1.0, fz + 1.0]); life.perches.push([x - 1.6, 1.98, fz + 0.5], [x + 1.6, 1.98, fz + 0.5]);
     } else if (lm.type === 'miniaturk') { // MİNİATÜRK: the park of little models on snowy lawns: an old stone tower, a tower on a rock in the sea, a clock tower, a little bridge over a stream, and the big sign
       const [x, z] = centre(lm), hedge = M('plaster', '#3f7a5a'), stone = M('stone', '#d9cfc3'), stoneD = M('stone', '#9a8f86'), slate = M('metal', '#5d5f86'), water = M('glow', '#9fc8ec'), white = M('plaster', '#f6f3f8');
       K.add(rbox(4.5, 4.1, 0.16, 0.06), mSnow, x, 0, z); for (const [hx, hz, hw, hd] of [[0, -2.0, 4.5, 0.18], [-2.2, 0, 0.18, 4.1], [2.2, 0, 0.18, 4.1]]) K.add(rbox(hw, hd, 0.32, 0.05), hedge, x + hx, 0.1, z + hz);

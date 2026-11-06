@@ -63,11 +63,16 @@ function build3d(ctx, { kind, pieces, expected, sayAtEnd, revealText, revealTr, 
   let next = expected.findIndex(e => !e.given), tried = false, done = false;
   if (next < 0) next = expected.length;
   const glowNext = () => { const target = items.find(it => !it.used && it.p.key === expected[next]?.key); for (const it of items) { if (it.used) continue; const on = it === target; it.el.classList.toggle('show', on); it.mesh.material = on ? glowM : mat; } };
-  const lay = (it, i) => {
+  // a set may carry the pieces itself (the shipyard's crane: set.carry, set.carryBack, set.idle)
+  const carrier = s.set?.carry && !ctx.reduceMotion ? s.set : null;
+  const lay = (it, i, fast = false) => {
     it.used = true; it.mesh.material = mat; it.el.classList.remove('show'); it.el.classList.add('placed'); it.el.disabled = true;
+    const landed = () => { ghosts[i].visible = false; s.puff(it.mesh, 8); };
+    if (carrier && !fast) { carrier.carry(it.mesh, [slots[i].x, slots[i].y, slots[i].z], landed); return; }
     it.mesh.rotation.y = 0;
-    s.fly(it.mesh, [slots[i].x, slots[i].y, slots[i].z], { T: 0.5, lift: 1.3, spin: ice ? 0.6 : 0.15, done: () => { ghosts[i].visible = false; s.puff(it.mesh, 8); } });
+    s.fly(it.mesh, [slots[i].x, slots[i].y, slots[i].z], { T: 0.5, lift: 1.3, spin: ice ? 0.6 : 0.15, done: landed });
   };
+  const whenIdle = fn => (carrier ? carrier.idle(fn) : fn()); // wait for the crane to put the last piece down
   const complete = right => {
     done = true; ctx.sound('capture'); s.set?.A?.cheer();
     ctx.item(ctx.step.sourceIds?.[0], right);
@@ -84,16 +89,17 @@ function build3d(ctx, { kind, pieces, expected, sayAtEnd, revealText, revealTr, 
       lay(it, next); next++;
       while (next < expected.length && expected[next].given) next++;
       if (tried) glowNext();
-      if (next >= expected.length) ctx.later(() => complete(!tried), ctx.reduceMotion ? 50 : 560);
+      if (next >= expected.length) { const r = !tried; whenIdle(() => ctx.later(() => complete(r), ctx.reduceMotion ? 50 : 560)); }
     } else {
-      s.wobble(it.mesh); s.set?.A?.oops(); it.el.classList.remove('wrong'); void it.el.offsetWidth; it.el.classList.add('wrong'); ctx.sound('tap');
+      if (carrier) carrier.carryBack(it.mesh); else s.wobble(it.mesh); s.set?.A?.oops(); it.el.classList.remove('wrong'); void it.el.offsetWidth; it.el.classList.add('wrong'); ctx.sound('tap');
       if (!tried) { tried = true; ctx.coach(wrongCoach); }
       glowNext();
     }
   };
   ctx.onTimeUp(() => {
     if (done) return; tried = true;
-    for (let i = next; i < expected.length; i++) { if (expected[i].given) continue; const it = items.find(o => !o.used && o.p.key === expected[i].key); if (it) lay(it, i); }
+    carrier?.hurry?.(); // the crane drops what it is carrying into place at once
+    for (let i = next; i < expected.length; i++) { if (expected[i].given) continue; const it = items.find(o => !o.used && o.p.key === expected[i].key); if (it) lay(it, i, true); }
     next = expected.length; ctx.coach("Time's up! Here it is."); ctx.later(() => complete(false), 600);
   });
 }
