@@ -21,6 +21,7 @@ import { AutoQuality, guessLevel, LEVELS } from './quality.js';
 import { Sticks } from './sticks.js';
 import { unlockAudio, play, setSound, music, stopMusic } from './audio.js';
 import { speech } from './speech.js';
+import { drawLogo, Hero, lessonPicker, unitsOf } from './startui.js';
 import { OutpostFlow, assignFlakeWords } from './outpostflow.js';
 import { ensureUnit, startRun } from '../rules/progress.mjs';
 import { StageRunner } from './stagerun.js';
@@ -56,15 +57,32 @@ function startScreen() {
     document.querySelectorAll('.kit-btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kit === kit)));
     document.querySelectorAll('.pace-btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pace === pace)));
     document.querySelectorAll('.who-btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.who === gender)));
-    $('#play').disabled = !team; $('#play').textContent = team ? 'PLAY!' : 'Pick your team';
+    $('#play').disabled = !team; $('#play').textContent = team ? 'PLAY ▶' : 'Pick your team';
+    $('#st-team-hint').textContent = team ? CONFIG.teams[team].name : 'Pick one to play';
+    $('#start').style.setProperty('--tc', team ? CONFIG.teams[team].color : '#e889b5'); // the hats on the girl and boy tiles
+    hero?.set({ team, gender, kit, look: save.look });
   };
+  // the logo, your kid turning in the snow (dressed as you choose), the lesson, the stars, sound
+  drawLogo($('#st-logo'), { height: innerHeight < 450 ? 40 : innerWidth < 380 || innerHeight < 700 ? 48 : 60 });
+  let hero = null; try { if (!params.has('autostart')) hero = new Hero($('#st-hero')); } catch (err) { console.warn('hero', err); }
+  let unitId = params.get('unit') || save.unitId || 'g5u1';
+  const showLesson = async () => {
+    const grade = +(/^g(\d)/.exec(unitId)?.[1] || 5), n = +(/u(\d+)$/.exec(unitId)?.[1] || 1), card = $('#st-lesson');
+    card.querySelector('i').textContent = grade; card.querySelector('small').textContent = `Grade ${grade} · Unit ${n}`;
+    const stars = save.units?.[unitId]?.arenas?.[0]?.stages?.kasimpasa?.stars || 0; $('#st-stars').textContent = `★ ${stars} / 3`;
+    try { const u = (await unitsOf(grade)).find(q => q.id === unitId); if (u) card.querySelector('b').textContent = u.title; } catch { /* offline: keep the number */ }
+  };
+  showLesson();
+  $('#st-lesson').onclick = () => lessonPicker(document.body, { current: unitId, onPick: id => { unitId = id; save.unitId = id; writeSave(save); showLesson(); } });
+  const soundIcon = () => { $('#st-sound').textContent = save.settings.sound ? '🔊' : '🔈'; $('#st-sound').setAttribute('aria-label', save.settings.sound ? 'Sound on' : 'Sound off'); };
+  soundIcon(); $('#st-sound').onclick = () => { save.settings.sound = !save.settings.sound; setSound(save.settings.sound); writeSave(save); soundIcon(); };
   $('#teams').onclick = e => { const b = e.target.closest('.team-btn'); if (b) { team = b.dataset.team; refresh(); } };
   $('#kits').onclick = e => { const b = e.target.closest('.kit-btn'); if (b) { kit = b.dataset.kit; refresh(); } };
   document.querySelectorAll('.pace-btn').forEach(b => { b.onclick = () => { pace = b.dataset.pace; refresh(); }; });
   document.querySelectorAll('.who-btn').forEach(b => { b.onclick = () => { gender = b.dataset.who; refresh(); }; });
   $('#play').onclick = async () => {
-    unlockAudio(); save.team = team; save.kit = kit; save.pace = pace; if (save.look?.gender !== gender) save.look = { gender }; writeSave(save);
-    $('#start').hidden = true;
+    unlockAudio(); save.team = team; save.kit = kit; save.pace = pace; save.unitId = unitId; if (save.look?.gender !== gender) save.look = { gender }; writeSave(save);
+    $('#start').hidden = true; hero?.dispose(); hero = null;
     try { await startGame(team, kit, pace); } catch (err) { $('#loading').hidden = false; $('#loading').textContent = 'Sorry, the game could not start: ' + err.message; throw err; }
   };
   refresh();

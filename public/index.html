@@ -16,17 +16,31 @@
 <div id="weather" aria-hidden="true"></div>
 <div id="fx-layer" aria-hidden="true"></div>
 
-<section id="start" class="screen">
-  <div class="card">
-    <h1>SnowPax</h1>
-    <p class="sub">Snow day! School's out. Grab your team and take the street!</p>
-    <div class="step st-team"><span class="lbl">Your team</span><div id="teams" class="row4"></div></div>
-    <div class="step st-kit"><span class="lbl">Your snowball style</span><div id="kits" class="row3"></div></div>
-    <div class="step pace who st-who"><span class="lbl">You are a</span><button type="button" class="pace-btn who-btn" data-who="girl">Girl</button><button type="button" class="pace-btn who-btn" data-who="boy">Boy</button></div>
-    <div class="step pace st-pace"><button type="button" class="pace-btn" data-pace="relaxed">Relaxed</button><button type="button" class="pace-btn" data-pace="challenge">Challenge</button></div>
-    <button id="play" class="play-btn" type="button" disabled>Pick your team</button>
-    <p class="note">Feel test · v{{VERSION}} · <a href="preview.html">Task preview</a></p>
-  </div>
+<section id="start" class="screen start2">
+  <header class="st-top">
+    <canvas id="st-logo" role="img" aria-label="SnowPax, by Mr. Saymaz"></canvas>
+    <div class="st-icons"><button type="button" id="st-sound" class="st-ico" aria-label="Sound on">🔊</button></div>
+  </header>
+  <div class="st-hero"><canvas id="st-hero" aria-hidden="true"></canvas>
+    <div class="st-tag"><b>Snow day.</b><b class="gold">Take Kasımpaşa back!</b><small>Every right answer is a snowflake for the Snow Shop.</small></div></div>
+  <div class="st-panel"><i class="st-cap" aria-hidden="true"></i><div class="st-scroll">
+    <div class="st-head"><div><small>Your next snow day</small><h2>Ready for a snowball fight?</h2></div><span class="st-chip" id="st-stars">★ 0 / 3</span></div>
+    <div class="st-sec"><div class="st-lbl"><span>Arena</span><em>1 of 3 open</em></div>
+      <div class="st-arenas">
+        <button type="button" class="st-arena open" aria-pressed="true"><span class="ar-art ar-kas"></span><b>Kasımpaşa</b><small>Arena 1 · Ready</small></button>
+        <button type="button" class="st-arena locked" disabled><span class="ar-art ar-ist"></span><b>İstiklal Street</b><small>🔒 Coming soon</small></button>
+        <button type="button" class="st-arena locked" disabled><span class="ar-art ar-3"></span><b>Arena 3</b><small>🔒 Coming soon</small></button>
+      </div></div>
+    <div class="st-sec st-team"><div class="st-lbl"><span>Your team</span><em id="st-team-hint">Pick one to play</em></div><div id="teams" class="row4"></div></div>
+    <div class="st-sec st-who"><div class="st-lbl"><span>You are a</span></div>
+      <div class="who-row"><button type="button" class="who-btn" data-who="girl"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M12 40c-3 8-2 15 3 19 3-5 4-11 4-17zM52 40c3 8 2 15-3 19-3-5-4-11-4-17z" fill="#6b3e26" stroke="#1c2340" stroke-width="2.5" stroke-linejoin="round"/><circle cx="14" cy="57" r="3.2" fill="var(--tc,#e889b5)" stroke="#1c2340" stroke-width="2"/><circle cx="50" cy="57" r="3.2" fill="var(--tc,#e889b5)" stroke="#1c2340" stroke-width="2"/><circle cx="32" cy="38" r="17" fill="#f2c9a0" stroke="#1c2340" stroke-width="2.8"/><path d="M15 33c2-6 8-9 17-9s15 3 17 9c-6-2-11-2-17-2s-11 0-17 2z" fill="#6b3e26"/><circle cx="25.5" cy="39" r="2.4" fill="#1c2340"/><circle cx="38.5" cy="39" r="2.4" fill="#1c2340"/><path d="M27 45q5 4 10 0" fill="none" stroke="#1c2340" stroke-width="2.4" stroke-linecap="round"/><circle cx="21" cy="44" r="2.6" fill="#f3a6a6"/><circle cx="43" cy="44" r="2.6" fill="#f3a6a6"/><path d="M13 30c0-12 9-20 19-20s19 8 19 20z" fill="var(--tc,#e889b5)" stroke="#1c2340" stroke-width="2.8" stroke-linejoin="round"/><rect x="11" y="27" width="42" height="7" rx="3.5" fill="#fbf7ef" stroke="#1c2340" stroke-width="2.5"/><circle cx="32" cy="9" r="5" fill="#fbf7ef" stroke="#1c2340" stroke-width="2.5"/></svg><b>Girl</b></button><button type="button" class="who-btn" data-who="boy"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="38" r="17" fill="#e7b88c" stroke="#1c2340" stroke-width="2.8"/><path d="M15.5 34c1-4 4-6 7-6l-1 7zM48.5 34c-1-4-4-6-7-6l1 7z" fill="#3b2a20"/><circle cx="25.5" cy="39" r="2.4" fill="#1c2340"/><circle cx="38.5" cy="39" r="2.4" fill="#1c2340"/><path d="M26 45q6 5 12 0" fill="none" stroke="#1c2340" stroke-width="2.4" stroke-linecap="round"/><circle cx="21" cy="44" r="2.4" fill="#f0a08c"/><circle cx="43" cy="44" r="2.4" fill="#f0a08c"/><path d="M13 30c0-12 9-20 19-20s19 8 19 20z" fill="var(--tc,#3d8bd8)" stroke="#1c2340" stroke-width="2.8" stroke-linejoin="round"/><path d="M20 13l2 15M32 10v18M44 13l-2 15" stroke="rgba(255,255,255,0.45)" stroke-width="2.4"/><rect x="11" y="27" width="42" height="7" rx="3.5" fill="#fbf7ef" stroke="#1c2340" stroke-width="2.5"/><circle cx="32" cy="9" r="5" fill="#fbf7ef" stroke="#1c2340" stroke-width="2.5"/></svg><b>Boy</b></button></div></div>
+    <div class="st-sec st-kit"><div class="st-lbl"><span>Snowball style</span></div><div id="kits" class="row3"></div></div>
+    <div class="st-sec st-lp">
+      <div class="st-lesson"><div class="st-lbl"><span>Lesson</span></div><button type="button" class="lesson-card" id="st-lesson"><i>5</i><span><small>Grade 5 · Unit 1</small><b>School Life</b></span><em aria-hidden="true">›</em></button></div>
+      <div class="st-pace"><div class="st-lbl"><span>Pace</span></div><div class="pace-stack"><button type="button" class="pace-btn" data-pace="relaxed">Relaxed</button><button type="button" class="pace-btn" data-pace="challenge">Challenge</button></div></div>
+    </div>
+    <footer class="st-foot"><a href="preview.html">Task preview</a><span>Progress saves on this device · v{{VERSION}}</span></footer>
+  </div><button id="play" class="play-btn" type="button" disabled>Pick your team</button></div>
 </section>
 <div id="wt-layer" hidden></div>
 <section id="taskcard" class="taskcard" hidden aria-live="polite"></section>
