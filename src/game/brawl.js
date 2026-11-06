@@ -241,7 +241,7 @@ async function startGame(myTeam, kit, pace) {
       seizeButton: on => { $('#seizebtn').hidden = !on; },
       hush: () => { clearTimeout(coach.t); $('#coach').hidden = true; },
       stars: (n, pop) => { const el = $('#stars'); el.hidden = n == null; if (n != null) { el.querySelector('b').textContent = n; if (pop) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); } } },
-      build: { open: i => buildUI.open(i), refresh: i => buildUI.refresh(i), close: () => buildUI.close() },
+      build: { open: i => buildUI.open(i), refresh: (i, bought) => buildUI.refresh(i, bought), close: () => buildUI.close() },
       fx, hunt: w => { const el = $('#hunt'), clean = s => String(s ?? '').replace(/[&<>"']/g, ''); el.hidden = !w; if (w) el.innerHTML = `<small>${w.reveal ? 'Time!' : 'Freeze the snowman that means'}</small><span class="hunt-word">${w.pic ? `<img src="${clean(w.pic)}" alt="">` : ''}<b>${clean(w.tr)}</b></span>`; },
       showdown: {
         start: (z, b) => showdownView.start(z, b), raise: k => showdownView.raise(k), giantBall: (f, t, s) => showdownView.giantBall(f, t, s), ring: () => showdownView.ring(), stop: () => showdownView.stop(),

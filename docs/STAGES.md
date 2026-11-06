@@ -91,9 +91,13 @@ in `fights.mjs`).
    a ⭐. A miss: a surprised face, "Hmm… not quite! Try the glowing one.", and they ask again in a
    moment (4 s). No rivals on the field yet. Counted toward the 80% (answered calmly).
 2. **The Snow Shop** (35 s at most, or tap Fight!; `cards/shop.js`): the camera cuts to a snowy
-   market stall with a striped awning in your team's colour. The four boosts stand on the counter
-   and the shelf as things (big mittens, a lightning bolt, a gold star, a puffer jacket on a
-   hanger), each with a price tag to tap; your kid stands by the counter and cheers for each buy.
+   market stall with a striped awning in your team's colour, and your own kid stands in the
+   middle looking at you, like a clothes shop in an open-world game. The four boosts are price
+   tags on the parts they change: super start by the head, warm coat at the shoulder, big gloves
+   and quick hands at the hands. Buy one and you see it on your kid at once, with a puff of
+   sparkles and a cheer (`render/gear.js`): big red mittens, glowing wristbands with a bolt, a
+   fluffy collar and a longer coat, a gold star badge and a warm glow at the feet. Your kid wears
+   the same gear in the fight (the warm coat's collar goes when it has saved you from a hit).
    A slim bar shows your stars, the time and Fight!.
 3. **The opening round:** the rival team keeps coming back from its camp; freeze **12 rivals**
    to break the line (90 s at most). Each friend brings one more snowman to the rivals' side, so

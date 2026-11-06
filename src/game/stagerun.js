@@ -232,6 +232,7 @@ export class StageRunner {
     const P = this.match.player, use = this.arm.takeFight(); // the one-fight boosts
     if (use.has('super')) P.super = Math.max(P.super, 0.5);
     if (use.has('coat')) P.coat = 1;
+    P.gear = new Set(use); // the student's kid wears it in the fight
     next?.();
   }
   beginFight() {
@@ -350,7 +351,7 @@ export class StageRunner {
     if (lost && z && z.owner !== 'home') { z.owner = null; z.progress = 0; z.seizing = false; }
     this.sim.activeZone = null; this.pendingRival = null; if (z) z.halves = null; this.endHunt(); this.sim.removeSupply(); this.plan = null;
     this.match.clearRecruits(); this.sim.removeRecruitSpot(); this.ui.onGone?.(); this.ui.build?.close(); this.ui.stars?.(null); this.buildNext = null;
-    { const P = this.match.player; P.ammoMax = 0; P.reloadMul = 1; P.coat = 0; } // boosts last one stage
+    { const P = this.match.player; P.ammoMax = 0; P.reloadMul = 1; P.coat = 0; P.gear = null; } // boosts last one stage
     if (this.yard) { const i = this.sim.zones.indexOf(this.yard); if (i >= 0) this.sim.zones.splice(i, 1); this.ui.showdown?.stop(); clearTimeout(this.giantT); this.giant = null; }
     this.zone = null;
   }
@@ -495,6 +496,7 @@ export class StageRunner {
   }
   onEvent(e) {
     if (this.mode !== 'outpost') return;
+    if (e.type === 'coat' && e.id === this.match.player.id && this.match.player.gear) { const P = this.match.player; P.gear = new Set([...P.gear].filter(g => g !== 'coat')); } // the warm coat has done its job
     if (this.plan && e.type === 'freeze') { // the fights: rivals frozen count, word snowmen are checked, and our kids never lose a life
       const c = this.sim.chars.find(q => q.id === e.id);
       if (c && c.side === 'rival') {

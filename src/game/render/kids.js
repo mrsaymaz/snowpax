@@ -11,6 +11,7 @@ import { emblemSVG } from '../../emblems.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { buildKid, bakeKid } from './kids2.js';
 import { makeLook } from '../looks.mjs';
+import { setGear, tickGear } from './gear.js';
 
 // the kids' size: about one tile wide and 1.75 tall (the sled run and the stations use the same kid)
 export const KID_SCALE = 0.74;
@@ -126,6 +127,8 @@ export class Kid {
   onEvent(type) { if (type === 'throw' || type === 'super') this.throwT = 0.28; if (type === 'shake') this.shakeT = 0.7; }
 
   update(dt, { visible = true, reduceMotion = false, groundY = 0 } = {}) {
+    if (this.c.gear !== this.gearRef) { this.gearRef = this.c.gear; setGear(this.kid, this.c.gear || [], { color: this.team?.dark }); } // what the student bought in the Snow Shop
+    if (this.gearRef) tickGear(this.kid, this.t || 0);
     const c = this.c;
     this.root.position.set(c.x, groundY, c.z);
     this.sled.visible = !!c.sled; this.sled.rotation.y = c.face;
