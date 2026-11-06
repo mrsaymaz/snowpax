@@ -307,7 +307,7 @@ export function bellListen(ctx) {
   const T = tall(); frameFor(s, { eye: [0, 3.0, 10.6], look: [0, 1.9, 0] }, { eye: [0, 3.2, 11.6], look: [0, 1.8, 0] }, { eye: [0, 2.8, 9.6], look: [0, 2.6, 0.6], width: 38 });
   s.say(`${esc(st.prompt)} <span class="tr">Toss the simit to that gull!</span>${voice ? '' : ` <span class="tr">${esc(st.fallbackText || st.speak)}</span>`}`);
   const play = () => { set.ring(); ctx.sound('bell'); ctx.later(() => ctx.speech.say(st.speak), 250); };
-  s.label('🔔 Hear it again', { cls: 'wt-bell', at: innerHeight < 430 ? [1.75, 2.55, -1.6] : [0, 3.75, -1.6], onTap: play });
+  s.label('🔔 Hear it again', { cls: 'wt-bell', at: innerHeight < 430 ? [1.75, 2.55, -1.6] : T ? [0, 5.0, -1.6] : [0, 4.3, -1.6], onTap: play }); // high above the bell, clear of the gulls
   if (voice) ctx.later(play, 450); else ctx.note('No English voice on this device: read the word instead.');
   // the gulls hover over the pier, each with a word; you toss a simit to the right one
   const els = st.options.map((o, i) => s.label(st.pics?.[i] ? `<img src="${esc(st.pics[i])}" alt=""><span>${esc(o)}</span>` : esc(o), { cls: 'wt-opt gullsign', onTap: () => pick(i) }));

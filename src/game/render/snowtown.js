@@ -6,7 +6,7 @@
 import {
   BufferGeometry, Float32BufferAttribute, Mesh, MeshLambertMaterial, BoxGeometry, SphereGeometry, CylinderGeometry, ConeGeometry,
   PlaneGeometry, TorusGeometry, CapsuleGeometry, CanvasTexture, RepeatWrapping, SRGBColorSpace, Color, CircleGeometry,
-  Group, Matrix4, MeshBasicMaterial, AdditiveBlending,
+  Group, Matrix4, MeshBasicMaterial, AdditiveBlending, Vector3, Quaternion, Euler,
 } from 'three';
 import { makeGround } from '../terrain.mjs';
 import { addSparkle } from './look.js';
@@ -511,9 +511,13 @@ export function buildSnowtown(ctx) {
       // a mast behind with a yardarm, the outpost flag on top and strings of signal flags
       const mz = z - 1.55; K.add(new CylinderGeometry(0.07, 0.09, 5.2, 8), M('wood', '#e8e4ee'), x, 2.6, mz); K.add(rbox(2.4, 0.08, 0.08, 0.02), M('wood', '#e8e4ee'), x, 4.2, mz);
       const SIG = ['#e8584a', '#f2c14e', '#4f6fa8', '#ffffff', '#7cc47a', '#e889b5'];
-      for (const sgn of [-1, 1]) for (let k = 1; k <= 6; k++) { const t = k / 7, fx = x + sgn * 1.15 * (1 - t) + sgn * t * 2.0, fy = 4.2 - t * 3.5 - Math.sin(Math.PI * t) * 0.3, fz2 = mz + t * 1.4;
-        const tri = new BufferGeometry(); tri.setAttribute('position', new Float32BufferAttribute([-0.13, 0, 0, 0.13, 0, 0, 0, -0.3, 0], 3)); tri.computeVertexNormals(); K.add(tri, M('fabric', SIG[(k + (sgn > 0 ? 3 : 0)) % SIG.length]), fx, fy, fz2); }
-      const sg = sign('Waterfront Park', 1.7); sg.position.set(x, 0.72, z + 2.25); group.add(sg);
+      const rope = M('fabric', '#e8dcc0'), pennant = new ConeGeometry(0.15, 0.32, 3), up = new Vector3(0, 1, 0), q = new Quaternion(), e = new Euler();
+      for (const sgn of [-1, 1]) { // each string runs from a yardarm tip down to the quay, a little pennant on it every so often
+        const pts = [[x + sgn * 1.15, 4.2, mz]]; for (let k = 1; k <= 7; k++) { const t = k / 7; pts.push([x + sgn * 1.15 * (1 - t) + sgn * t * 2.0, 4.2 - t * 3.5 - Math.sin(Math.PI * t) * 0.3, mz + t * 1.4]); }
+        for (let k = 1; k < pts.length; k++) { const [a1, b1, c1] = pts[k - 1], [a2, b2, c2] = pts[k], d = new Vector3(a2 - a1, b2 - b1, c2 - c1), len = d.length(); e.setFromQuaternion(q.setFromUnitVectors(up, d.normalize())); K.add(new CylinderGeometry(0.012, 0.012, len, 4), rope, (a1 + a2) / 2, (b1 + b2) / 2, (c1 + c2) / 2, e.x, e.y, e.z); }
+        for (let k = 1; k <= 6; k++) { const [fx, fy, fz2] = pts[k]; K.add(pennant, M('fabric', SIG[(k + (sgn > 0 ? 3 : 0)) % SIG.length]), fx, fy - 0.17, fz2, Math.PI, 0, 0, 1, 1, 0.22); } // thin solid pennants, so they keep their colours under the cartoon outline
+      }
+      const sg = sign('The Pier', 1.7); sg.position.set(x, 0.72, z + 2.25); group.add(sg);
       lantern(x - 1.2, 1.0, z + 1.6, true); lantern(x + 0.8, 1.0, z + 1.75);
       flagAt(lm.outpost, x, 5.8, mz); life.perches.push([ax, T0 + 2.35 * S2, az], [lx, ly + 1.35, lz], [x + 1.1, 4.3, mz], [x - 1.1, 4.3, mz]);
     } else if (lm.type === 'pier') { // wooden pier over the ice with bollards and a lamp

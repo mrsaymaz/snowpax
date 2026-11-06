@@ -100,7 +100,38 @@ const RIDE_CHORDS = [[62, 66, 69], [59, 62, 66], [55, 59, 62], [57, 61, 64]], RI
 // the Archery Ground theme (about 7 s): a saz-like tune in Hicaz over a drone, a frame drum (düm tek)
 const ARCHERY_MELODY = [[0, 69, 2], [2, 70, 2], [4, 69, 2], [6, 67, 2], [8, 66, 4], [12, 67, 2], [14, 69, 2], [16, 70, 2], [18, 72, 2], [20, 74, 4], [24, 72, 2], [26, 70, 2], [28, 69, 4],
   [32, 67, 2], [34, 66, 2], [36, 63, 2], [38, 66, 2], [40, 62, 8]];
+// the other places' themes (about 7 s each, 100 bpm, three bars)
+const at = (list, k) => list.filter(([n]) => n === k);
+const BOULEVARD = { mel: [[0, 67, 2], [2, 71, 2], [4, 74, 2], [6, 79, 2], [8, 78, 4], [12, 74, 4], [16, 76, 2], [18, 74, 2], [20, 71, 2], [22, 74, 2], [24, 72, 4], [28, 69, 4], [32, 71, 2], [34, 74, 2], [36, 79, 4], [40, 78, 2], [42, 79, 6]], bass: [[0, 43], [8, 50], [16, 48], [24, 50], [32, 43], [40, 50]] };
+const KIZILAY = { mel: [[0, 69, 2], [2, 71, 2], [4, 72, 2], [6, 74, 2], [8, 76, 4], [12, 74, 2], [14, 72, 2], [16, 71, 2], [18, 72, 2], [20, 74, 4], [24, 72, 2], [26, 71, 2], [28, 69, 4], [32, 68, 2], [34, 69, 2], [36, 71, 2], [38, 68, 2], [40, 69, 8]], bass: [[0, 45], [8, 52], [16, 50], [24, 52], [32, 44], [40, 45]] };
+const SURURI = { mel: [[0, 72, 1], [2, 76, 1], [4, 79, 1], [6, 76, 1], [8, 77, 2], [10, 76, 1], [12, 74, 2], [16, 72, 1], [18, 76, 1], [20, 79, 1], [22, 84, 1], [24, 81, 2], [28, 79, 2], [32, 77, 1], [34, 76, 1], [36, 74, 1], [38, 71, 1], [40, 72, 6]], bass: [[0, 36], [4, 43], [8, 36], [12, 43], [16, 41], [20, 36], [24, 43], [28, 36], [32, 41], [36, 43], [40, 36]] };
+const PIER = { mel: [[4, 76, 4], [12, 80, 4], [20, 78, 4], [28, 73, 4], [36, 75, 4], [42, 76, 6]], chords: [[0, [64, 68, 71]], [12, [61, 64, 68]], [24, [57, 61, 64]], [36, [59, 63, 66]]] };
 const TRACKS = {
+  // Boulevard Park: a music box over a soft plucked bass (G major)
+  boulevard: { bpm: 100, steps: 48, loop: false, step(k, t, sp, dest) {
+    for (const [, n, len] of at(BOULEVARD.mel, k)) { bellAt(t, hz(n + 12), 0.05, 0.4 + len * 0.12, dest); bellAt(t, hz(n), 0.018, 0.5, dest); }
+    for (const [, n] of at(BOULEVARD.bass, k)) synth(t, hz(n), sp * 3, { gain: 0.1, attack: 0.005, release: 0.2, dest });
+    if (k === 0) for (const n of [55, 59, 62]) synth(t, hz(n), sp * 44, { gain: 0.016, attack: 0.5, release: 0.8, cutoff: 1500, dest });
+  } },
+  // Kızılay Square: a café tune in Nihavend (A minor) on a plucked string, a tambourine on the offbeats
+  kizilay: { bpm: 100, steps: 48, loop: false, step(k, t, sp, dest) {
+    for (const [, n, len] of at(KIZILAY.mel, k)) synth(t, hz(n), sp * len * 0.7, { type: 'sawtooth', gain: 0.055, attack: 0.004, release: 0.22, cutoff: 2000, dest });
+    for (const [, n] of at(KIZILAY.bass, k)) synth(t, hz(n), sp * 3, { gain: 0.1, attack: 0.005, release: 0.18, dest });
+    if (k % 4 === 2) hit(t, { f0: 8000, f1: 10000, dur: 0.06, gain: 0.04, type: 'highpass', dest });
+    if (k % 8 === 0) thump(t, 90, 0.12, dest);
+  } },
+  // Sururi Park: a bouncy xylophone (C major), claps on two and four
+  sururi: { bpm: 100, steps: 48, loop: false, step(k, t, sp, dest) {
+    for (const [, n, len] of at(SURURI.mel, k)) { synth(t, hz(n), sp * len * 0.5, { gain: 0.07, attack: 0.002, release: 0.12, dest }); bellAt(t, hz(n + 12), 0.015, 0.25, dest); }
+    for (const [, n] of at(SURURI.bass, k)) synth(t, hz(n), sp * 1.5, { gain: 0.11, attack: 0.004, release: 0.1, dest });
+    if (k % 16 === 4 || k % 16 === 12) hit(t, { f0: 1600, f1: 1100, dur: 0.08, gain: 0.07, dest });
+  } },
+  // the Pier: a ferry's horn, then warm chords at sunset and a slow bell tune (E major)
+  pier: { bpm: 100, steps: 48, loop: false, step(k, t, sp, dest) {
+    if (k === 0) synth(t, 98, 1.3, { type: 'sawtooth', gain: 0.05, attack: 0.08, release: 0.5, cutoff: 420, dest });
+    for (const [at0, ch] of PIER.chords) if (at0 === k) for (const n of ch) synth(t, hz(n), sp * 12, { gain: 0.022, attack: 0.3, release: 0.6, cutoff: 1400, dest });
+    for (const [, n, len] of at(PIER.mel, k)) bellAt(t, hz(n), 0.05, 0.6 + len * 0.15, dest);
+  } },
   sled: { bpm: 132, steps: 128, loop: true, step(k, t, sp, dest) {
     if (k % 2 === 0) hit(t, { f0: 7000, f1: 9000, dur: 0.05, gain: k % 4 === 0 ? 0.05 : 0.03, type: 'highpass', dest }); // sleigh bells
     if (k % 8 === 0) thump(t, 95, 0.16, dest);

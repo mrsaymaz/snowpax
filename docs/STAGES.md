@@ -8,11 +8,11 @@ about **9** (see Timing), with every task type still in it.
 
 | Place | English task | Its task scene | On the carousel | On the sled ride in |
 |---|---|---|---|---|
-| Boulevard Park | Answer | the treehouse | the treehouse | a cinematic scene (to come) |
-| Archery Ground | Sorting | the archers' lodge | the archers' lodge | **the sample cinematic scene** |
-| Kızılay Square | Matching | the fountain | the fountain | a cinematic scene (to come) |
-| Sururi Park | Builder | the snow castle | the snow castle | a cinematic scene (to come) |
-| The Pier | Listening | the waterfront | the admiral's statue | a cinematic scene (to come) |
+| Boulevard Park | Answer | the treehouse | the treehouse | a cinematic view |
+| Archery Ground | Sorting | the archers' lodge | the archers' lodge | a cinematic view |
+| Kızılay Square | Matching | the fountain | the fountain | a cinematic view |
+| Sururi Park | Builder | the snow castle | the snow castle | a cinematic view |
+| The Pier | Listening | the waterfront | the admiral's statue | a cinematic view |
 
 Part 1 is Boulevard Park and Archery Ground; Part 2 is Kızılay Square, Sururi Park and the Pier
 (`parts` in `stages.mjs`, `PLACE_OF` for the names, `PLACE_ID` for the scenes).
@@ -33,51 +33,44 @@ aside and moved onto the deck).
   or kid (never the captain, never a word snowman), so Part 1 helps in "They strike back!" and
   all five help in the Final Showdown.
 
-## The places on the way: cinematic scenes on the sled ride
+## The places on the way: cinematic views on the sled ride
 
-The ride into Kasımpaşa passes each place in task order, and at each one the camera turns to a
-scene of it, alive (`render/cinema.js`, about 7 s each). Archery Ground is built as the sample;
-the other four follow the same pattern.
-- **A clear stretch:** the track runs straight and flat, with no obstacles, words or letters; the
-  sled slows to 60% and rides itself (no steering needed).
-- **The camera:** it first turns its head from the track towards the place (a wide look at it),
-  then glides into the scene's shots (cuts, like a film); for the last second it glides back
-  behind the sled and turns forward.
-- **Music** (synthesized in `audio.js`, no downloaded audio): the ride has a looping sleigh-ride
-  tune (D major, sleigh bells, a soft drum, bass, warm chords, a toy-flute melody). Each place's
-  scene has its own short theme over the ride's tune turned down; Archery Ground's is a saz-like
-  tune in Hicaz over a drone with a frame drum (düm tek). The tune fades out on arrival. Letterbox bars come in; the run's buttons and counters fade.
-- **The name card** at about 1 s ("SORTING · PART 1 / Archery Ground"), for 3.4 s, and the
-  welcome read aloud ("Welcome to Archery Ground!"). "GET READY!" as the camera swings back.
-- **Tap to skip** a scene already seen this session. With reduce motion: one held wide shot and
-  cuts instead of swings.
-- **Light:** the scene brings its own low sun with long shadows (shadows only while a scene shows).
-- Each scene is built just before it is needed and thrown away after.
+The ride into Kasımpaşa passes each place in task order, and at each one the camera turns, for
+about 7 seconds, to a grand view of it (`render/cinema.js`): the landmark in its own little
+neighbourhood under its own sky and light. They are views, not tasks: no people, nothing to do.
+- **The neighbourhood** is a purpose-built tile layout drawn by the game's own village renderer,
+  so it looks like the arena and uses the same landmark models as the carousel: a square plaza
+  round the landmark, a lane with old lamps (never between the camera and the place), snowed-in
+  houses with lit windows closing the back and the sides, trees, stalls, buried roofs; the side
+  towards the track stays open so the camera can look in. The landmark's flag flies in the
+  place's colour.
+- **The layer over it:** a gradient sky with a glowing sun, a haze along the horizon, the game's
+  painted backdrop of rooftops and trees beyond, long snowy hills and an old stone tower far off,
+  gulls circling, falling snow, the scene's own low sun with long shadows.
+- **Three shots:** a reveal (in along an avenue, past the record stones, across the square), a
+  slow orbit round the landmark, then a rising pull-back over the neighbourhood and the town.
+- **The light warms along the ride:** Boulevard Park a clear blue afternoon, Archery Ground bright
+  late afternoon, Kızılay Square lavender with the lamps coming on, Sururi Park golden hour, the
+  Pier sunset with the lamps lit.
+- **Each place has its own short theme** over the ride's sleigh-ride tune, turned down
+  (`audio.js`): Boulevard Park a music box, Archery Ground a saz-like tune in Hicaz with a frame
+  drum, Kızılay Square a café tune in Nihavend with a tambourine, Sururi Park a bouncy xylophone
+  with claps, the Pier a ferry's horn then warm chords and a slow bell tune.
+- **On the ride:** a clear, straight, flat stretch with no obstacles, words or letters; the sled
+  slows to 60% and rides itself. The camera first turns its head from the track to the place,
+  glides into the shots, and for the last second glides back and turns forward. Letterbox bars,
+  the name card ("SORTING · PART 1 / Archery Ground") for 3.4 s, the welcome read aloud, "GET
+  READY!". A tap skips a view already seen this session; with reduce motion, one held wide shot.
+- The five views are built when the ride starts (under a second on a laptop), shown only near
+  their stretch, and their geometry is freed after.
 
-**Archery Ground** (bright late afternoon): the record stones along the way (tall white marble,
-gold bands, snow caps); the archers' lodge with its three lead domes, red-and-white arches, lit
-windows and the golden bow; red and gold pennants snapping on tall poles; four kids in a row
-throwing snowballs at three straw targets on easels, each hit a puff of snow and a wobble; the
-coach beside the targets holding up the score; an old man sweeping the lodge steps, with a ginger
-cat on the step swishing its tail; a salep stall with a purple-and-white awning, a copper urn and
-steam; snow drifting off the domes; pines and houses behind. Shots: a low dolly along the record
-stones, a slow push to the lodge, then behind the row down the range. **The moment:** the small
-girl in the green coat hits the bullseye (a big puff and a golden sparkle, a fanfare), the row
-jumps with their arms up, and the coach, laughing, flips the score from 8 to 10.
-
-## Three symbols, one job each
-
-The star used to mean four things. Now:
-- **★ stars** only rate how well the stage went (3 at 90% right first time, 2 at 70%), on the
-  results card and the arena card.
-- **❄ snowflakes** are the Snow Shop's money. They are rare: the sled ride's golden word
-  snowflakes, and every English answer right first time (the camp's children, Part 1, Part 2, the
-  snowflake round).
-- **⚪ snowballs** are the common thing on the sled track: the ride's score. A crash spills a few
-  of them, never snowflakes.
-
-Super start's icon is a comet (☄️) and its badge on the kid is a glowing snowball in a gold ring.
-A right answer in a scene sends a little ❄ flying into the progress bar.
+| Place | The view |
+|---|---|
+| Boulevard Park | down an avenue of old plane trees to the treehouse fort; up and round to the fort; back over the park |
+| Archery Ground | up past the white marble record stones; round the lodge's porch with the low sun behind; the ground and the town beyond |
+| Kızılay Square | across the square to the tiled fountain kiosk, simit, tea and corn stalls; round the kiosk; up over the square |
+| Sururi Park | in past the slide to the snow castle, swings and the giant snowman; round the towers; high over the park |
+| The Pier | the admiral and his lion against the sunset, signal flags on their ropes; round the statue; out over the frozen Golden Horn, the ferry in the ice and the far shore |
 
 ## The stage, start to finish
 

@@ -15,6 +15,7 @@ import {
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Kid } from './render/kids.js';
 import { CINEMA, shotAt, TRACK_Z, SCENE_SECONDS } from './render/cinema.js';
+import { CUT } from './render/cutout.js';
 
 const LANE = 1.8, LANES = [-LANE, 0, LANE];
 const CHIME = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24]; // a major pentatonic run up from D, in semitones
@@ -130,6 +131,7 @@ export class SledRun {
 
     this.plan();
     this.scenery();
+    for (const q of this.slots) this.prepare(q); // the places' scenes are built now, before the ride starts (no stutter while steering)
   }
 
   // ---------- the winding path: centre, heading, height and bank for every metre ----------
@@ -270,6 +272,7 @@ export class SledRun {
   update(dt) {
     if (this.finished) { this.time += dt; this.v = Math.max(0, this.v - dt * 8); this.dist += this.v * dt; this.place(); return; }
     this.time += dt;
+    CUT.radius.value = 0; // the arena's see-through effect is off on the ride
     this.updateCinema(dt);
     const target = this.cine ? this.vmax * 0.6 : this.stumbleT > 0 ? 3.5 : this.vmax;
     if (this.cine) this.lane = 1;
@@ -300,13 +303,16 @@ export class SledRun {
   }
 
   // ---------- the places on the way: a cinematic scene beside a clear stretch ----------
+  // a place's scene, beside its clear stretch (hidden until the sled is near)
+  prepare(q) {
+    const sc = q.scene = CINEMA[q.id].build({ camera: this.camera }), mid = q.a + q.lead + (this.vmax * 0.6 * q.dur) / 2, th = this.heading(mid);
+    this.at(mid, -TRACK_Z, 0, sc.group.position); sc.group.rotation.y = Math.PI / 2 - th; this.scene.add(sc.group); sc.group.updateMatrixWorld(true);
+    sc.tick(0, 0); sc.group.visible = false;
+  }
   updateCinema(dt) {
     for (const q of this.slots) {
-      if (!q.scene && !q.played && this.dist > q.a - 90) { // build it a little before, beside the track
-        const sc = q.scene = CINEMA[q.id].build({ sound: (n, o) => this.on.sound?.(n, o) }), mid = q.a + q.lead + (this.vmax * 0.6 * q.dur) / 2, th = this.heading(mid);
-        this.at(mid, -TRACK_Z, 0, sc.group.position); sc.group.rotation.y = Math.PI / 2 - th; this.scene.add(sc.group); sc.group.updateMatrixWorld(true);
-        sc.tick(0, 0);
-      }
+      if (!q.played && this.dist > q.b && this.cine?.q !== q) q.played = true; // already past it
+      if (q.scene && !q.played) q.scene.group.visible = this.dist > q.a - 40 && this.dist < q.b + 20; // only near its stretch (the sky would cover the ride)
       if (q.scene && !q.played && !this.cine && this.dist >= q.a + q.lead) { this.cine = { q, t: 0, ready: false }; this.lightFor(q.scene); this.on.cinema?.({ phase: 'start', id: q.id, title: q.title, task: q.task, part: q.part, welcome: CINEMA[q.id].welcome }); }
       if (q.played && q.scene && this.dist > q.b + 20) { this.scene.remove(q.scene.group); q.scene.dispose(); q.scene = null; }
     }
@@ -319,11 +325,12 @@ export class SledRun {
   skipCine() { const c = this.cine; if (c && c.t < c.q.dur - 1.0) c.t = c.q.dur - 1.0; }
   // a scene's own light: a low warm sun with long shadows over the place; back to the ride's after
   lightFor(sc) {
-    const sun = this.sun, hemi = this.hemi;
-    if (!this.light0) this.light0 = { col: sun.color.clone(), int: sun.intensity, pos: sun.position.clone(), sky: hemi.color.clone() };
-    if (!sc) { const L0 = this.light0; sun.color.copy(L0.col); sun.intensity = L0.int; sun.position.copy(L0.pos); sun.target.position.set(0, 0, 0); hemi.color.copy(L0.sky); sun.castShadow = false; return; }
-    const c = sc.group.position, d = new Vector3(...sc.light.dir).applyAxisAngle(new Vector3(0, 1, 0), sc.group.rotation.y).normalize();
-    sun.color.set(sc.light.sun); sun.intensity = sc.light.intensity; hemi.color.set(sc.light.sky);
+    const sun = this.sun, hemi = this.hemi, sceneT = this.scene, cam = this.camera;
+    if (!this.light0) this.light0 = { col: sun.color.clone(), int: sun.intensity, pos: sun.position.clone(), sky: hemi.color.clone(), gr: hemi.groundColor.clone(), bg: sceneT.background.clone(), fog: sceneT.fog.color.clone(), near: sceneT.fog.near, far: sceneT.fog.far, cfar: cam.far };
+    if (!sc) { const L0 = this.light0; sun.color.copy(L0.col); sun.intensity = L0.int; sun.position.copy(L0.pos); sun.target.position.set(0, 0, 0); hemi.color.copy(L0.sky); hemi.groundColor.copy(L0.gr); sceneT.background.copy(L0.bg); sceneT.fog.color.copy(L0.fog); sceneT.fog.near = L0.near; sceneT.fog.far = L0.far; cam.far = L0.cfar; cam.updateProjectionMatrix(); sun.castShadow = false; return; }
+    const c = sc.group.position.clone().add(new Vector3(0, 0, -9).applyAxisAngle(new Vector3(0, 1, 0), sc.group.rotation.y)), d = new Vector3(...sc.light.dir).applyAxisAngle(new Vector3(0, 1, 0), sc.group.rotation.y).normalize();
+    sun.color.set(sc.light.sun); sun.intensity = sc.light.intensity; hemi.color.set(sc.light.sky); if (sc.light.ground) hemi.groundColor.set(sc.light.ground);
+    sceneT.background.set(sc.light.horizon); sceneT.fog.color.set(sc.light.fog || sc.light.horizon); sceneT.fog.near = 45; sceneT.fog.far = 190; cam.far = 420; cam.updateProjectionMatrix(); // a long view, hazing into the scene's sky
     sun.target.position.copy(c); sun.position.copy(c).addScaledVector(d, 30);
     sun.castShadow = true; Object.assign(sun.shadow.camera, { left: -20, right: 20, top: 20, bottom: -20, near: 1, far: 80 }); sun.shadow.camera.updateProjectionMatrix(); sun.shadow.mapSize.set(1024, 1024); sun.shadow.bias = -0.0006;
   }
