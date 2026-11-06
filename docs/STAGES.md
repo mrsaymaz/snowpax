@@ -95,7 +95,7 @@ Lives are still lost on the sled.
   "RIGHT WORD!", +2 toward the 12 and a boost for the super. A wrong one shows what its word
   means. Missed words come back sooner. Teammates leave word snowmen to the student. Practice
   only: never counted toward the 80%, because a snowball can always hit the wrong snowman.
-- **Supply crates:** a crate with a glowing "?" lands on the field every 20 s or so. Run onto it
+- **Supply crates:** a crate lands on the field every 20 s or so, under a big golden "?" badge that bobs, pulses and wiggles, with a soft beam of light, ripples on the snow and sparkles; when it is out of view a golden "?" at the screen edge points to it. Run onto it
   for one quick question: right, and the whole team's snowballs are refilled and the super gets a
   big boost; wrong, and there is still a snowball (a question never punishes).
 

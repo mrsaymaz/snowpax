@@ -502,3 +502,14 @@ body.reading #hunt { display: none; }
 /* landscape: the word prompt sits on the right, out of the middle of the field */
 @media (orientation: landscape) { #hunt { left: auto; right: 12px; top: 72px; transform: none; animation-name: hunt-in-side; } }
 @keyframes hunt-in-side { from { transform: translateX(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* a supply crate out of view: a golden "?" badge at the screen edge with an arrow toward it */
+.crate-mark { position: fixed; left: 0; top: 0; width: 46px; height: 46px; }
+.crate-mark .cm-in { position: absolute; inset: 0; animation: crate-pulse 1s ease-in-out infinite; }
+.crate-mark[hidden] { display: none; }
+.crate-mark b { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3b0, #ffcf3e 45%, #f08c00); border: 3px solid #fff; box-shadow: 0 0 0 2px #a85a00, 0 0 16px 4px rgba(255, 196, 60, 0.75); color: #fff; font: 900 28px system-ui, sans-serif; -webkit-text-stroke: 1.5px #8a4300; }
+.crate-mark i { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform: rotate(var(--a, 0rad)); }
+.crate-mark i::before { content: ''; position: absolute; left: 24px; top: -9px; border-left: 14px solid #ffb21e; border-top: 9px solid transparent; border-bottom: 9px solid transparent; filter: drop-shadow(0 0 2px #8a4300); }
+@keyframes crate-pulse { 50% { transform: scale(1.12); } }
+body.reading .crate-mark, body.sledding .crate-mark { display: none; }
+@media (prefers-reduced-motion: reduce) { .crate-mark .cm-in { animation: none; } }

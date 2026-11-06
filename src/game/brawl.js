@@ -30,7 +30,7 @@ import { useBasicScenes } from './cards/scenes.js';
 import { WorldTasks } from './render/worldtask.js';
 import { castleStation } from './cards/castle3d.js';
 import { treehouseStation, archeryStation, fountainStation, bellStation } from './cards/stations.js';
-import { InstancedMesh, MeshLambertMaterial, SphereGeometry, Object3D, Group, Mesh, BoxGeometry, Sprite, SpriteMaterial, CanvasTexture, SRGBColorSpace } from 'three';
+import { InstancedMesh, MeshLambertMaterial, SphereGeometry, Object3D, Group, Mesh, BoxGeometry, Sprite, SpriteMaterial, CanvasTexture, SRGBColorSpace, CylinderGeometry, PlaneGeometry, MeshBasicMaterial, AdditiveBlending, DoubleSide } from 'three';
 
 const $ = s => document.querySelector(s);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -245,14 +245,47 @@ async function startGame(myTeam, kit, pace) {
     wallMesh.receiveShadow = true; scene.add(wallMesh);
   };
   // supply crates on the field (the fights): a crate with a snow cap and a glowing question mark
-  const crates = new Map(), qTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); const gr = g.createRadialGradient(64, 64, 8, 64, 64, 62); gr.addColorStop(0, 'rgba(255,214,110,1)'); gr.addColorStop(0.55, 'rgba(255,170,60,0.55)'); gr.addColorStop(1, 'rgba(255,150,40,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); g.fillStyle = '#5a3200'; g.font = '900 72px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', 64, 68); const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; return t; })();
+  // supply crates on the field (the fights): a crate under a big golden "?" badge that bobs and
+  // pulses, a soft beam of light, ripples on the snow and sparkles, so it calls you over from afar
+  const canvasTex = (S, draw) => { const c = document.createElement('canvas'); c.width = c.height = S; draw(c.getContext('2d'), S); const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; return t; };
+  const qTex = canvasTex(256, (g, S) => {
+    const r = S * 0.4, c = S / 2;
+    g.fillStyle = 'rgba(40,24,0,0.35)'; g.beginPath(); g.arc(c + 6, c + 10, r, 0, 7); g.fill(); // a soft drop shadow
+    const gr = g.createRadialGradient(c - r * 0.35, c - r * 0.45, r * 0.1, c, c, r); gr.addColorStop(0, '#fff3b0'); gr.addColorStop(0.45, '#ffcf3e'); gr.addColorStop(1, '#f08c00');
+    g.fillStyle = gr; g.beginPath(); g.arc(c, c, r, 0, 7); g.fill();
+    g.lineWidth = 14; g.strokeStyle = '#ffffff'; g.stroke(); g.lineWidth = 5; g.strokeStyle = '#a85a00'; g.beginPath(); g.arc(c, c, r + 9, 0, 7); g.stroke();
+    g.font = '900 150px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.lineWidth = 12; g.strokeStyle = '#8a4300'; g.strokeText('?', c, c + 8); g.fillStyle = '#ffffff'; g.fillText('?', c, c + 8);
+    g.fillStyle = 'rgba(255,255,255,0.55)'; g.beginPath(); g.ellipse(c - r * 0.35, c - r * 0.55, r * 0.32, r * 0.14, -0.5, 0, 7); g.fill(); // a shine
+  });
+  const haloTex = canvasTex(128, (g, S) => { const gr = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2); gr.addColorStop(0, 'rgba(255,220,120,0.9)'); gr.addColorStop(0.45, 'rgba(255,180,60,0.35)'); gr.addColorStop(1, 'rgba(255,160,40,0)'); g.fillStyle = gr; g.fillRect(0, 0, S, S); });
+  const beamTex = canvasTex(64, (g, S) => { const gr = g.createLinearGradient(0, S, 0, 0); gr.addColorStop(0, 'rgba(255,214,110,0.75)'); gr.addColorStop(0.6, 'rgba(255,214,110,0.18)'); gr.addColorStop(1, 'rgba(255,214,110,0)'); g.fillStyle = gr; g.fillRect(0, 0, S, S); });
+  const ringTex = canvasTex(128, (g, S) => { g.strokeStyle = 'rgba(255,200,70,1)'; g.lineWidth = 10; g.beginPath(); g.arc(S / 2, S / 2, S / 2 - 8, 0, 7); g.stroke(); });
+  const crates = new Map();
   const addCrate = (id, x, z) => {
     const g = new Group(), y0 = groundH(x, z); g.position.set(x, y0, z);
-    const box = new Mesh(new BoxGeometry(0.9, 0.7, 0.9), new MeshLambertMaterial({ color: '#c08a52' })); box.position.y = 0.35; box.castShadow = true; g.add(box);
-    for (const s of [-1, 1]) { const band = new Mesh(new BoxGeometry(0.94, 0.1, 0.94), new MeshLambertMaterial({ color: '#7a4f2a' })); band.position.y = 0.35 + s * 0.22; g.add(band); }
-    const cap = new Mesh(new BoxGeometry(0.92, 0.12, 0.92), new MeshLambertMaterial({ color: '#f6f8ff' })); cap.position.y = 0.76; g.add(cap);
-    const q = new Sprite(new SpriteMaterial({ map: qTex, depthWrite: false, transparent: true })); q.scale.set(1.1, 1.1, 1); q.position.y = 1.5; q.renderOrder = 5; g.add(q); g.userData.q = q;
-    scene.add(g); crates.set(id, g); fx.emit(x, 1, z, 24, '#ffd166', 4, 0.8);
+    const body = new Group(); g.add(body); g.userData.body = body;
+    const box = new Mesh(new BoxGeometry(0.9, 0.7, 0.9), new MeshLambertMaterial({ color: '#c08a52', emissive: new Color('#5a3300'), emissiveIntensity: 0.25 })); box.position.y = 0.35; box.castShadow = true; body.add(box);
+    for (const s of [-1, 1]) { const band = new Mesh(new BoxGeometry(0.94, 0.1, 0.94), new MeshLambertMaterial({ color: '#7a4f2a' })); band.position.y = 0.35 + s * 0.22; body.add(band); }
+    const cap = new Mesh(new BoxGeometry(0.92, 0.12, 0.92), new MeshLambertMaterial({ color: '#f6f8ff' })); cap.position.y = 0.76; body.add(cap);
+    const add = (o, y) => { o.position.y = y; o.renderOrder = 5; g.add(o); return o; };
+    const beam = add(new Mesh(new CylinderGeometry(0.42, 0.62, 7, 18, 1, true), new MeshBasicMaterial({ map: beamTex, transparent: true, depthWrite: false, blending: AdditiveBlending, side: DoubleSide })), 3.5);
+    const halo = add(new Sprite(new SpriteMaterial({ map: haloTex, depthWrite: false, transparent: true, blending: AdditiveBlending })), 2.05);
+    const q = add(new Sprite(new SpriteMaterial({ map: qTex, depthWrite: false, depthTest: false, transparent: true })), 2.05); q.renderOrder = 6;
+    const rings = [0, 0.5].map(ph => { const m = new Mesh(new PlaneGeometry(1, 1), new MeshBasicMaterial({ map: ringTex, transparent: true, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.userData.ph = ph; return add(m, 0.04); });
+    Object.assign(g.userData, { q, halo, beam, rings, t: 0, spark: 0 });
+    scene.add(g); crates.set(id, g); fx.emit(x, 1, z, 36, '#ffd166', 5, 0.9); play('sparkle');
+  };
+  const tickCrates = dt => {
+    for (const g of crates.values()) {
+      const u = g.userData; u.t += dt; const t = u.t, pop = Math.min(1, t / 0.45), over = pop < 1 ? 1 + Math.sin(pop * Math.PI) * 0.35 : 1; // pops in with a little overshoot
+      const pulse = reduceMotion ? 1 : 1 + Math.sin(t * 5) * 0.08, bob = reduceMotion ? 0 : Math.sin(t * 2.6) * 0.18;
+      u.q.scale.setScalar(1.75 * pop * over * pulse); u.q.position.y = 2.05 + bob; u.q.material.rotation = reduceMotion ? 0 : Math.sin(t * 2.2) * 0.12; // a friendly wiggle
+      u.halo.scale.setScalar(3.2 * pop * (1 + Math.sin(t * 5) * 0.12)); u.halo.position.y = u.q.position.y;
+      u.beam.material.opacity = 0.55 + Math.sin(t * 3) * 0.2; u.beam.rotation.y += dt * 0.8; u.body.rotation.y += dt * 0.5;
+      for (const r of u.rings) { const k = ((t * 0.7 + r.userData.ph) % 1); r.scale.setScalar(0.9 + k * 2.6); r.material.opacity = (1 - k) * 0.9; }
+      if (!reduceMotion && (u.spark -= dt) <= 0) { u.spark = 0.35; fx.emit(g.position.x + (Math.random() - 0.5) * 0.8, 2.0 + bob, g.position.z + (Math.random() - 0.5) * 0.8, 3, '#fff1a8', 1.6, 0.6); }
+    }
   };
   const dropCrate = id => { const g = crates.get(id); if (!g) return; scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); crates.delete(id); };
   // rival snowmen views
@@ -449,7 +482,7 @@ async function startGame(myTeam, kit, pace) {
       const c = k.c, visible = !c.benched && (c.side === 'home' || sim.canSee(player, c) || c.frozen);
       k.update(dt, { visible, reduceMotion, groundY: groundH(c.x, c.z) });
     }
-    for (const g of crates.values()) { g.userData.q.position.y = 1.5 + Math.sin(now / 300) * 0.12; g.rotation.y += dt * 0.6; }
+    tickCrates(dt);
     for (const v of snowmen.values()) { v.update(dt, groundH(v.c.x, v.c.z)); v.root.visible = sim.canSee(player, v.c) || v.c.frozen > 0; }
     sim.drifts.forEach((d, i) => { const t = 1 - d.cd / 6; if (d.lt !== t) { d.lt = t; world.updateDrift(i, Math.max(0.2, t)); } });
     fx.update(pose ? 0 : dt, sim);
@@ -514,6 +547,7 @@ async function startGame(myTeam, kit, pace) {
   // rivals just out of view: an arrow at the screen edge pointing to each (within 30 m)
   const edgeLayer = document.createElement('div'); edgeLayer.id = 'edge-marks'; document.body.appendChild(edgeLayer);
   const marks = Array.from({ length: 6 }, () => { const m = document.createElement('div'); m.className = 'edge-mark'; m.style.setProperty('--c', rivCol); m.hidden = true; edgeLayer.appendChild(m); return m; });
+  const crateMark = document.createElement('div'); crateMark.className = 'crate-mark'; crateMark.hidden = true; crateMark.innerHTML = '<span class="cm-in"><i></i><b>?</b></span>'; edgeLayer.appendChild(crateMark);
   const ev = new Vector3();
   function edgeMarks() {
     const show = stages ? stages.mode === 'outpost' && !worldTasks?.active : true; let k = 0;
@@ -526,6 +560,18 @@ async function startGame(myTeam, kit, pace) {
       const m = marks[k++]; m.hidden = false; m.style.transform = `translate(${cx + dx * f}px, ${cy + dy * f}px) translate(-50%, -50%) rotate(${Math.atan2(dy, dx)}rad)`;
     }
     for (; k < marks.length; k++) marks[k].hidden = true;
+    // a supply crate out of view: a golden "?" at the screen edge, pointing to it
+    const s = show && sim.pickups.find(p => p.kind === 'supply' && !p.asking);
+    crateMark.hidden = true;
+    if (s) {
+      ev.set(s.x, groundH(s.x, s.z) + 1.5, s.z).project(camera);
+      const sx = (ev.x + 1) / 2 * innerWidth, sy = (1 - ev.y) / 2 * innerHeight, M = 46, top = 120;
+      if (!(ev.z < 1 && sx > M && sx < innerWidth - M && sy > top && sy < innerHeight - M)) {
+        const cx = innerWidth / 2, cy = innerHeight / 2, dx = (ev.z < 1 ? sx : 2 * cx - sx) - cx, dy = (ev.z < 1 ? sy : 2 * cy - sy) - cy, f = Math.min(Math.abs((innerWidth / 2 - M) / (dx || 1e-6)), Math.abs((innerHeight / 2 - M - (dy < 0 ? top / 2 : 0)) / (dy || 1e-6)));
+        const px = Math.max(M, Math.min(innerWidth - M, cx + dx * f)), py = Math.max(top, Math.min(innerHeight - M, cy + dy * f)); // always fully on screen
+        crateMark.hidden = false; crateMark.style.transform = `translate(${px}px, ${py}px) translate(-50%, -50%)`; crateMark.style.setProperty('--a', Math.atan2(dy, dx) + 'rad');
+      }
+    }
   }
   const screenOf = c => { const v = new Vector3(c.x, groundH(c.x, c.z) + (c.role === 'minion' ? 0.9 : 1.0), c.z).project(camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight }; };
   globalThis.__snowpax = { match, sim, player, quality, renderer, world, life, flow, stages, scene, snowmen, screenOf };
