@@ -1,13 +1,14 @@
 // Prepare, then fight (the Archery Ground sample, from the third play-test talk). English and
-// fighting are kept apart, so nobody reads while being hit, but the English decides the fight: right
-// answers earn snow stars, and stars build towers on glowing pads and buy boosts. No DOM here, so
-// it is tested in node.
+// fighting are kept apart, so nobody reads while being hit, but the English decides the fight:
+// right answers recruit neighbourhood children to your team and earn snow stars for more recruits
+// and boosts. No DOM here, so it is tested in node.
 //
 // An outpost:
-//   1. camp: supply crates at the home end, one quick question each (a star when right first time);
-//      no rivals on the field yet;
-//   2. build: tap a glowing pad to build a tower (snowball cannon, snow fort, cocoa stand, ice
-//      patch) or pick a boost (big gloves, quick hands, super start, warm coat); then Fight!;
+//   1. camp: neighbourhood children wait at the home end in plain coats; walk up to one and answer
+//      their question: right first time and they join your team (team colour, puffer jacket) and
+//      you get a star; wrong and they wait, ask again in a moment; no rivals on the field yet;
+//   2. build: stars invite another friend (a role you have not got yet) or buy a boost (big
+//      gloves, quick hands, super start, warm coat); then Fight!;
 //   3. the opening round: the rival team keeps coming back from its camp; freeze `goal` rivals to
 //      break the line (after `max` seconds they give up anyway, so a class is never stuck);
 //   4. part 1 of the outpost's English (each right first try is also a star), build;
@@ -20,12 +21,11 @@
 
 export const FIGHT_PLANS = {
   long: {
-    // camp: supply crates at the home end before the first fight, one question each (v, d: across
-    // and rows south of the outpost centre)
-    camp: { crates: [[-5.5, 22.2], [-2, 21.3], [2, 21.3], [5.5, 22.2]], max: 75 },
-    // build moments before each fight; the glowing pads (v, d) towers stand on
+    // camp: neighbourhood children waiting at the home end (v, d: across and rows south of the
+    // outpost centre), one role each
+    camp: { kids: [[-7, 24.5, 'thrower'], [0, 21.8, 'lobber'], [7, 24.5, 'sprayer']], max: 75, retry: 4 },
     build: 35,
-    pads: [[-3.5, 19.5], [3.5, 19.5], [-7.5, 11.5], [7.5, 11.5], [-6.5, 3.5], [6.5, 3.5]],
+    recruits: { max: 4, cost: 2, extraSnowmen: 1 }, // at most 4 friends; each one brings an extra snowman to the rivals' side
     open: { goal: 12, max: 90, trickle: 8, snowmen: 4 },
     strike: { seconds: 50, max: 85 },
     final: 30,
@@ -34,16 +34,16 @@ export const FIGHT_PLANS = {
   },
 };
 
-// What snow stars buy. Towers stand on a glowing pad for the rest of the stage; boosts are for the
-// student's kid: gloves and quick hands last the stage, a super start and a warm coat are for the
-// next fight.
+// The neighbourhood children who can join (each plays differently), and what stars buy.
+export const ROLES = {
+  thrower: { name: 'Quick thrower', kit: 'thrower', style: 'rusher', icon: '❄️', tip: 'Fast snowballs, runs in' },
+  lobber: { name: 'Lobber', kit: 'lobber', style: 'sniper', icon: '🌨️', tip: 'Throws over walls' },
+  sprayer: { name: 'Sprayer', kit: 'sprayer', style: 'flanker', icon: '💨', tip: 'Three snowballs up close' },
+  builder: { name: 'Wall builder', kit: 'thrower', style: 'builder', icon: '🧱', tip: 'Puts up snow walls' },
+};
+// first names for the neighbourhood children (girls and boys)
+export const KID_NAMES = { girl: ['Elif', 'Zeynep', 'Defne', 'Ada', 'Nil', 'Ela'], boy: ['Can', 'Emir', 'Mert', 'Kaan', 'Ege', 'Arda'] };
 export const SHOP = {
-  towers: {
-    cannon: { name: 'Snowball cannon', cost: 3, icon: '🎯', tip: 'Throws at rivals nearby' },
-    fort: { name: 'Snow fort', cost: 1, icon: '🧱', tip: 'A wall to hide behind' },
-    cocoa: { name: 'Cocoa stand', cost: 2, icon: '☕', tip: 'Warms your team nearby' },
-    ice: { name: 'Ice patch', cost: 1, icon: '🧊', tip: 'Slows rivals crossing it' },
-  },
   boosts: {
     gloves: { name: 'Big gloves', cost: 2, icon: '🧤', tip: '4 snowballs instead of 3', keep: true },
     quick: { name: 'Quick hands', cost: 2, icon: '⚡', tip: 'Snowballs come back faster', keep: true },
@@ -52,12 +52,16 @@ export const SHOP = {
   },
 };
 
-// The stars and what has been built at one outpost (no DOM, tested in node).
+// The stars, the team's recruits and the boosts at one outpost (no DOM, tested in node).
 export class Armoury {
-  constructor(pads = []) { this.stars = 0; this.earned = 0; this.pads = pads.map(([v, d], i) => ({ i, v, d, tower: null })); this.boosts = new Set(); this.next = new Set(); }
+  constructor({ max = 4, cost = 2 } = {}) { this.stars = 0; this.earned = 0; this.max = max; this.cost = cost; this.team = []; this.boosts = new Set(); this.next = new Set(); }
   earn(n = 1) { this.stars += n; this.earned += n; }
-  canTower(kind, pad) { const p = this.pads[pad], t = SHOP.towers[kind]; return !!(p && t && !p.tower && this.stars >= t.cost); }
-  buildTower(kind, pad) { if (!this.canTower(kind, pad)) return false; this.stars -= SHOP.towers[kind].cost; this.pads[pad].tower = kind; return true; }
+  // a child joined (from the camp, or invited with stars)
+  join(role) { if (this.team.length >= this.max || !ROLES[role]) return false; this.team.push(role); return true; }
+  // the roles that can still be invited with stars: one of each, while there is room
+  invitable() { return this.team.length >= this.max ? [] : Object.keys(ROLES).filter(r => !this.team.includes(r)); }
+  canInvite(role) { return this.invitable().includes(role) && this.stars >= this.cost; }
+  invite(role) { if (!this.canInvite(role)) return false; this.stars -= this.cost; return this.join(role); }
   canBoost(id) { const b = SHOP.boosts[id]; return !!(b && !(b.keep ? this.boosts : this.next).has(id) && this.stars >= b.cost); }
   buyBoost(id) { if (!this.canBoost(id)) return false; const b = SHOP.boosts[id]; this.stars -= b.cost; (b.keep ? this.boosts : this.next).add(id); return true; }
   // the boosts for the fight that is starting (the one-fight ones are used up)

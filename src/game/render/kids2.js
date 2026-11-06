@@ -50,9 +50,11 @@ const knitTex = col => canvas('knit' + col, 64, 64, (g, W) => { g.fillStyle = co
 const emblemTex = team => canvas('emb' + team, 128, 128, (g, W) => { g.fillStyle = '#fff'; g.beginPath(); g.arc(64, 64, 62, 0, 7); g.fill(); const im = new Image(); im.onload = () => { g.drawImage(im, 8, 8, 112, 112); texCache.get('emb' + team).needsUpdate = true; }; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(emblemSVG(team, 112).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')); });
 
 // one kid model: { design, team, kit, skin (index), hair (index) }
+// a neighbourhood child not on a team yet: a plain everyday coat, no badge (team 'neutral')
+export const NEUTRAL = { color: '#c9bba4', dark: '#8c7d68' };
 export function buildKid({ design = 'puffer', team = 'hufflepuff', kit = 'thrower', gender = 'boy', style = null, skin = 0, hair = 0, mood = 'happy' } = {}) {
   const girl = gender === 'girl'; style = style || (girl ? 'pigtails' : 'short');
-  const T = CONFIG.teams[team], root = new Group(), col = T.color, dark = T.dark, skinCol = SKINS[skin % SKINS.length], hairCol = HAIR[hair % HAIR.length];
+  const T = CONFIG.teams[team] || NEUTRAL, root = new Group(), col = T.color, dark = T.dark, skinCol = SKINS[skin % SKINS.length], hairCol = HAIR[hair % HAIR.length];
   const fab = c => design === 'vinyl' ? new MeshPhysicalMaterial({ color: c, roughness: 0.32, clearcoat: 0.8, clearcoatRoughness: 0.2 }) : design === 'plush' ? new MeshLambertMaterial({ color: '#ffffff', map: knitTex(c) }) : new MeshStandardMaterial({ color: c, roughness: 0.72, metalness: 0 });
   const skinM = design === 'vinyl' ? new MeshPhysicalMaterial({ color: skinCol, roughness: 0.38, clearcoat: 0.6 }) : design === 'plush' ? new MeshLambertMaterial({ color: skinCol }) : new MeshStandardMaterial({ color: skinCol, roughness: 0.6 });
   const M = { team: fab(col), dark: fab(dark), white: fab('#f6f4ef'), boot: fab(design === 'plush' ? '#8a5a3c' : '#5a3a2a'), pants: fab('#34405e'), hair: fab(hairCol), scarf: fab(kit === 'lobber' ? '#ffd166' : kit === 'sprayer' ? '#7bdff2' : '#f4f1ea') };
@@ -84,8 +86,10 @@ export function buildKid({ design = 'puffer', team = 'hufflepuff', kit = 'throwe
     for (const y of [0.92, 0.72]) add(new CylinderGeometry(0.045, 0.045, 0.03, 12), M.white, 0, y, 0.41, Math.PI / 2); // buttons
   }
   // chest badge with the team emblem
-  const badge = add(new CircleGeometry(0.12, 24), new MeshBasicMaterial({ map: emblemTex(team), transparent: true }), design === 'puffer' ? 0.17 : 0, design === 'vinyl' ? 0.82 : 0.9, design === 'vinyl' ? 0.355 : design === 'plush' ? 0.42 : 0.45);
-  badge.castShadow = false; if (design !== 'plush') badge.rotation.x = -0.1;
+  if (CONFIG.teams[team]) { // not for a child who is not on a team yet
+    const badge = add(new CircleGeometry(0.12, 24), new MeshBasicMaterial({ map: emblemTex(team), transparent: true }), design === 'puffer' ? 0.17 : 0, design === 'vinyl' ? 0.82 : 0.9, design === 'vinyl' ? 0.355 : design === 'plush' ? 0.42 : 0.45);
+    badge.castShadow = false; if (design !== 'plush') badge.rotation.x = -0.1;
+  }
   // scarf
   add(new TorusGeometry(design === 'vinyl' ? 0.3 : 0.31, 0.09, 10, 22), M.scarf, 0, 1.14, 0, Math.PI / 2); add(new BoxGeometry(0.16, 0.42, 0.07), M.scarf, 0.14, 0.92, 0.3, 0.15, 0, 0.15);
   // arms and mittens

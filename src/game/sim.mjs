@@ -36,9 +36,7 @@ export const WORLD = {
   sled: { start: 2.5, push: 2.2, gravity: 9, max: 9.5, board: 0.75, cooldown: 1.5, cost: 2.6 },
   cocoa: { respawn: 40, reach: 0.85, superBonus: 0.35 }, // a question first; right answer = full warmth, full snowballs, some super
   supply: { reach: 0.9, superBonus: 0.45 }, // supply crates in the fights
-  // towers built with snow stars before a fight (fights.mjs): a snowball cannon, a snow fort (a
-  // wall), a cocoa stand (warms teammates nearby), an ice patch (slows rivals crossing it)
-  tower: { cannon: { range: 6.5, reload: 1.3, dmg: 22, speed: 11 }, cocoa: { r: 3, heal: 12 }, ice: { r: 1.9 } },
+  recruit: { reach: 1.3 }, // neighbourhood children waiting to join (fights.mjs camp)
   flake: { reach: 0.85 },
   dump: { reach: 1.4, damage: 6, slow: 1.1, cooldown: 4, tiles: 'HRtlTvyx' },
   gust: { every: [25, 45], seconds: 6, strength: 2.4, dir: [-Math.SQRT1_2, Math.SQRT1_2] }, // poyraz: from the north-east
@@ -64,7 +62,7 @@ export class Sim {
   constructor({ arena, grid, nav, seats, rng = Math.random, pace = 'relaxed' }) {
     this.arena = arena; this.grid = grid; this.nav = nav; this.rng = rng;
     this.pace = CONFIG.pace[pace] || CONFIG.pace.relaxed;
-    this.t = 0; this.events = []; this.balls = []; this.walls = []; this.towers = [];
+    this.t = 0; this.events = []; this.balls = []; this.walls = [];
     this.seats = new Map(seats.map(s => [s.id, s]));
     this.chars = [];
     this.drifts = arena.drifts.map(([x, z], i) => ({ id: i, x, z, cd: 0 }));
@@ -202,42 +200,11 @@ export class Sim {
     for (const w of [...this.walls]) if ((w.life -= dt) <= 0) { this.removeWall(w); this.emit('wallMelt', { id: w.id }); }
     for (const d of this.drifts) d.cd = Math.max(0, d.cd - dt);
     for (const z of this.zones) this.stepZone(z, dt);
-    if (this.towers.length) this.stepTowers(dt);
   }
 
-  // ---------- towers (built with snow stars before a fight) ----------
-  addTower(kind, x, z, side = 'home') {
-    const t = { id: 't' + (this.towerN = (this.towerN || 0) + 1), kind, x, z, side, cd: 0.5, cells: [] };
-    if (kind === 'cannon' || kind === 'cocoa') t.cells = [[x, z]];
-    if (kind === 'fort') t.cells = [[x - 1, z], [x, z], [x + 1, z]];
-    for (const [px, pz] of t.cells) this.grid.set(px, pz, GRID.BLOCK, true);
-    this.towers.push(t); this.emit('towerBuilt', { id: t.id, kind, x, z }); return t;
-  }
-  clearTowers() { for (const t of this.towers) for (const [px, pz] of t.cells) this.grid.set(px, pz, GRID.BLOCK, false); this.towers = []; this.emit('towersCleared', {}); }
-  stepTowers(dt) {
-    const T = WORLD.tower;
-    for (const t of this.towers) {
-      if (t.kind === 'cannon') {
-        if ((t.cd -= dt) > 0) continue;
-        let best = null, bd = Infinity;
-        for (const o of this.chars) {
-          if (o.side === t.side || o.frozen || o.thaw || o.benched || o.gone || o.word) continue; // word snowmen are the student's to find
-          const d = Math.hypot(o.x - t.x, o.z - t.z); if (d > T.cannon.range || d >= bd) continue;
-          const ux = (o.x - t.x) / (d || 1), uz = (o.z - t.z) / (d || 1);
-          if (!this.grid.clearLine(t.x + ux * 0.7, t.z + uz * 0.7, o.x, o.z)) continue;
-          best = o; bd = d;
-        }
-        if (!best) { t.cd = 0.3; continue; }
-        const ux = (best.x - t.x) / bd, uz = (best.z - t.z) / bd, team = this.chars.find(c => c.side === t.side)?.team;
-        this.balls.push({ owner: -1, side: t.side, team, kit: 'thrower', kind: 'straight', x: t.x + ux * 0.7, z: t.z + uz * 0.7, y: 1.05 + this.ground(t.x, t.z), vx: ux * T.cannon.speed, vz: uz * T.cannon.speed, dmg: T.cannon.dmg, r: SIM.ballRadius, left: T.cannon.range + 0.5, d0: T.cannon.range + 0.5 });
-        t.cd = T.cannon.reload; this.emit('towerShot', { id: t.id, x: t.x, z: t.z, a: Math.atan2(ux, uz) });
-      } else if (t.kind === 'cocoa') {
-        for (const c of this.chars) if (c.side === t.side && !c.frozen && !c.benched && Math.hypot(c.x - t.x, c.z - t.z) < T.cocoa.r) c.warmth = Math.min(c.maxWarmth, c.warmth + T.cocoa.heal * dt);
-      } else if (t.kind === 'ice') {
-        for (const c of this.chars) if (c.side !== t.side && Math.hypot(c.x - t.x, c.z - t.z) < T.ice.r) c.slow = Math.max(c.slow, 0.3);
-      }
-    }
-  }
+  // ---------- neighbourhood children waiting to join (the camp before a fight) ----------
+  addRecruitSpot(spot) { const p = { ...spot, kind: 'recruit', cd: 0, taken: false, asking: false }; this.pickups.push(p); this.emit('recruitWait', { pickup: p.id }); return p; }
+  removeRecruitSpot(id = null) { for (const p of this.pickups.filter(q => q.kind === 'recruit' && (!id || q.id === id))) { this.pickups.splice(this.pickups.indexOf(p), 1); this.emit('recruitGone', { pickup: p.id }); } }
 
   // ---------- sled runs ----------
   runPoint(run, s) {
@@ -282,6 +249,9 @@ export class Sim {
         if (c.frozen || c.thaw) continue;
         const d = Math.hypot(c.x - p.x, c.z - p.z);
         if (p.kind === 'flake' && c.role === 'player' && d < WORLD.flake.reach) { p.taken = true; c.flakes++; this.emit('collect', { id: c.id, pickup: p.id, kind: 'flake', x: p.x, z: p.z }); break; }
+        if (p.kind === 'recruit' && c.role === 'player' && !c.planted && d < WORLD.recruit.reach) { // a child waiting to join: a question first
+          p.asking = true; this.emit('recruitAsk', { id: c.id, pickup: p.id, x: p.x, z: p.z }); break;
+        }
         if (p.kind === 'supply' && c.role === 'player' && !c.planted && d < WORLD.supply.reach) { // a supply crate: a quick question first
           p.asking = true; this.emit('supplyAsk', { id: c.id, pickup: p.id, x: p.x, z: p.z }); break;
         }
@@ -323,7 +293,8 @@ export class Sim {
     this.emit('snowDump', { x, z, tile: ch, hit });
   }
 
-  nearestZone(x, z) { let best = null, bd = Infinity; for (const zn of this.zones) { const d = Math.hypot(zn.x - x, zn.z - z); if (d < bd) { bd = d; best = zn; } } return best; }
+  // during a stage only its own outpost counts (the other fields sit next to it in the world file)
+  nearestZone(x, z) { if (this.activeZone) return this.activeZone; let best = null, bd = Infinity; for (const zn of this.zones) { const d = Math.hypot(zn.x - x, zn.z - z); if (d < bd) { bd = d; best = zn; } } return best; }
   stepZone(z, dt) {
     let home = 0, rival = 0;
     for (const c of this.chars) if (!c.frozen && !c.thaw && !c.benched && Math.hypot(c.x - z.x, c.z - z.z) <= z.r) { if (c.side === 'home') home++; else rival++; }

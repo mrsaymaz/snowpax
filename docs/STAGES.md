@@ -73,40 +73,44 @@ its own layout.
 
 From the third play-test talk: fewer, bigger outposts, each taken in two halves of English with
 real fights round them. English and fighting are kept apart, so nobody has to read while being
-hit, but the English decides the fights: right answers earn **⭐ snow stars**, and stars build
-towers and buy boosts. Archery Ground is the sample (`fights` and `halves` in `stages.mjs`, the
-plan and the shop in `fights.mjs`); the others follow once it is approved.
+hit, but the English decides the fights: right answers **recruit neighbourhood children** to your
+team and earn **⭐ snow stars** for more friends and boosts. Archery Ground is the sample (`fights`
+and `halves` in `stages.mjs`; the plan, the roles and the shop in `fights.mjs`); the others follow
+once it is approved.
 
-1. **Camp:** four supply crates at the home end, no rivals yet. Run onto each for one quick
-   question: a ⭐ when right first time (counted toward the 80%, answered calmly).
-2. **Build** (35 s at most, or tap Fight!): the camera pulls back over the field; tap a glowing
-   pad to build a tower, or pick a boost in the panel.
+1. **Camp:** three neighbourhood children wait at the home end in plain beige coats, each with a
+   "Can I join?" bubble and their name. Walk up to one and answer their question: right first
+   time and they join (a puff of snow, and out they come in your team's colour and puffer jacket),
+   plus a ⭐; wrong and they say "Nearly! Ask me again in a moment" (4 s). No rivals on the field
+   yet. Counted toward the 80% (answered calmly).
+2. **Build** (35 s at most, or tap Fight!): stars invite another friend (a role you have not got
+   yet, ⭐2) or buy a boost.
 3. **The opening round:** the rival team keeps coming back from its camp; freeze **12 rivals**
-   to break the line (90 s at most).
+   to break the line (90 s at most). Each friend brings one more snowman to the rivals' side, so
+   the fight stays exciting.
 4. **Part 1 of 2: Matching** (the fountain activity): every right first try is also a ⭐. Build.
 5. **"They strike back!":** hold the circle for **50 s** (the clock stops while rivals stand in
    it alone).
 6. **Part 2 of 2: Sorting** (the archery activity), ⭐ again. Build, then the **final wave** (30 s
-   at most), and the outpost is yours.
+   at most), and the outpost is yours. The friends go home after the stage.
 
-| Towers (on six fixed glowing pads) | ⭐ | Boosts (for your kid) | ⭐ |
+| Friends who can join (one of each, 4 at most) | | Boosts (for your kid) | ⭐ |
 |---|---|---|---|
-| Snowball cannon: throws at rivals nearby | 3 | Big gloves: 4 snowballs instead of 3 (the whole stage) | 2 |
-| Snow fort: a wall to hide behind | 1 | Quick hands: snowballs come back faster (the whole stage) | 2 |
-| Cocoa stand: warms your team nearby | 2 | Super start: half a super for the next fight | 1 |
-| Ice patch: slows rivals crossing it | 1 | Warm coat: the first hit in the next fight does not count | 1 |
+| ❄️ Quick thrower: fast snowballs, runs in | camp | Big gloves: 4 snowballs instead of 3 (the whole stage) | 2 |
+| 🌨️ Lobber: throws over walls | camp | Quick hands: snowballs come back faster (the whole stage) | 2 |
+| 💨 Sprayer: three snowballs up close | camp | Super start: half a super for the next fight | 1 |
+| 🧱 Wall builder: puts up snow walls | ⭐2 | Warm coat: the first hit in the next fight does not count | 1 |
 
-Two pads are near the home end, two on the flanks of the middle, two by the circle (for the
-strike-back and the final). Towers stay for the stage. The fights stay winnable without any.
+Only neighbourhood children join (first names like Elif, Can, Zeynep, Emir), girls and boys. Each
+friend is a bot that follows the student, and a team seat a classmate could take one day.
+The fights stay winnable without any friends.
 
 **Being frozen in a fight never costs a life:** the kid goes back to the spawn for a moment.
 
 **Word snowmen** stay in the fights, but tidy: three snowmen walk out together in a row, side by
 side, slowly, in their own lanes, and never throw. The top of the screen shows a Turkish word with
 its picture; freeze the snowman with the right English word ("RIGHT WORD!", +2 toward the 12, a
-boost for the super). Teammates and cannons leave them to the student. Practice only.
-
-**Supply crates** are only in the camp now, not in the fights.
+boost for the super). Teammates leave them to the student. Practice only.
 
 ## A stage
 

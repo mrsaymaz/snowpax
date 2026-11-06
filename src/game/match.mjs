@@ -44,6 +44,7 @@ export function createMatch({ arena, myTeam, rivalTeam, pace = 'relaxed', rng = 
   }
   for (const [id, b] of bots) bots.set(id, new Bot(sim, b.c, { style: CONFIG.teams[b.seat.team]?.style, leader: b.seat.side === 'home' ? player : null, rng }));
 
+  let recruitN = 0;
   return {
     arena, sim, grid, nav, bots, player, seats, base, rivalBase: rv,
     // a rival snowman joins the fight, walking toward `goal` (an outpost)
@@ -52,6 +53,15 @@ export function createMatch({ arena, myTeam, rivalTeam, pace = 'relaxed', rng = 
       const seat = { id: c.seat, team: rivalTeam, side: 'rival', role: 'minion', controller: 'bot' };
       seats.push(seat); bots.set(seat.id, new MinionBot(sim, c, { goal, rng })); return c;
     },
+    // a neighbourhood child joins the student's team for this stage (fights.mjs): a bot that
+    // follows the student; a seat a classmate could take one day
+    addRecruit({ kit = 'thrower', style = 'rusher', look = null, name = '', x, z }) {
+      const seat = { id: 'n' + (recruitN = recruitN + 1), team: myTeam, side: 'home', role: 'bot', controller: 'bot', kit, look, recruit: true };
+      const c = sim.add(makeCharacter({ seat: seat.id, team: myTeam, side: 'home', role: 'bot', kit, look, x, z }));
+      c.recruit = true; c.name = name; seats.push(seat); bots.set(seat.id, new Bot(sim, c, { style, leader: player, rng }));
+      sim.emit('spawnKid', { id: c.id, x, z }); return c;
+    },
+    clearRecruits() { for (const c of sim.chars) if (c.recruit) c.gone = true; return this.removeGone(); },
     clearMinions() { for (const c of sim.chars) if (c.role === 'minion') c.gone = true; this.removeGone(); },
     removeGone() { const gone = sim.removeGone(); for (const c of gone) { const i = seats.findIndex(s => s.id === c.seat); if (i >= 0) seats.splice(i, 1); bots.delete(c.seat); } return gone; },
     // remoteInputs: inputs that arrived from peers (unused in version 1).

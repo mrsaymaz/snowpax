@@ -70,34 +70,42 @@ test('supply crates land on open ground in the field; walking onto one asks a qu
   const q = m.sim.dropSupply(s.x, s.z); P.ammo = 0; m.sim.supplyResult(q.id, P, false); assert.equal(P.ammo, 1, 'a wrong answer still gives a snowball');
 });
 
-test('prepare then fight: stars buy towers on pads and boosts; one-fight boosts are used up', async () => {
-  const { Armoury, SHOP } = await import('../src/game/fights.mjs');
+test('recruits: camp children join one role each; stars invite the roles still missing (up to the team limit) and buy boosts', async () => {
+  const { Armoury, SHOP, ROLES, KID_NAMES } = await import('../src/game/fights.mjs');
   const P = FIGHT_PLANS.long;
-  assert.ok(P.camp.crates.length >= 3 && P.pads.length >= 4 && P.build >= 20);
-  const a = new Armoury(P.pads); assert.equal(a.stars, 0);
-  assert.equal(a.buildTower('fort', 0), false, 'no stars, no tower');
-  a.earn(6);
-  assert.ok(a.buildTower('cannon', 0)); assert.equal(a.stars, 6 - SHOP.towers.cannon.cost);
-  assert.equal(a.buildTower('fort', 0), false, 'one tower per pad');
+  assert.ok(P.camp.kids.length >= 3 && P.recruits.max >= P.camp.kids.length && P.build >= 20);
+  for (const [, , role] of P.camp.kids) assert.ok(ROLES[role], role);
+  assert.ok(KID_NAMES.girl.length >= 3 && KID_NAMES.boy.length >= 3);
+  const a = new Armoury(P.recruits);
+  assert.ok(a.join('thrower')); assert.deepEqual(a.invitable().sort(), ['builder', 'lobber', 'sprayer']);
+  assert.equal(a.invite('lobber'), false, 'no stars, no invite');
+  a.earn(5);
+  assert.ok(a.invite('lobber')); assert.equal(a.stars, 5 - P.recruits.cost);
+  assert.equal(a.invite('lobber'), false, 'one of each role');
   assert.ok(a.buyBoost('gloves')); assert.equal(a.buyBoost('gloves'), false, 'gloves last the stage');
-  assert.ok(a.buyBoost('coat'));
-  const fight1 = a.takeFight(); assert.ok(fight1.has('gloves') && fight1.has('coat'));
-  const fight2 = a.takeFight(); assert.ok(fight2.has('gloves') && !fight2.has('coat'), 'the coat was for one fight');
-  assert.equal(a.earned, 6);
+  a.earn(4); assert.ok(a.invite('sprayer')); assert.ok(a.invite('builder') || a.team.length >= a.max);
+  assert.equal(a.team.length, Math.min(4, P.recruits.max)); assert.deepEqual(a.invitable(), [], 'a full team');
+  a.earn(1); assert.ok(a.buyBoost('coat'));
+  const f1 = a.takeFight(), f2 = a.takeFight(); assert.ok(f1.has('coat') && !f2.has('coat') && f2.has('gloves'));
+  assert.ok(SHOP.boosts.super && SHOP.boosts.quick);
 });
 
-test('every Archery pad and camp crate spot is on open ground; towers block their cells and the cannon throws at rivals in range', () => {
+test('a camp child waits on open ground; answering in reach asks the question; a recruit joins the home team, follows the student and fights; a warm coat takes the first hit', () => {
   const m = createMatch({ arena: buildTileArena(def), myTeam: 'hufflepuff', rivalTeam: 'gryffindor', rng: makeRng(5) });
-  const z = m.sim.zones.find(q => q.id === 'archery'), P = FIGHT_PLANS.long;
-  for (const [v, d] of P.pads) for (const dv of [-1, 0, 1]) assert.ok(!m.grid.blocked(z.x + v + dv, z.z + d), `pad ${v},${d} (fort cells) is open`);
-  for (const [v, d] of P.camp.crates) assert.ok(m.grid.freeCircle(z.x + v, z.z + d, 0.5), `crate ${v},${d}`);
-  for (const c of m.sim.chars) if (c.side === 'rival') { c.benched = true; c.x = c.z = -999; }
-  const [v, d] = P.pads[0], t = m.sim.addTower('cannon', z.x + v, z.z + d);
-  assert.ok(m.grid.blocked(t.x, t.z), 'the cannon stands on its pad');
-  const s = m.addMinion('waddler', t.x, t.z - 4, z); s.march = { x: s.x, z: s.z }; // stands still in range
-  let ev = []; for (let k = 0; k < 60; k++) { m.sim.step(0.05, new Map()); ev.push(...m.sim.drainEvents()); }
-  assert.ok(ev.some(e => e.type === 'towerShot'), 'it throws'); assert.ok(s.frozen > 0 || s.warmth < 24, 'and hits');
-  m.sim.clearTowers(); assert.ok(!m.grid.blocked(t.x, t.z), 'cleared at the end of the stage');
-  const kid = m.player; kid.coat = 1; const w = kid.warmth; m.sim.hit(kid, { dmg: 30, owner: -1, kind: 'straight', vx: 1, vz: 0, x: kid.x, z: kid.z });
+  const z = m.sim.zones.find(q => q.id === 'archery'), P = FIGHT_PLANS.long, kid = m.player;
+  for (const [v, d] of P.camp.kids) assert.ok(m.grid.freeCircle(z.x + v, z.z + d, 0.5), `camp child ${v},${d}`);
+  for (const c of m.sim.chars) if (c !== kid) { c.benched = true; c.x = c.z = -999; }
+  const [v, d, role] = P.camp.kids[0], spot = m.sim.addRecruitSpot({ id: 'k0', role, name: 'Elif', look: null, x: z.x + v, z: z.z + d });
+  kid.x = spot.x; kid.z = spot.z + 0.5;
+  let ev = []; for (let k = 0; k < 4; k++) { m.sim.step(0.05, new Map()); ev.push(...m.sim.drainEvents()); }
+  assert.ok(ev.some(e => e.type === 'recruitAsk' && e.pickup === 'k0'));
+  m.sim.removeRecruitSpot('k0'); assert.ok(!m.sim.pickups.some(p => p.kind === 'recruit'));
+  const r = m.addRecruit({ kit: 'lobber', style: 'sniper', name: 'Elif', x: spot.x, z: spot.z });
+  assert.equal(r.side, 'home'); assert.equal(r.team, 'hufflepuff'); assert.equal(r.kit, 'lobber'); assert.ok(r.recruit);
+  assert.ok(m.bots.has(r.seat), 'a bot drives the recruit (a seat a classmate could take one day)');
+  kid.x = z.x; kid.z = z.z + 20; for (let k = 0; k < 80; k++) m.step(0.05, {});
+  assert.ok(Math.hypot(r.x - kid.x, r.z - kid.z) < 5, 'the recruit follows the student');
+  m.clearRecruits(); assert.ok(!m.sim.chars.includes(r) && !m.bots.has(r.seat), 'recruits leave at the end of the stage');
+  kid.coat = 1; const w = kid.warmth; m.sim.hit(kid, { dmg: 30, owner: -1, kind: 'straight', vx: 1, vz: 0, x: kid.x, z: kid.z });
   assert.equal(kid.warmth, w, 'a warm coat takes the first hit'); assert.equal(kid.coat, 0);
 });

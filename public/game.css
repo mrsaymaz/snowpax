@@ -535,21 +535,15 @@ body.reading .crate-mark, body.sledding .crate-mark { display: none; }
 #build .bd-boost:disabled { opacity: 0.45; }
 #build .bd-boost.owned { opacity: 1; border-color: #3aa76d; background: #eafaf0; }
 #build .bd-boost.owned .c { display: none; }
-#pads { position: fixed; inset: 0; z-index: 35; pointer-events: none; }
-#pads[hidden] { display: none; }
-#pads .pad { position: fixed; left: 0; top: 0; width: 52px; height: 52px; border-radius: 50%; pointer-events: auto; border: 3px solid #fff; background: radial-gradient(circle at 35% 30%, #fff3b0, #ffcf3e 50%, #f08c00); color: #fff; font: 900 30px system-ui, sans-serif; -webkit-text-stroke: 1.5px #8a4300; box-shadow: 0 0 0 2px #a85a00, 0 0 18px 6px rgba(255, 196, 60, 0.7); animation: pad-pulse 1.1s ease-in-out infinite; }
-#pads .pad.built { display: none; } /* the tower itself shows */
-@keyframes pad-pulse { 50% { box-shadow: 0 0 0 2px #a85a00, 0 0 26px 10px rgba(255, 196, 60, 0.9); } }
-#padmenu { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -60%); z-index: 45; width: min(340px, calc(100vw - 32px)); background: #fffaf0; border: 3px solid #1c2a55; border-radius: 18px; box-shadow: 0 5px 0 #1c2a55; padding: 10px; display: flex; flex-direction: column; gap: 6px; color: #1c2a55; font: 600 13px system-ui, sans-serif; }
-#padmenu[hidden] { display: none; }
-#padmenu .pm-title { font: 900 17px system-ui, sans-serif; text-align: center; }
-#padmenu button[data-tower] { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 10px; border-radius: 12px; border: 2px solid #9fb3df; background: #fff; color: #1c2a55; text-align: left; }
-#padmenu button[data-tower] .i { font-size: 26px; }
-#padmenu button[data-tower] .n { display: flex; flex-direction: column; flex: 1; }
-#padmenu button[data-tower] .n small { opacity: 0.75; }
-#padmenu button[data-tower] .c { background: #ffcf3e; border-radius: 999px; padding: 2px 8px; font: 900 13px system-ui, sans-serif; }
-#padmenu button[data-tower]:disabled { opacity: 0.45; }
-#padmenu .pm-close { min-height: 40px; border-radius: 12px; border: 2px solid #c8cfe0; background: #f2f4fa; color: #1c2a55; font: 700 13px system-ui, sans-serif; }
 body.building #attack, body.building #super, body.building #stick, body.building #seizebtn, body.building #hunt { opacity: 0; pointer-events: none; }
 @media (orientation: portrait) and (max-width: 600px) { #build .bd-boosts { grid-template-columns: repeat(2, 1fr); } #build .bd-head > b { font-size: 16px; } }
-@media (prefers-reduced-motion: reduce) { #pads .pad { animation: none; } #stars.pop { animation: none; } }
+@media (prefers-reduced-motion: reduce) { #stars.pop { animation: none; } }
+
+#build .bd-team { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 2px 2px 6px; }
+#build .bd-team > b, #build .bd-sub { font: 900 14px system-ui, sans-serif; display: block; }
+#build .bd-sub { margin: 10px 2px 6px; }
+#build .bd-mates { font: 700 13px system-ui, sans-serif; letter-spacing: 2px; }
+#build .bd-invites { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+#build .bd-invite { border-color: #f2b632; background: #fffbea; }
+#build .bd-full { grid-column: 1 / -1; margin: 0; padding: 8px; text-align: center; font: 800 14px system-ui, sans-serif; color: #3aa76d; }
+@media (orientation: portrait) and (max-width: 600px) { #build .bd-invites { grid-template-columns: repeat(2, 1fr); } #build .bd-boost small { display: none; } #build .bd-boost { padding: 5px 4px 6px; } }

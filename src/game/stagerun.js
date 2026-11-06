@@ -7,7 +7,8 @@ import { CONFIG } from '../config.js';
 import { STAGES, stageById, Lives, stageState, isUnlocked, nextStage, finishStage, totalStars, UNLOCK } from './stages.mjs';
 import { WAVES, RIVAL_INFO, BANNERS, minionList, stageWall, setWall, entryPoints, schoolyardSpot } from './waves.mjs';
 import { flakeWords } from './visit.mjs';
-import { FIGHT_PLANS, WordHunt, Armoury, SHOP } from './fights.mjs';
+import { FIGHT_PLANS, WordHunt, Armoury, ROLES, KID_NAMES } from './fights.mjs';
+import { makeLook } from './looks.mjs';
 import { SledRun } from './sledrun.js';
 import { THEME_ICON } from './taskcard.js';
 import { speech } from './speech.js';
@@ -23,7 +24,7 @@ export class StageRunner {
   constructor({ match, flow, unit, unitProgress, save, writeSave, pace, rng, team, kit, reduceMotion, ui }) {
     Object.assign(this, { match, sim: match.sim, flow, unit, up: unitProgress, save, writeSave, pace, rng, team, kit, reduceMotion, ui });
     this.mode = 'map'; this.lives = new Lives(); this.wall = []; this.waves = []; this.runFlakes = 0; this.ridesDone = 0;
-    flow.ui.onCaptured = z => this.captured(z); flow.ui.onHeld = z => this.held(z); flow.ui.onHalf = z => this.startBuild('strike', () => this.startStrike(z)); flow.ui.onStar = () => this.addStar();
+    flow.ui.onCaptured = z => this.captured(z); flow.ui.onHeld = z => this.held(z); flow.ui.onHalf = z => this.startBuild('strike', () => this.startStrike(z)); flow.ui.onStar = () => this.addStar(); flow.ui.onRecruit = (id, right) => this.recruitAnswer(id, right);
     this.bindInput();
     // rival kids wait off the field until their wave
     for (const c of this.sim.chars) if (c.side === 'rival') this.bench(c);
@@ -89,11 +90,11 @@ export class StageRunner {
     this.save.snowflakes = (this.save.snowflakes || 0) + this.runFlakes; this.writeSave(this.save);
     this.ui.rebuildWorld?.(z); // v2 look: build only this stage's area
     this.mode = 'outpost'; document.body.classList.remove('sledding'); $('#runhud').hidden = true; $('#hud').hidden = false;
-    this.zone = z; this.tStand = 0; this.waveIdx = 0; this.waves = []; this.finalT = null;
+    this.zone = z; this.tStand = 0; this.waveIdx = 0; this.waves = []; this.finalT = null; sim.activeZone = z;
     // longer fights with English inside them (fights.mjs): the stage's plan, two halves of English
     this.plan = st.fights ? FIGHT_PLANS[st.fights] : null; z.halves = st.halves || null;
     this.score = 0; this.hunt = null; this.huntT = 0; this.trickleT = 0; this.toldFrozen = false;
-    if (this.plan) { this.huntNext = this.plan.hunt.first; this.words = this.words || new WordHunt(this.unit, this.rng, this.plan.hunt.size); this.arm = new Armoury(this.plan.pads); }
+    if (this.plan) { this.huntNext = this.plan.hunt.first; this.words = this.words || new WordHunt(this.unit, this.rng, this.plan.hunt.size); this.arm = new Armoury(this.plan.recruits); }
     // close the stage with snowbanks, find where the waves come in
     this.wall = stageWall(grid, z); setWall(grid, this.wall, true); this.ui.showWall?.(this.wall);
     this.entries = entryPoints(grid, z);
@@ -178,35 +179,53 @@ export class StageRunner {
     const e = this.entries[Math.floor(this.rng() * this.entries.length)], c = this.match.addMinion(type, e.x + (this.rng() - 0.5), e.z + (this.rng() - 0.5), goal);
     if (word) c.word = word; return c;
   }
-  // ---------- preparing for the fights (fights.mjs): camp, stars, building ----------
-  // Camp: supply crates at the home end, one quick question each; no rivals on the field yet.
+  // ---------- preparing for the fights (fights.mjs): camp, recruits, stars, building ----------
+  // Camp: neighbourhood children wait at the home end in plain coats; answer one's question and they
+  // join the team. No rivals on the field yet.
   startCamp(z) {
     this.phase = 'camp'; this.tCamp = 0; this.ui.stars?.(this.arm.stars);
-    for (const [v, d] of this.plan.camp.crates) { // on the planned spot, or the nearest open one
+    const taken = new Set();
+    this.plan.camp.kids.forEach(([v, d, role], k) => { // on the planned spot, or the nearest open one
       const near = [[0, 0], [0.5, 0], [-0.5, 0], [0, 0.6], [0, -0.6], [1, 0], [-1, 0], [0.8, 0.8], [-0.8, 0.8]].map(([a, b]) => [z.x + v + a * Math.sign(v || 1), z.z + d + b]);
-      const at = near.find(([x, zz]) => this.match.grid.freeCircle(x, zz, 0.5)); if (at) this.sim.dropSupply(at[0], at[1]);
-    }
-    setTimeout(() => { if (this.phase === 'camp') this.ui.coach('Get ready before the fight! Run to each supply crate and answer its question. Every right answer is a ⭐ to build with.', 6); }, 1600);
+      const at = near.find(([x, zz]) => this.match.grid.freeCircle(x, zz, 0.5)); if (!at) return;
+      const gender = (k + (this.rng() < 0.5 ? 0 : 1)) % 2 ? 'girl' : 'boy', names = KID_NAMES[gender].filter(n => !taken.has(n)), name = names[Math.floor(this.rng() * names.length)]; taken.add(name);
+      this.sim.addRecruitSpot({ id: 'k' + k, role, name, look: makeLook(gender, this.rng), x: at[0], z: at[1] });
+    });
+    setTimeout(() => { if (this.phase === 'camp') this.ui.coach('Neighbourhood kids want to join your team! Walk up to each one and answer their question. A right answer first time and they join (and you get a ⭐).', 6); }, 1600);
   }
   updateCamp(dt) {
     this.tCamp += dt;
-    const left = this.sim.pickups.filter(p => p.kind === 'supply').length;
-    if ((left === 0 || this.tCamp > this.plan.camp.max) && !this.flow.busy) { this.sim.removeSupply(); this.startBuild('field', () => this.beginFight()); }
+    for (const p of this.sim.pickups) if (p.kind === 'recruit' && p.cd > 0) { p.cd -= dt; if (p.cd <= 0) { p.cd = 0; p.asking = false; } } // ready to be asked again
+    const left = this.sim.pickups.filter(p => p.kind === 'recruit').length;
+    if ((left === 0 || this.tCamp > this.plan.camp.max) && !this.flow.busy) { this.sim.removeRecruitSpot(); this.startBuild('field', () => this.beginFight()); }
+  }
+  // a child's question was answered: right (first time) and they join; wrong and they wait a moment
+  recruitAnswer(pickupId, right) {
+    const p = this.sim.pickups.find(q => q.id === pickupId); if (!p) return;
+    if (right && this.arm.join(p.role)) { this.sim.removeRecruitSpot(p.id); this.joinTeam(p.role, p.name, p.look, p.x, p.z); }
+    else { p.cd = this.plan.camp.retry; this.ui.coach(`${p.name} says: "Nearly! Ask me again in a moment."`, 3); }
+  }
+  joinTeam(role, name, look, x, z) {
+    const R = ROLES[role], c = this.match.addRecruit({ kit: R.kit, style: R.style, look, name, x, z });
+    this.ui.recruited?.(c, R); this.ui.banner(`${name.toUpperCase()} JOINS!`, 'win', 1.3); this.ui.play('fanfare');
+    return c;
   }
   addStar() { if (!this.arm) return; this.arm.earn(1); this.ui.stars?.(this.arm.stars, true); }
-  // Build: spend stars on towers (glowing pads) and boosts; then the fight starts (Fight! or 35 s).
+  // Build: spend stars on another friend or a boost; then the fight starts (Fight! or 35 s).
   startBuild(kind, next) {
     if (this.mode !== 'outpost' || !this.plan) { next(); return; }
     this.phase = 'build'; this.buildKind = kind; this.buildNext = next; this.tBuild = 0; this.flow.stageHold = true; this.ui.seizeButton?.(false);
-    const d = kind === 'field' ? 14 : 3; this.buildFocus = { x: this.zone.x, z: this.zone.z + d };
     this.ui.build?.open(this.buildInfo());
-    this.ui.coach(this.arm.stars ? `You have ${this.arm.stars} ⭐. Tap a glowing pad to build a tower, or pick a boost. Then tap Fight!` : 'No stars this time. Answer right first time to earn stars for towers and boosts! Tap Fight! when you are ready.', 5);
+    this.ui.coach(this.arm.stars ? `You have ${this.arm.stars} ⭐. Invite another friend or pick a boost, then tap Fight!` : 'No stars this time. Answer right first time to earn stars for friends and boosts! Tap Fight! when you are ready.', 5);
   }
-  buildInfo() { return { kind: this.buildKind, stars: this.arm.stars, pads: this.arm.pads.map(p => ({ ...p, x: this.zone.x + p.v, z: this.zone.z + p.d })), boosts: this.arm.boosts, next: this.arm.next, left: Math.max(0, Math.ceil(this.plan.build - this.tBuild)) }; }
+  buildInfo() { return { kind: this.buildKind, stars: this.arm.stars, team: this.arm.team.slice(), invitable: this.arm.invitable(), cost: this.arm.cost, boosts: this.arm.boosts, next: this.arm.next, left: Math.max(0, Math.ceil(this.plan.build - this.tBuild)) }; }
   updateBuild(dt) { this.tBuild += dt; if (this.tBuild > this.plan.build) this.endBuild(); }
-  buyTower(kind, pad) {
-    if (this.phase !== 'build' || !this.arm.buildTower(kind, pad)) return false;
-    const p = this.arm.pads[pad]; this.sim.addTower(kind, this.zone.x + p.v, this.zone.z + p.d); this.ui.play('pop');
+  // invite a friend with stars: they come running in from the home end
+  invite(role) {
+    if (this.phase !== 'build' || !this.arm.invite(role)) return false;
+    const z = this.zone, gender = this.rng() < 0.5 ? 'girl' : 'boy', used = new Set(this.sim.chars.filter(c => c.recruit).map(c => c.name)), names = KID_NAMES[gender].filter(n => !used.has(n));
+    const P = this.match.player, x = P.x + (this.rng() - 0.5) * 2, zz = Math.min(z.z + z.battlefield.front - 1.5, P.z + 1.5);
+    this.joinTeam(role, names[Math.floor(this.rng() * names.length)] || 'Deniz', makeLook(gender, this.rng), this.match.grid.freeCircle(x, zz, 0.4) ? x : P.x, this.match.grid.freeCircle(x, zz, 0.4) ? zz : P.z);
     this.ui.stars?.(this.arm.stars); this.ui.build?.refresh(this.buildInfo()); return true;
   }
   buyBoost(id) {
@@ -235,7 +254,7 @@ export class StageRunner {
     if (fighting) {
       this.trickleT += dt;
       const live = this.sim.chars.filter(c => c.role === 'minion' && !c.gone && !c.word && !c.frozen).length;
-      if (this.trickleT >= P.open.trickle && live < P.open.snowmen) { this.trickleT = 0; const types = minionList(WAVES[this.cur.id][0]); this.spawnSnowman(types[Math.floor(this.rng() * types.length)], goal); }
+      if (this.trickleT >= P.open.trickle && live < P.open.snowmen + this.arm.team.length * P.recruits.extraSnowmen) { /* more friends, a few more snowmen */ this.trickleT = 0; const types = minionList(WAVES[this.cur.id][0]); this.spawnSnowman(types[Math.floor(this.rng() * types.length)], goal); }
     }
     // word snowmen: find the English word for the Turkish one
     if (this.hunt) {
@@ -289,7 +308,7 @@ export class StageRunner {
   // the HUD line for the fights (null: the usual one)
   fightText() {
     if (this.mode !== 'outpost' || !this.plan) return null;
-    if (this.phase === 'camp') { const n = this.plan.camp.crates.length, left = this.sim.pickups.filter(p => p.kind === 'supply').length; return `get ready: crates ${n - left} / ${n}`; }
+    if (this.phase === 'camp') { const n = this.plan.camp.kids.length, left = this.sim.pickups.filter(p => p.kind === 'recruit').length; return `friends joined ${n - left} / ${n}`; }
     if (this.phase === 'build') return `build time ${Math.max(0, Math.ceil(this.plan.build - this.tBuild))}s`;
     if (this.phase === 'fight') return `freeze rivals ${Math.min(this.score, this.plan.open.goal)} / ${this.plan.open.goal}`;
     if (this.phase === 'strike') return this.strikeHeld === false ? 'rivals in the circle!' : `hold it ${Math.max(0, Math.ceil(this.strikeLeft))}s`;
@@ -338,8 +357,8 @@ export class StageRunner {
     for (const c of this.sim.chars) if (c.side === 'rival') this.bench(c);
     this.sim.balls = [];
     if (lost && z && z.owner !== 'home') { z.owner = null; z.progress = 0; z.seizing = false; }
-    if (z) z.halves = null; this.endHunt(); this.sim.removeSupply(); this.plan = null;
-    this.sim.clearTowers(); this.ui.build?.close(); this.ui.stars?.(null); this.buildNext = null;
+    this.sim.activeZone = null; if (z) z.halves = null; this.endHunt(); this.sim.removeSupply(); this.plan = null;
+    this.match.clearRecruits(); this.sim.removeRecruitSpot(); this.ui.onGone?.(); this.ui.build?.close(); this.ui.stars?.(null); this.buildNext = null;
     { const P = this.match.player; P.ammoMax = 0; P.reloadMul = 1; P.coat = 0; } // boosts last one stage
     if (this.yard) { const i = this.sim.zones.indexOf(this.yard); if (i >= 0) this.sim.zones.splice(i, 1); this.ui.showdown?.stop(); clearTimeout(this.giantT); this.giant = null; }
     this.zone = null;

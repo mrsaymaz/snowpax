@@ -83,7 +83,7 @@ export class OutpostFlow {
 
   onItem({ itemId, correctFirstTry }) {
     if (this.mode === 'cocoa') { this.cocoaRight = correctFirstTry; return; }
-    if (this.mode === 'supply') { // a camp crate: counts toward the 80% (answered calmly), a star when right first time
+    if (this.mode === 'supply' || this.mode === 'recruit') { // camp questions: count toward the 80% (answered calmly), a star when right first time
       this.cocoaRight = correctFirstTry; recordItem(this.up, 0, { correctFirstTry, itemId }); this.writeSave(this.save);
       if (correctFirstTry) this.ui.onStar?.(); return;
     }
@@ -104,6 +104,7 @@ export class OutpostFlow {
   onStepDone(empty = false) {
     if (this.mode === 'cocoa') return this.finishCocoa();
     if (this.mode === 'supply') return this.finishSupply();
+    if (this.mode === 'recruit') return this.finishRecruit();
     const v = this.mode === 'defend' ? this.defendVisit : this.visits.get(this.zone.id);
     if (this.mode === 'seize' && this.zone.halves && !v.halfDone && v.famIdx === 0 && v.famDone >= v.perFamily && !v.finished) { // half way: a fight before the second half
       v.halfDone = true; this.mode = 'half'; this.card.setCoach('Half of it is yours! Get ready…');
@@ -144,7 +145,21 @@ export class OutpostFlow {
     const a = this.accuracy; this.ui.coach(`${z.label} is yours for good! Right first time so far: ${a.firstTry} of ${a.total} (${a.pct}%).`, 5);
   }
 
-  // ---------- supply crates (in the fights) ----------
+  // ---------- a neighbourhood child who wants to join (the camp) ----------
+  openRecruit(pickupId) {
+    const p = this.sim.pickups.find(q => q.id === pickupId); if (!p) return;
+    if (this.mode) { p.asking = false; return; }
+    this.mode = 'recruit'; this.cocoaId = pickupId; this.cocoaRight = false; this.plant(true);
+    this.card.open({ theme: 'cocoa', title: `${p.name} wants to join!`, coach: '', leave: false }); this.card.setProgress(0);
+    this.card.show(cocoaQuestion(this.unit, this.rng)); this.card.setCoach(`"I'll join your team if you get this right!" Right first time: ${p.name} joins, and a ⭐ for you.`);
+  }
+  finishRecruit() {
+    const right = this.cocoaRight, id = this.cocoaId;
+    this.card.close(); this.plant(false); this.mode = null;
+    this.ui.onRecruit?.(id, right);
+  }
+
+  // ---------- supply crates ----------
   openSupply(pickupId) {
     const p = this.sim.pickups.find(q => q.id === pickupId); if (!p) return;
     if (this.mode) { p.asking = false; return; }
@@ -213,6 +228,7 @@ export class OutpostFlow {
     if (e.type === 'plantedHit' && e.id === this.player.id && (this.mode === 'seize' || this.mode === 'seize-fill') && !this.card.inWorld) { this.chillT = 1.2; this.card.chill(); } // 3D actions are protected: hits never chill the bar
     if (e.type === 'cocoaAsk' && e.id === this.player.id) this.openCocoa(e.pickup);
     if (e.type === 'supplyAsk' && e.id === this.player.id) this.openSupply(e.pickup);
+    if (e.type === 'recruitAsk' && e.id === this.player.id) this.openRecruit(e.pickup);
     if (e.type === 'collect' && e.kind === 'flake') {
       const p = this.sim.pickups.find(q => q.id === e.pickup), w = p?.word;
       if (w) { this.ui.fx.number(e.x, e.z, `${w.en} = ${w.tr}`, 'word'); speech.say(w.en); }
