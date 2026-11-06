@@ -499,3 +499,6 @@ body.reading .edge-mark, body.sledding .edge-mark { display: none; }
 body.reading #hunt { display: none; }
 @media (orientation: portrait) and (max-width: 600px) { #hunt { top: 184px; } #hunt b { font-size: 21px; } } /* below Mr. Saymaz's bubble */
 @media (prefers-reduced-motion: reduce) { #hunt { animation: none; } }
+/* landscape: the word prompt sits on the right, out of the middle of the field */
+@media (orientation: landscape) { #hunt { left: auto; right: 12px; top: 72px; transform: none; animation-name: hunt-in-side; } }
+@keyframes hunt-in-side { from { transform: translateX(16px); opacity: 0; } to { transform: none; opacity: 1; } }
