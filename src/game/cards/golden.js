@@ -11,7 +11,7 @@ import {
   PlaneGeometry, CircleGeometry, Vector3, Color, DoubleSide, CanvasTexture, SRGBColorSpace,
 } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
-import { stage, pines, mounds, bunting, row, actor } from './stationkit.js';
+import { stage, pines, mounds, bunting, row, actor, canvasTex } from './stationkit.js';
 import { tall, fountainMatch } from './stations.js';
 import { castleWorldOrder, castleWorldSpell } from './castle3d.js';
 import { esc, shuffle } from './util.js';
@@ -24,7 +24,7 @@ const frameFor = (s, desk, short, port = null) => {
 const caption = st => `${st.context ? `<span class="ctx">${esc(st.context)}</span>` : ''}<span ${st.promptLang === 'tr' ? 'lang="tr"' : ''}>${esc(st.prompt)}</span>${st.hintTr ? ` <span class="tr">${esc(st.hintTr)}</span>` : ''}`;
 const sized = (s, el, min, pad) => Math.max(min, s.measure(el).w / s.pxPerMeter() + pad);
 const add = (P, geo, mat, x, y, z, ry = 0) => { const m = new Mesh(geo, mat); m.position.set(x, y, z); m.rotation.y = ry; m.castShadow = m.receiveShadow = true; P.add(m); return m; };
-const signTex = (text, bg = '#7a1f1f') => { const c = document.createElement('canvas'); c.width = 512; c.height = 128; const g = c.getContext('2d'); g.fillStyle = '#4a2f22'; g.beginPath(); g.roundRect(6, 6, 500, 116, 26); g.fill(); g.fillStyle = bg; g.beginPath(); g.roundRect(16, 16, 480, 96, 20); g.fill(); g.fillStyle = '#fff6dc'; g.font = '900 60px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 256, 68); const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; return t; };
+const signTex = (text, bg = '#7a1f1f') => { const c = document.createElement('canvas'); c.width = 512; c.height = 128; const g = c.getContext('2d'); g.fillStyle = '#4a2f22'; g.beginPath(); g.roundRect(6, 6, 500, 116, 26); g.fill(); g.fillStyle = bg; g.beginPath(); g.roundRect(16, 16, 480, 96, 20); g.fill(); g.fillStyle = '#fff6dc'; let fs = 60; do g.font = `900 ${fs}px system-ui, sans-serif`; while (g.measureText(text).width > 440 && (fs -= 2) > 24); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 256, 68); const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; return t; };
 const sign = (P, text, w, x, y, z, bg) => { const m = new Mesh(new PlaneGeometry(w, w / 4), new MeshBasicMaterial({ map: signTex(text, bg), transparent: true })); m.position.set(x, y, z); P.add(m); return m; };
 // the far shore of the Golden Horn: houses climbing a hill, an old round tower
 function farShore(P, z = -18) {
@@ -309,6 +309,35 @@ export function tersaneStation(s, { color = '#f5b616' } = {}) {
 }
 export const tersaneOrder = castleWorldOrder, tersaneSpell = castleWorldSpell;
 
+// a soft sunset cloud: overlapping puffs, lit pink-gold from below
+function puffTex() {
+  return canvasTex(256, 112, (g, w, h) => {
+    const puffs = [[56, 70, 34], [96, 54, 42], [146, 50, 46], [192, 64, 36], [124, 78, 40], [214, 80, 24], [34, 84, 22]];
+    for (const [x, y, r] of puffs) { const gr = g.createRadialGradient(x, y - r * 0.3, r * 0.1, x, y, r); gr.addColorStop(0, 'rgba(255,246,240,0.95)'); gr.addColorStop(0.6, 'rgba(255,214,206,0.85)'); gr.addColorStop(1, 'rgba(250,196,196,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+    const under = g.createLinearGradient(0, h * 0.55, 0, h); under.addColorStop(0, 'rgba(255,200,150,0)'); under.addColorStop(1, 'rgba(255,184,120,0.55)'); g.globalCompositeOperation = 'source-atop'; g.fillStyle = under; g.fillRect(0, 0, w, h);
+  });
+}
+// the far shore seen from the pavilion: two hills rising behind the frozen water, houses climbing them
+// in rows with lit windows, cypresses, an old round tower on the ridge
+function hillShore(P) {
+  const ridge = (x, z, r, sy, col) => { const m = add(P, new SphereGeometry(r, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), new MeshLambertMaterial({ color: col }), x, 0, z); m.scale.set(1.6, sy, 0.45); m.castShadow = false; return m; };
+  ridge(-12, -42, 16, 0.62, '#e2d6ec'); ridge(10, -44, 18, 0.55, '#e6dcef'); // the farther hills, pale in the haze
+  const near = [[-8, -30, 13, 0.62], [9, -31, 14, 0.56]]; for (const [x, z, r, sy] of near) ridge(x, z, r, sy, '#f1eaf6'); // the near hills under snow
+  const ground = (x, z) => Math.max(0, ...near.map(([cx, cz, r, sy]) => { const u = (x - cx) / (r * 1.6), v = (z - cz) / (r * 0.45), q = 1 - u * u - v * v; return q > 0 ? Math.sqrt(q) * r * sy : 0; }));
+  add(P, new BoxGeometry(80, 0.5, 1.0), L('#b3a9c4'), 0, 0.25, -21.6); // the quay along the far water
+  const cols = ['#e8c9b0', '#d9cfe8', '#f0d7b8', '#c9d8ea', '#e9c3c3', '#d6e4cf'], win = new MeshBasicMaterial({ color: '#ffd27a' });
+  let n = 0;
+  for (let r = 0; r < 5; r++) for (let k = 0; k < 18 - r * 2; k++) {
+    const x = -17 + r * 1.9 + k * 2.0 + ((k * 7 + r * 3) % 5) * 0.12, z = -22.6 - r * 1.5;
+    const y = Math.max(0.5, ground(x, z + 0.5) - 0.15), h = 1.1 + ((k * 37 + r) % 4) * 0.32, w = 1.3 + (k % 3) * 0.2; n++;
+    add(P, new BoxGeometry(w, h, 1.1), L(cols[(k + r * 2) % cols.length]), x, y + h / 2, z).castShadow = false;
+    add(P, new ConeGeometry(w * 0.78, 0.6, 4), L('#f6f7ff'), x, y + h + 0.3, z, Math.PI / 4).castShadow = false;
+    for (let q = 0; q < 2; q++) if ((k + q + r) % 3 !== 1) add(P, new PlaneGeometry(0.26, 0.3), win, x - 0.3 + q * 0.6, y + h * 0.55, z + 0.56).castShadow = false; // lit windows
+    if ((k + r) % 4 === 2) { const c = add(P, new CylinderGeometry(0.05, 0.36, 2.2, 8), L('#355e50'), x + w * 0.6, y + 1.1, z + 0.3); c.castShadow = false; } // a cypress between the houses
+  }
+  { const ty = ground(5.5, -30.5) - 0.3; add(P, new CylinderGeometry(0.8, 0.95, 4.2, 16), L('#cdbfb4'), 5.5, ty + 2.1, -30.5); add(P, new ConeGeometry(1.0, 1.6, 16), L('#6d6f96'), 5.5, ty + 5.0, -30.5); add(P, new ConeGeometry(0.9, 0.5, 16), L('#f6f7ff'), 5.5, ty + 4.45, -30.5); } // the old round tower on the ridge
+  return n;
+}
 // ======================= Aynalıkavak Pavilion · Answer =======================
 // The pavilion's front, its windows bright as mirrors: each answer is on a window. Snowball the right
 // one: it flashes like a mirror in the sun, with a sparkle. A wrong one gets a splat of snow.
@@ -323,8 +352,15 @@ export function aynalikavakStation(s, { color = '#f5b616' } = {}) {
   add(P, new BoxGeometry(W, 3.0, 2.6), wall, 0, 2.7, Z);
   add(P, new BoxGeometry(W + 0.1, 0.1, 2.7), wood, 0, 3.32, Z); // the string course
   for (let k = 0; k < 16; k++) { if (k === 7 || k === 8) continue; const x = -5.6 + k * 0.75 + (k % 2 ? -0.08 : 0.08); add(P, new BoxGeometry(0.5, 1.4, 0.06), wood, x, 2.3, fz + 0.01); add(P, new PlaneGeometry(0.4, 1.28), glassL, x, 2.3, fz + 0.05); }
-  const COL = ['#5d8fd8', '#e0584a', '#f2c14e', '#5bb36a'];
-  for (let k = 0; k < 24; k++) { const x = -5.75 + k * 0.5, m = new MeshBasicMaterial({ color: COL[k % 4] }); add(P, new PlaneGeometry(0.26, 0.3), m, x, 3.72, fz + 0.02); add(P, new CircleGeometry(0.13, 12, 0, Math.PI), m, x, 3.87, fz + 0.021); }
+  // the upper row: small arched windows of coloured glass, each in a pale plaster frame with a white glazing bar, over each tall window
+  const COL = ['#7fa7d6', '#d9907f', '#e3c477', '#8fbf98', '#b39ad0'], plaster = new MeshBasicMaterial({ color: '#fff8ee' }), barM = new MeshBasicMaterial({ color: '#fdfaf4' });
+  for (let k = 0; k < 16; k++) {
+    if (k === 7 || k === 8) continue; const x = -5.6 + k * 0.75 + (k % 2 ? -0.08 : 0.08), m = new MeshStandardMaterial({ color: COL[(k * 3) % 5], roughness: 0.4, emissive: new Color(COL[(k * 3) % 5]), emissiveIntensity: 0.35 });
+    add(P, new PlaneGeometry(0.46, 0.4), plaster, x, 3.7, fz + 0.015); add(P, new CircleGeometry(0.23, 14, 0, Math.PI), plaster, x, 3.9, fz + 0.015);
+    add(P, new PlaneGeometry(0.34, 0.32), m, x, 3.7, fz + 0.02); add(P, new CircleGeometry(0.17, 14, 0, Math.PI), m, x, 3.86, fz + 0.021);
+    add(P, new PlaneGeometry(0.03, 0.46), barM, x, 3.76, fz + 0.025); add(P, new PlaneGeometry(0.34, 0.03), barM, x, 3.72, fz + 0.025);
+  }
+  for (const x of [-0.42, 0.42]) { add(P, new CircleGeometry(0.3, 16, 0, Math.PI), plaster, x, 3.62, fz + 0.015); add(P, new CircleGeometry(0.24, 16, 0, Math.PI), new MeshStandardMaterial({ color: '#e3c477', emissive: new Color('#e3c477'), emissiveIntensity: 0.4 }), x, 3.62, fz + 0.02); } // a fan light over the door
   add(P, new BoxGeometry(1.3, 2.0, 0.08), wood, 0, 2.2, fz + 0.02); add(P, new PlaneGeometry(1.1, 1.8), new MeshBasicMaterial({ color: '#ffd98a' }), 0, 2.15, fz + 0.07); // the door
   // the wide eaves on brackets, the grey hipped roof under snow
   add(P, new BoxGeometry(W + 2.2, 0.2, 4.6), wood, 0, 4.3, Z);
@@ -333,18 +369,23 @@ export function aynalikavakStation(s, { color = '#f5b616' } = {}) {
   // the double stair rising to the door from both sides, a landing in front of it
   add(P, new BoxGeometry(2.0, 1.2, 1.0), stone, 0, 0.6, fz + 0.5);
   for (const sd of [-1, 1]) for (let k = 0; k < 6; k++) add(P, new BoxGeometry(0.5, 0.2, 0.9), stone, sd * (1.25 + k * 0.42), 1.1 - k * 0.2, fz + 0.5);
-  for (const sd of [-1, 1]) add(P, new BoxGeometry(2.8, 0.08, 0.06), wood, sd * 2.4, 1.15, fz + 0.96).rotation.z = sd * 0.42;
+  for (const sd of [-1, 1]) add(P, new BoxGeometry(2.8, 0.08, 0.06), wood, sd * 2.4, 1.3, fz + 0.96).rotation.z = -sd * 0.38; // the handrails follow the steps down
+  for (const sd of [-1, 1]) for (const k of [0, 2, 4]) { const x = 1.25 + k * 0.42, top = 1.2 - k * 0.2, ry = 1.3 - Math.tan(0.38) * (x - 2.4); add(P, new BoxGeometry(0.06, ry - top, 0.06), wood, sd * x, (ry + top) / 2, fz + 0.96); } // posts under the rails
   // the garden: a pool, cypresses, lamps; beyond, the frozen Golden Horn and the far shore at sunset
   add(P, new BoxGeometry(5, 0.2, 1.6), stone, 0, 0.1, 1.6); add(P, new BoxGeometry(4.6, 0.04, 1.2), new MeshStandardMaterial({ color: '#a9d6ff', roughness: 0.1, metalness: 0.2 }), 0, 0.21, 1.6);
   for (const [x, z] of [[-7.6, -1.6], [7.6, -1.6], [-8.6, -4.8], [8.6, -4.8], [-6.6, 2.2], [6.6, 2.2], [-4.2, -6.4], [3.6, -6.6]]) { add(P, new CylinderGeometry(0.08, 0.62, 4.2, 10), L('#2f5a4a'), x, 2.1, z); add(P, new ConeGeometry(0.2, 0.5, 8), snowM, x, 4.15, z); }
   for (const x of [-3.2, 3.2]) { add(P, new CylinderGeometry(0.05, 0.07, 1.6, 8), L('#2b3556'), x, 0.8, 2.6); add(P, new BoxGeometry(0.3, 0.38, 0.3), new MeshBasicMaterial({ color: '#ffe3a0' }), x, 1.75, 2.6); }
-  const sea = add(P, new PlaneGeometry(60, 12), new MeshStandardMaterial({ color: '#c8b8d8', roughness: 0.2, metalness: 0.1 }), 0, 0.03, -13); sea.rotation.x = -Math.PI / 2;
-  farShore(P, -21);
-  for (let k = 0; k < 14; k++) { const x = -14 + k * 2.1, h = 1.4 + ((k * 31) % 5) * 0.4, y = 1.6 + Math.sin(k * 0.8) * 0.5; for (const wy of [0.5, 1.1]) if ((k + wy * 10) % 3 > 0.5) add(P, new PlaneGeometry(0.3, 0.32), new MeshBasicMaterial({ color: '#ffd27a' }), x - 0.3 + (k % 2) * 0.5, y + wy * h * 0.6, -20.18 - (k % 3) * 0.8); } // lit windows on the far shore
-  const clouds = [];
-  for (const [x, y, w] of [[-9, 9.5, 7], [-1, 11, 9], [8, 9, 6], [13, 11.5, 5]]) { const c = new Mesh(new PlaneGeometry(w, w * 0.32), new MeshBasicMaterial({ color: '#ffdccf', transparent: true, opacity: 0.85, fog: false, depthWrite: false })); c.position.set(x, y, -24); P.add(c); clouds.push(c); }
+  s.scene.fog.near = 34; s.scene.fog.far = 90; // a clear sunset evening: the far shore stays in view
+  const sea = add(P, new PlaneGeometry(80, 16), new MeshStandardMaterial({ color: '#d9cde6', roughness: 0.12, metalness: 0.25 }), 0, 0.03, -14); sea.rotation.x = -Math.PI / 2;
+  const glint = add(P, new PlaneGeometry(5, 14), new MeshBasicMaterial({ color: '#ffd9b8', transparent: true, opacity: 0.45, depthWrite: false }), -8, 0.05, -14); glint.rotation.x = -Math.PI / 2; // the low sun on the ice
+  { const g = new Group(); g.position.set(-8, 0, -6); P.add(g); add(g, new BoxGeometry(1.6, 0.3, 0.7), L('#4b5a86'), 0, 0.15, 0); add(g, new BoxGeometry(0.9, 0.06, 0.6), snowM, 0, 0.33, 0); } // a rowing boat frozen in by the garden steps
+  hillShore(P);
+  const sunM = new MeshBasicMaterial({ map: canvasTex(128, 128, (g, w) => { const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,248,220,1)'); gr.addColorStop(0.22, 'rgba(255,226,170,0.95)'); gr.addColorStop(0.5, 'rgba(255,190,150,0.35)'); gr.addColorStop(1, 'rgba(255,180,150,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, w); }), transparent: true, fog: false, depthWrite: false });
+  const sun = new Mesh(new PlaneGeometry(9, 9), sunM); sun.position.set(-11, 6.5, -40); sun.renderOrder = -1; P.add(sun);
+  const clouds = [], cloudTex = puffTex();
+  for (const [x, y, w, z] of [[-13, 12.5, 11, -38], [-2, 14.5, 14, -40], [10, 12, 10, -38], [17, 15, 9, -41], [3, 10.4, 7, -36]]) { const c = new Mesh(new PlaneGeometry(w, w * 0.42), new MeshBasicMaterial({ map: cloudTex, transparent: true, opacity: 0.95, fog: false, depthWrite: false })); c.position.set(x, y, z); c.renderOrder = -1; P.add(c); clouds.push(c); }
   const gulls = []; for (let k = 0; k < 3; k++) { const g = new Group(); for (const sd of [-1, 1]) { const w2 = new Mesh(new PlaneGeometry(0.5, 0.1), new MeshBasicMaterial({ color: '#4a4f6e', side: DoubleSide })); w2.position.x = sd * 0.24; g.add(w2); } g.position.set(-6 + k * 5, 7 + k * 0.6, -9); P.add(g); gulls.push(g); }
-  sign(P, 'Aynalıkavak Pavilion', 2.8, 0, 0.42, 2.43);
+  sign(P, 'Aynalıkavak Pavilion', 1.9, 0, 0.6, fz + 1.02); // a name board on the front of the stair landing
   const A = actor(s, P, { at: [-3.4, 0, 3.8], face: Math.PI - 0.5 });
   let t = 0; return { tick: dt => { t += dt; K.tick(dt); A?.tick(dt); if (s.reduceMotion) return; gulls.forEach((g, k) => { g.position.x += dt * 0.6; if (g.position.x > 12) g.position.x = -12; g.children.forEach((w2, j) => { w2.rotation.z = (j ? -1 : 1) * Math.sin(t * 6 + k) * 0.4; }); }); clouds.forEach((c, k) => { c.position.x += dt * 0.08 * (k % 2 ? 1 : -1); }); }, K, A, colors: [color, '#ffffff', '#ffd166', '#f3a6c8'] };
 }
