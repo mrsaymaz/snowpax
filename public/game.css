@@ -575,3 +575,6 @@ body.building #attack, body.building #super, body.building #stick, body.building
 @media (prefers-reduced-motion: reduce) { .talk-q.pop, .wt-reply.wrong { animation: none; } }
 
 .tc-coach:empty { display: none; } /* a slim header when there is nothing to add */
+/* build moments: the new-rivals card sits above the build panel, under the coach's line */
+body.building #newrival { top: calc(190px + env(safe-area-inset-top)); bottom: auto; z-index: 41; }
+@media (orientation: landscape) { body.building #newrival { top: 130px; } }

@@ -25,23 +25,23 @@ export const WAVES = {
     { name: 'They want it back!', m: { shield: 2, waddler: 2 }, kids: 2, final: true },
   ],
   kizilay: [
-    { name: 'Here come the sleds', m: { waddler: 2, sledder: 2 }, kids: 0 },
+    { name: 'The rival team', m: { waddler: 2, sledder: 2 }, kids: 2 },
     { name: 'Rush hour', m: { sledder: 3, shield: 1 }, kids: 1 },
     { name: 'They want it back!', m: { sledder: 2, waddler: 2, shield: 1 }, kids: 2, final: true },
   ],
   sururi: [
-    { name: 'Snowballs from the sky', m: { waddler: 2, lobber: 1 }, kids: 1 },
+    { name: 'The rival team', m: { waddler: 2, lobber: 1 }, kids: 2 },
     { name: 'Mixed snow', m: { lobber: 2, shield: 1, sledder: 1 }, kids: 1 },
     { name: 'They want it back!', m: { lobber: 2, shield: 1, waddler: 2 }, kids: 2, final: true },
   ],
   waterfront: [
-    { name: 'From the ice', m: { waddler: 2, sledder: 2, lobber: 1 }, kids: 1 },
+    { name: 'The rival team', m: { waddler: 2, sledder: 2, lobber: 1 }, kids: 2 },
     { name: 'The big push', m: { shield: 2, lobber: 2, sledder: 1 }, kids: 2 },
     { name: 'They want it back!', m: { shield: 2, lobber: 1, sledder: 2, waddler: 1 }, kids: 3, final: true },
   ],
   // the Schoolyard Showdown: waves come with the banners (see stagerun.js), the captain in the second
   showdown: [
-    { name: 'The last stand', m: { waddler: 2, shield: 1, sledder: 1 }, kids: 1 },
+    { name: 'The rival team', m: { waddler: 2, shield: 1, sledder: 1 }, kids: 2 },
     { name: 'The rival captain!', m: { captain: 1, waddler: 2 }, kids: 1 },
     { name: 'Everyone at once!', m: { lobber: 2, shield: 1, sledder: 2 }, kids: 2, final: true },
   ],

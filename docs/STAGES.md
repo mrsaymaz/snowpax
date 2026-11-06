@@ -3,14 +3,18 @@
 Inspired by Growbloom's garden path, solMaxima's gates and Tower Swarm's waves. Arena 1 is six
 stages played in order:
 
-| # | Stage | Sled ride | Task family | New rival |
+| # | Stage | Sled ride | English (part 1 → part 2) | New rival |
 |---|---|---|---|---|
-| 1 | Boulevard Park | 45 s, plane-tree avenue | Answer | snowmen (waddlers) |
-| 2 | Archery Ground | 45 s, record stones and targets, spelling letters | Matching, then Sorting (two halves, the long fights) | shield snowmen |
-| 3 | Kızılay Square | 45 s, tiled kiosks and simit carts | Matching | sledder snowmen |
-| 4 | Sururi Park | 45 s, snow castles and slides, spelling letters | Builder | lobber snowmen |
-| 5 | Waterfront Park | 45 s, along the frozen Golden Horn | Listening | — (everything mixed) |
-| 6 | Schoolyard Showdown | 45 s, home to Our School | all five | the rival captain |
+| 1 | Boulevard Park | 45 s, plane-tree avenue | Sorting → Answer | snowmen (waddlers) |
+| 2 | Archery Ground | 45 s, record stones and targets, spelling letters | Matching → Sorting | shield snowmen |
+| 3 | Kızılay Square | 45 s, tiled kiosks and simit carts | Listening → Matching | sledder snowmen |
+| 4 | Sururi Park | 45 s, snow castles and slides, spelling letters | Answer → Builder | lobber snowmen |
+| 5 | Waterfront Park | 45 s, along the frozen Golden Horn | Builder → Listening | — (everything mixed) |
+| 6 | Schoolyard Showdown | 45 s, home to Our School | all five (five banners) | the rival captain |
+
+Every stage prepares, then fights (see below): a camp with neighbourhood children to recruit, build
+moments, long fights. Each outpost is taken in two halves of English, its own task type last, so
+every type comes twice in the arena (and twice more in the Showdown's banners).
 
 ## Look, time of day and dressing
 
@@ -69,14 +73,14 @@ its own layout.
 - During a stand there are no blizzards or sun bursts, so the light stays steady; each stage
   keeps its own time of day.
 
-## Prepare, then fight (Archery Ground, the sample)
+## Prepare, then fight (every stage)
 
 From the third play-test talk: fewer, bigger outposts, each taken in two halves of English with
 real fights round them. English and fighting are kept apart, so nobody has to read while being
 hit, but the English decides the fights: right answers **recruit neighbourhood children** to your
-team and earn **⭐ snow stars** for more friends and boosts. Archery Ground is the sample (`fights`
-and `halves` in `stages.mjs`; the plan, the roles and the shop in `fights.mjs`); the others follow
-once it is approved.
+team and earn **⭐ snow stars** for more friends and boosts. Archery Ground was the sample; every
+stage plays this way now (`fights` and `halves` in `stages.mjs`; the plan, the roles and the shop
+in `fights.mjs`).
 
 1. **Camp:** three neighbourhood children wait at the home end in plain beige coats, each with a
    "Can I join?" bubble and their name. Walk up to one and the camera cuts to a **close-up, face
@@ -91,11 +95,16 @@ once it is approved.
 3. **The opening round:** the rival team keeps coming back from its camp; freeze **12 rivals**
    to break the line (90 s at most). Each friend brings one more snowman to the rivals' side, so
    the fight stays exciting.
-4. **Part 1 of 2: Matching** (the fountain activity): every right first try is also a ⭐. Build.
+4. **Part 1 of 2** (at Archery Ground: Matching, in the fountain activity; each task type keeps its
+   own activity wherever it is played): every right first try is also a ⭐. Build.
 5. **"They strike back!":** hold the circle for **50 s** (the clock stops while rivals stand in
    it alone).
-6. **Part 2 of 2: Sorting** (the archery activity), ⭐ again. Build, then the **final wave** (30 s
-   at most), and the outpost is yours. The friends go home after the stage.
+6. **Part 2 of 2** (the outpost's own task type, at Archery Ground Sorting), ⭐ again. Build, then
+   the **final wave** (30 s at most), and the outpost is yours. The friends go home after the stage.
+
+**The Showdown** prepares the same way (camp, build, the opening round against the rival team in
+the schoolyard). Then the five banners are raised calmly with English (no waves while answering),
+a build moment, and the finale: the rival captain comes and the giant snowball rolls.
 
 | Friends who can join (one of each, 4 at most) | | Boosts (for your kid) | ⭐ |
 |---|---|---|---|

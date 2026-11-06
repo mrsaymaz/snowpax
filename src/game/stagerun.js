@@ -134,7 +134,8 @@ export class StageRunner {
     this.flow.setStage(z); this.drawLives();
     this.ui.banner(st.title.toUpperCase(), 'go', 1.6);
     if (st.final) { this.bannersUp = 0; this.giant = null; this.ui.showdown?.start(z, BANNERS); this.ui.coach(z.battlefield ? 'Home at last! The rivals have taken the schoolyard. Beat them, raise all five banners with English, then roll the giant snowball!' : 'Home at last! The rivals want Our School. Raise all five banners with English, then roll the giant snowball!', 6); }
-    if (st.newRival && RIVAL_INFO[st.newRival]) this.newRival(st.newRival);
+    this.ui.hush?.(); // a calm arrival: nothing left over from the ride
+    if (st.newRival && RIVAL_INFO[st.newRival]) { if (this.plan) this.pendingRival = st.newRival; else this.newRival(st.newRival); } // with a plan: shown at the first build moment, before the fight
     // first a fight: clear the first wave of snowmen, then seize the outpost with English (with a
     // fight plan: first the camp, then building, then the fight)
     this.phase = 'fight'; this.tFight = 0; this.flow.stageHold = true;
@@ -216,6 +217,7 @@ export class StageRunner {
     if (this.mode !== 'outpost' || !this.plan) { next(); return; }
     this.phase = 'build'; this.buildKind = kind; this.buildNext = next; this.tBuild = 0; this.flow.stageHold = true; this.ui.seizeButton?.(false);
     this.ui.build?.open(this.buildInfo());
+    if (this.pendingRival) { this.newRival(this.pendingRival); this.pendingRival = null; } // who you will meet in the fight
     this.ui.coach(this.arm.stars ? `You have ${this.arm.stars} ⭐. Invite another friend or pick a boost, then tap Fight!` : 'No stars this time. Answer right first time to earn stars for friends and boosts! Tap Fight! when you are ready.', 5);
   }
   buildInfo() { return { kind: this.buildKind, stars: this.arm.stars, team: this.arm.team.slice(), invitable: this.arm.invitable(), cost: this.arm.cost, boosts: this.arm.boosts, next: this.arm.next, left: Math.max(0, Math.ceil(this.plan.build - this.tBuild)) }; }
@@ -323,7 +325,7 @@ export class StageRunner {
 
   captured(z) { // the bar is full: the final wave comes, and decides the stand
     if (this.mode !== 'outpost') return;
-    if (this.cur.final) { this.giantSnowball(); return; }
+    if (this.cur.final) { if (this.plan) setTimeout(() => { if (this.mode === 'outpost') this.startBuild('final', () => { this.phase = 'seize'; this.giantSnowball(); }); }, 1000); else this.giantSnowball(); return; }
     if (this.plan) { setTimeout(() => { if (this.mode === 'outpost') this.startBuild('final', () => { this.phase = 'seize'; this.spawnWave(2); this.finalT = 0; }); }, 1000); return; } // build, then the final wave
     setTimeout(() => { if (this.mode === 'outpost') { this.spawnWave(2); this.finalT = 0; } }, 1200);
   }
@@ -355,7 +357,7 @@ export class StageRunner {
     for (const c of this.sim.chars) if (c.side === 'rival') this.bench(c);
     this.sim.balls = [];
     if (lost && z && z.owner !== 'home') { z.owner = null; z.progress = 0; z.seizing = false; }
-    this.sim.activeZone = null; if (z) z.halves = null; this.endHunt(); this.sim.removeSupply(); this.plan = null;
+    this.sim.activeZone = null; this.pendingRival = null; if (z) z.halves = null; this.endHunt(); this.sim.removeSupply(); this.plan = null;
     this.match.clearRecruits(); this.sim.removeRecruitSpot(); this.ui.onGone?.(); this.ui.build?.close(); this.ui.stars?.(null); this.buildNext = null;
     { const P = this.match.player; P.ammoMax = 0; P.reloadMul = 1; P.coat = 0; } // boosts last one stage
     if (this.yard) { const i = this.sim.zones.indexOf(this.yard); if (i >= 0) this.sim.zones.splice(i, 1); this.ui.showdown?.stop(); clearTimeout(this.giantT); this.giant = null; }
@@ -489,10 +491,13 @@ export class StageRunner {
     this.ui.seizeButton?.(true);
   }
   // Showdown waves come with the banners: the captain after two, everyone after four.
+  // With a fight plan the banners are raised calmly (no waves during the English); the captain
+  // comes for the finale, after a build moment.
   updateShowdown(dt, v) {
-    if (this.waveIdx === 0 && this.tStand > 2) this.spawnWave(0);
     const up = v ? v.bannersUp : 0;
     while (this.bannersUp < up) this.raiseBanner(this.bannersUp++);
+    if (this.plan) { for (const w of this.waves) { if (!w || w.cleared) continue; w.t += dt; if (!this.alive(w)) w.cleared = true; } return; }
+    if (this.waveIdx === 0 && this.tStand > 2) this.spawnWave(0);
     if (this.waveIdx === 1 && (up >= 2 || (this.tStand > 45 && this.alive(this.waves[0]) <= 1))) this.spawnWave(1);
     if (this.waveIdx === 2 && up >= 4) this.spawnWave(2);
     for (const w of this.waves) { if (!w || w.cleared) continue; w.t += dt; if (!this.alive(w)) { w.cleared = true; if (!this.giant) { this.ui.banner('WAVE CLEAR!', 'win', 1.3); this.ui.play('superReady'); } } }

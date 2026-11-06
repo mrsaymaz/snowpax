@@ -13,12 +13,18 @@ import { CONFIG } from '../src/config.js';
 const unit = JSON.parse(readFileSync(new URL('../content/grade5.json', import.meta.url), 'utf8')).units.find(u => u.id === 'g5u1');
 const def = JSON.parse(readFileSync(new URL('../public/arenas/arena1.json', import.meta.url), 'utf8'));
 
-test('Archery Ground is taken in two halves (Matching, then Sorting) with the long fights; its opening wave is the rival team', () => {
-  const st = STAGES.find(s => s.id === 'archery');
-  assert.deepEqual(st.halves, ['match', 'sort']); assert.ok(FIGHT_PLANS[st.fights]);
-  assert.equal(st.halves.at(-1), st.family, 'the outpost\'s own family comes last');
-  assert.ok(WAVES.archery[0].kids >= 2);
-  for (const f of st.halves) assert.ok(FAMILY_STATION[f], `${f} has its own activity`);
+test('every stage prepares then fights; every outpost is taken in two halves ending with its own family, each family twice in the arena; opening waves are the rival team', () => {
+  const count = {};
+  for (const st of STAGES) {
+    assert.ok(FIGHT_PLANS[st.fights], `${st.id} has a fight plan`);
+    assert.ok(WAVES[st.id][0].kids >= 2, `${st.id}: the rival team opens`);
+    if (st.final) continue;
+    assert.equal(st.halves.length, 2); assert.equal(st.halves.at(-1), st.family, `${st.id}: its own family comes last`);
+    assert.notEqual(st.halves[0], st.halves[1]);
+    for (const f of st.halves) { assert.ok(FAMILY_STATION[f], `${f} has its own activity`); count[f] = (count[f] || 0) + 1; }
+  }
+  assert.deepEqual(Object.values(count).sort(), [2, 2, 2, 2, 2], 'each family twice');
+  assert.deepEqual(STAGES.find(s => s.id === 'archery').halves, ['match', 'sort']);
   const P = FIGHT_PLANS.long;
   assert.ok(P.open.goal >= 10 && P.open.max >= 60 && P.strike.seconds >= 40 && P.final >= 20, 'fights last a while');
 });
@@ -93,7 +99,9 @@ test('recruits: camp children join one role each; stars invite the roles still m
 test('a camp child waits on open ground; answering in reach asks the question; a recruit joins the home team, follows the student and fights; a warm coat takes the first hit', () => {
   const m = createMatch({ arena: buildTileArena(def), myTeam: 'hufflepuff', rivalTeam: 'gryffindor', rng: makeRng(5) });
   const z = m.sim.zones.find(q => q.id === 'archery'), P = FIGHT_PLANS.long, kid = m.player;
-  for (const [v, d] of P.camp.kids) assert.ok(m.grid.freeCircle(z.x + v, z.z + d, 0.5), `camp child ${v},${d}`);
+  const near = [[0, 0], [0.5, 0], [-0.5, 0], [0, 0.6], [0, -0.6], [1, 0], [-1, 0], [0.8, 0.8], [-0.8, 0.8]];
+  for (const f of [...m.sim.zones, { id: 'schoolyard', ...m.arena.schoolyard }]) for (const [v, d] of P.camp.kids) // every field: the planned spot or one close by is open
+    assert.ok(near.some(([a, b]) => m.grid.freeCircle(f.x + v + a * Math.sign(v || 1), f.z + d + b, 0.5)), `${f.id}: camp child ${v},${d}`);
   for (const c of m.sim.chars) if (c !== kid) { c.benched = true; c.x = c.z = -999; }
   const [v, d, role] = P.camp.kids[0], spot = m.sim.addRecruitSpot({ id: 'k0', role, name: 'Elif', look: null, x: z.x + v, z: z.z + d });
   kid.x = spot.x; kid.z = spot.z + 0.5;
