@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Builds the Arena 1 world (Kasımpaşa): one purpose-built field, the Kasımpaşa outpost. Each arena
 // has one outpost; the places of the neighbourhood (Boulevard Park, Archery Ground, Kızılay Square,
-// Sururi Park and the Waterfront) are all part of it: the Kızılay fountain is the outpost's centre,
-// the other four landmarks stand round the field, and each place's English task opens in its own
-// scene. There is no real map and there are no real streets: the field is laid out for a good
+// Sururi Park and the Pier) are all part of it: the outpost is a big carousel with a ship's mast in
+// the middle (Kasımpaşa grew up round the old naval shipyard) and miniatures of the five landmarks
+// riding round it, and each place's English task opens in its own scene. There is no real map and there are no real streets: the field is laid out for a good
 // snowball fight, and only the look of the neighbourhood is kept round it (a cobbled lane,
 // snowed-in houses with lit windows, buried roofs, old lamps, trees and street stalls).
 // Later arenas (İstiklal Street, …) are built the same way: one PLACES entry each.
@@ -30,14 +30,13 @@ const TILE = 15; // nominal metres per tile (for the sound of distances only)
 // stall G (with a landmark entry), frozen sea W, Our School S, home spawn h, rival camp r.
 const FIELD = { front: 28, hw: 11 };      // rows in front of the outpost centre, half width
 const FRAME = 7;                          // frame depth round the field: 2 snow (the fence), lane, 2 houses, 2 roofs and trees
-const CORE = 2, RING_R = 3.9;
+const CORE = 3, CORE_R = 3.1, RING_R = 4.6; // the carousel: a round solid core of cells within CORE_R, the circle round it
 
-// The arena's outpost. `back`: rows behind the outpost centre. `around`: the neighbourhood's other
-// landmarks in the frame round the field: [type, place, v, d] with v across and d rows south of the
-// outpost centre (the landmark's middle; 4 × 4 cells, in the lane and house rows of the frame).
+// The arena's outpost. `back`: rows behind the outpost centre. `seats`: the landmarks riding the
+// carousel, in the order their places' tasks are played (Part 1, then Part 2).
 const PLACES = [
-  { id: 'kasimpasa', family: 'match', label: 'Kasımpaşa', landmark: 'fountain', back: 6, trees: 'TxvT', stalls: ['chestnut', 'simit', 'cay', 'salep'],
-    around: [['archers-lodge', 'archery', -8, -10], ['snow-castle', 'sururi', 8, -10], ['treehouse', 'boulevard', -14, 11], ['admiral', 'waterfront', 14, 11]] },
+  { id: 'kasimpasa', family: 'match', label: 'Kasımpaşa', landmark: 'carousel', back: 6, trees: 'TxvT', stalls: ['chestnut', 'simit', 'cay', 'salep'],
+    seats: ['treehouse', 'archers-lodge', 'fountain', 'snow-castle', 'admiral'] },
 ];
 
 // Field layouts: [kind, d0, d1, v0, v1] covers the cells whose centres have d0 ≤ d ≤ d1 (rows
@@ -103,13 +102,6 @@ PLACES.forEach((pl, k) => {
     const i = ci - 9 + n * 5, j = cj + front + 3;
     set(i, j, 'G'); set(i + 1, j, 'G'); landmarks.push({ type: 'stall', kind, i, j, w: 2, h: 1, outpost: pl.id });
   });
-  // the neighbourhood's other landmarks round the field (on cleared snow, in the frame)
-  for (const [type, place, v, d] of pl.around || []) {
-    const i0 = Math.round(ci + v) - 2, j0 = Math.round(cj + d) - 2;
-    for (let j = j0 - 1; j < j0 + 5; j++) for (let i = i0 - 1; i < i0 + 5; i++) if (!'aP'.includes(g[j][i])) set(i, j, '.');
-    for (let j = j0; j < j0 + 4; j++) for (let i = i0; i < i0 + 4; i++) set(i, j, 'O');
-    landmarks.push({ type, i: i0, j: j0, w: 4, h: 4, outpost: place });
-  }
   // the sea: a ferry stuck in the ice and a wooden pier off the quay
   if (pl.sea) {
     landmarks.push({ type: 'ferry', i: ci + 3, j: cj - back - 7, w: 5, h: 2, along: 'x', outpost: pl.id });
@@ -127,9 +119,9 @@ PLACES.forEach((pl, k) => {
     rival = [ci + 8, cj - 3]; set(...rival, 'r');              // the rivals' camp, by the school
     schoolyard = { i: ci, j: cj, r: 3.4, arena };
   } else {
-    for (let dj = -CORE; dj < CORE; dj++) for (let di = -CORE; di < CORE; di++) set(ci + di, cj + dj, 'O');
+    for (let dj = -CORE; dj < CORE; dj++) for (let di = -CORE; di < CORE; di++) if (Math.hypot(dj + 0.5, di + 0.5) <= CORE_R) set(ci + di, cj + dj, 'O');
     if (!home) { home = [ci, cj + front - 3]; set(...home, 'h'); rival = [ci + 8, cj - 3]; set(...rival, 'r'); } // the team starts at the south end; the rivals' camp is behind the outpost
-    landmarks.push({ type: pl.landmark, i: ci - CORE, j: cj - CORE, w: CORE * 2, h: CORE * 2, outpost: pl.id, centre: true });
+    landmarks.push({ type: pl.landmark, i: ci - CORE, j: cj - CORE, w: CORE * 2, h: CORE * 2, outpost: pl.id, centre: true, ...(pl.seats ? { seats: pl.seats } : {}) });
     outposts.push({ id: pl.id, family: pl.family, label: pl.label, landmark: pl.landmark, i: ci, j: cj, r: RING_R, yard: 90, arena });
   }
 });

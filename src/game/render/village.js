@@ -409,7 +409,8 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   };
 
   // ---------- edge buildings and nature (quieter around the edges) ----------
-  if (arena.world) buildSnowtown({ arena: { ...arena, x0, z0 }, K, M, T, PAL, GEO, rbox, prism, rnd, at, group, glows, smokeSources, lights, low, lantern, windows, pine, rock, barrel, crate, firewood, shovel, mSnow, mStone, mStoneDark, mBeam, mWood, mMetal, mIce, mGlass, sign, life, pools, centreFlags, makeFlag, look });
+  const snowCtx = arena.world ? { arena: { ...arena, x0, z0 }, K, M, T, PAL, GEO, rbox, prism, rnd, at, group, glows, smokeSources, lights, low, lantern, windows, pine, rock, barrel, crate, firewood, shovel, mSnow, mStone, mStoneDark, mBeam, mWood, mMetal, mIce, mGlass, sign, life, pools, centreFlags, makeFlag, look, Kit } : null;
+  if (snowCtx) buildSnowtown(snowCtx);
   else {
   const used = new Set(), key = (i, j) => i + ',' + j;
   const isH = (i, j) => i >= 0 && j >= 0 && i < W && j < H && rows[j][i] === 'H' && !used.has(key(i, j));
@@ -644,9 +645,11 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
   }
 
   let time = 0;
+  const carousel = snowCtx?.carousel || null; // the Kasımpaşa outpost (snowtown.js)
   return {
     group,
     life,
+    carousel,
     updateDrift(k, t) { setDrift(k, t); drift.instanceMatrix.needsUpdate = true; },
     // who holds an outpost: lanterns, chimney smoke nearby and the snow glow take their colour
     setOwner(id, color) {
@@ -672,7 +675,7 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
       if (flag) flag.material.color.set(p > 0.02 ? col : '#ffffff');
     },
     tick(dt, focus, reduceMotion = false, camera = null) {
-      time += dt;
+      time += dt; carousel?.tick(reduceMotion ? dt * 0.3 : dt);
       const q = camera ? camera.quaternion : null;
       fires.forEach(({ x, z }, f) => { for (let k = 0; k < 3; k++) { const s1 = 1 + Math.sin(time * (9 + k * 3) + f + k) * 0.12 + Math.sin(time * 23 + k) * 0.05; bo.position.set(x + (k - 1) * 0.08, 0.68, z + (k % 2) * 0.06); bo.quaternion.identity(); bo.scale.set(s1 * (1 - k * 0.2), s1 * (1 + 0.15 * Math.sin(time * 7 + k)) * (1 - k * 0.15), s1 * (1 - k * 0.2)); bo.updateMatrix(); flameMesh.setMatrixAt(f * 3 + k, bo.matrix); } });
       flameMesh.instanceMatrix.needsUpdate = true;

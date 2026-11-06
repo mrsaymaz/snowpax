@@ -6,6 +6,7 @@
 import {
   BufferGeometry, Float32BufferAttribute, Mesh, MeshLambertMaterial, BoxGeometry, SphereGeometry, CylinderGeometry, ConeGeometry,
   PlaneGeometry, TorusGeometry, CapsuleGeometry, CanvasTexture, RepeatWrapping, SRGBColorSpace, Color, CircleGeometry,
+  Group, Matrix4, MeshBasicMaterial, AdditiveBlending,
 } from 'three';
 import { makeGround } from '../terrain.mjs';
 import { addSparkle } from './look.js';
@@ -400,7 +401,7 @@ export function buildSnowtown(ctx) {
 
   // ---------- one landmark at each outpost ----------
   const centre = lm => at(lm.i + (lm.w - 1) / 2, lm.j + (lm.h - 1) / 2);
-  for (const lm of arena.landmarks) {
+  const landmarkBody = lm => {
     if (lm.type === 'footbridge') { // stair towers either side of the boulevard, a snowy steel deck over it
       const [ax, az] = at(...lm.a), [bx, bz] = at(...lm.b), mx = (ax + bx) / 2, mz = (az + bz) / 2, L = Math.hypot(bx - ax, bz - az), ry = Math.atan2(bx - ax, bz - az);
       for (const [x, z] of [[ax, az], [bx, bz]]) { K.add(rbox(0.9, 0.9, 3.0, 0.06), mStoneDark, x, 0, z); K.add(rbox(1.0, 1.0, 0.2, 0.08), mSnow, x, 3.0, z); }
@@ -630,5 +631,84 @@ export function buildSnowtown(ctx) {
       for (let k = 0; k < 6; k++) K.add(new CylinderGeometry(0.025, 0.025, 0.4, 6), mWood, x + 0.95 - k * 0.07, 0.3 + k * 0.45, z + 0.5, 0, 0, Math.PI / 2);
       shovel(x - 1.1, z + 0.4, 0.4); barrel(x + 1.3, z - 0.6);
     }
+  };
+  for (const lm of arena.landmarks) if (lm.type !== 'carousel') landmarkBody(lm);
+
+  // ---------- the carousel outpost (Kasımpaşa) ----------
+  // A big wooden carousel: a ship's mast in the middle with an anchor and the KASIMPAŞA sign (the
+  // neighbourhood grew up round the old naval shipyard), and miniatures of the places' landmarks
+  // riding round it on the turning deck. The miniatures are the real landmarks, built far away
+  // and moved onto the deck (their pieces taken back out of the shared kit).
+  const car = arena.landmarks.find(l => l.type === 'carousel');
+  if (car && ctx.Kit) ctx.carousel = buildCarousel(car);
+  function miniature(type, k) {
+    const snapS = new Map([...K.statics].map(([m, l]) => [m, l.length])), snapI = new Map([...K.inst].map(([key, v]) => [key, v.list.length]));
+    const nG = glows.length, nL = lights.length, nP = life.perches.length, nC = group.children.length;
+    const far = { type, i: -400 - k * 12, j: -400, w: 4, h: 4, outpost: 'mini-' + type }, [fx, fz] = centre(far);
+    landmarkBody(far);
+    const K2 = new ctx.Kit(), back = new Matrix4().makeTranslation(-fx, 0, -fz);
+    for (const [m, l] of K.statics) { const add = l.splice(snapS.get(m) || 0); if (add.length) { if (!K2.statics.has(m)) K2.statics.set(m, []); for (const g of add) K2.statics.get(m).push(g.translate(-fx, 0, -fz)); } }
+    for (const [key, v] of K.inst) { const add = v.list.splice(snapI.get(key) || 0); if (add.length) K2.inst.set(key, { geo: v.geo, mat: v.mat, list: add.map(mx => mx.premultiply(back)) }); }
+    glows.splice(nG); lights.splice(nL); life.perches.splice(nP);
+    const g = new Group(); K2.build(g, true);
+    for (const o of group.children.splice(nC)) { o.position.x -= fx; o.position.z -= fz; o.parent = null; g.add(o); }
+    return { g, flag: ctx.centreFlags.get(far.outpost) || null };
+  }
+  function buildCarousel(lm) {
+    const [cx, cz] = centre(lm), root = new Group(); root.position.set(cx, 0, cz); group.add(root);
+    const R = 3.0, wood = M('wood', '#a5714f'), dark = M('wood', '#6e4a32'), red = M('fabric', '#c8443c'), white = M('plaster', '#f6f2ea'), gold = M('glow', '#e8b84a'), iron = M('metal', '#3d4660');
+    // the base that stays still: a stone plinth with a snowy rim and two steps
+    const KB = new ctx.Kit();
+    KB.add(new CylinderGeometry(R + 0.15, R + 0.3, 0.3, 40), mStone, 0, 0.15, 0); KB.add(new TorusGeometry(R + 0.2, 0.09, 6, 40), mSnow, 0, 0.3, 0, Math.PI / 2);
+    for (const a of [0, Math.PI]) KB.add(rbox(1.2, 0.5, 0.16, 0.04), mStone, Math.sin(a) * (R + 0.45), 0, Math.cos(a) * (R + 0.45), 0, a);
+    // the mast in the middle (it stays still too): crow's nest, a yard with the sign, rigging to the deck, an anchor at its foot
+    KB.add(new CylinderGeometry(0.16, 0.22, 5.0, 12), dark, 0, 2.8, 0);
+    KB.add(new CylinderGeometry(0.42, 0.34, 0.32, 12), wood, 0, 4.5, 0); KB.add(new TorusGeometry(0.44, 0.04, 6, 16), dark, 0, 4.68, 0, Math.PI / 2);
+    KB.add(new CylinderGeometry(0.07, 0.07, 3.4, 8), dark, 0, 3.85, 0, 0, 0, Math.PI / 2); // the yard
+    for (const sx of [-1.6, 1.6]) KB.add(new CylinderGeometry(0.012, 0.012, Math.hypot(sx * 1.3, 3.4), 4), M('fabric', '#e8dcc0'), sx * 0.85, 2.15, 0, 0, 0, -Math.atan2(sx * 1.3, 3.4));
+    // the anchor, leaning on the mast's foot, facing the field
+    const az = 0.55; KB.add(new CylinderGeometry(0.08, 0.08, 1.7, 10), iron, 0, 1.25, az); KB.add(new CylinderGeometry(0.05, 0.05, 0.9, 8), iron, 0, 1.95, az, 0, 0, Math.PI / 2);
+    KB.add(new TorusGeometry(0.14, 0.04, 6, 14), iron, 0, 2.2, az); KB.add(new TorusGeometry(0.55, 0.07, 6, 16, Math.PI), iron, 0, 0.95, az, 0, 0, Math.PI);
+    for (const s2 of [-1, 1]) KB.add(new ConeGeometry(0.13, 0.32, 4), iron, s2 * 0.55, 1.05, az, 0, 0, s2 * 0.5);
+    KB.add(new TorusGeometry(0.12, 0.03, 6, 12), M('fabric', '#e8dcc0'), 0.14, 2.35, az + 0.05, 0.3);
+    for (const sx of [-1.2, 1.2]) KB.add(new CylinderGeometry(0.01, 0.01, 0.5, 4), M('fabric', '#e8dcc0'), sx, 3.6, 0.12); // the sign's ropes
+    const still = new Group(); KB.build(still, true); root.add(still);
+    // the sign hangs from the yard, tilted back towards the camera so it reads from above
+    const sg = sign('KASIMPAŞA', 2.8, '#7a1f1f'); sg.position.set(0, 3.3, 0.22); sg.rotation.x = -0.55; root.add(sg);
+    const sgB = sign('KASIMPAŞA', 2.8, '#7a1f1f'); sgB.position.set(0, 3.3, -0.22); sgB.rotation.set(-0.55, Math.PI, 0, 'YXZ'); root.add(sgB);
+    flagAt(lm.outpost, cx, 5.55, cz); // the outpost's flag at the masthead: it takes the holder's colour
+    lights.push([cx, 2.4, cz + 1.2]); glows.push([cx, 4.55, cz, 1.2]);
+    // the turning deck: wood with red-and-white skirt panels and brass poles, the miniatures on it
+    const deck = new Group(); deck.position.y = 0.3; root.add(deck);
+    const KD = new ctx.Kit();
+    KD.add(new CylinderGeometry(R, R, 0.22, 40), wood, 0, 0.11, 0); KD.add(new CylinderGeometry(R - 0.05, R - 0.05, 0.04, 40), mSnow, 0, 0.24, 0);
+    for (let k = 0; k < 20; k++) { const a = k / 20 * Math.PI * 2; KD.add(rbox(0.94, 0.08, 0.3, 0.02), k % 2 ? white : red, Math.sin(a) * (R + 0.02), -0.04, Math.cos(a) * (R + 0.02), 0, a); }
+    for (let k = 0; k < 10; k++) { const a = (k + 0.5) / 10 * Math.PI * 2; KD.add(new CylinderGeometry(0.035, 0.035, 1.4, 8), gold, Math.sin(a) * (R - 0.3), 0.92, Math.cos(a) * (R - 0.3)); KD.add(new SphereGeometry(0.07, 8, 6), gold, Math.sin(a) * (R - 0.3), 1.65, Math.cos(a) * (R - 0.3)); }
+    KD.add(new CylinderGeometry(0.75, 0.85, 0.3, 20), dark, 0, 0.36, 0); // round the mast
+    const dk = new Group(); KD.build(dk, true); deck.add(dk);
+    const seats = (lm.seats || []).map((type, k) => {
+      const a = k / lm.seats.length * Math.PI * 2, seat = new Group(); seat.position.set(Math.sin(a) * 1.95, 0.24, Math.cos(a) * 1.95); seat.rotation.y = a; deck.add(seat);
+      const { g, flag } = miniature(type, k); g.scale.setScalar(type === 'treehouse' ? 0.26 : 0.32); seat.add(g);
+      // a lamp on the deck under each landmark: off until its place is taken, then it glows in the team's colour
+      const glowM = new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0, depthWrite: false, blending: AdditiveBlending });
+      const pad = new Mesh(new CircleGeometry(0.85, 24), glowM); pad.rotation.x = -Math.PI / 2; pad.position.y = 0.03; seat.add(pad);
+      return { type, seat, angle: a, flag, glowM, lit: null };
+    });
+    let spin = 0, want = null, t = 0;
+    return {
+      root, seats,
+      // where a seat is in the world now (for its snowballs)
+      seatPos(k) { const s2 = seats[k]; if (!s2) return null; const a = s2.angle + spin; return { x: cx + Math.sin(a) * 1.95, z: cz + Math.cos(a) * 1.95 }; },
+      face(k) { const s2 = seats[k]; if (!s2) { want = null; return; } let w = -s2.angle; while (w - spin > Math.PI) w -= Math.PI * 2; while (w - spin < -Math.PI) w += Math.PI * 2; want = w; },
+      light(k, color) { const s2 = seats[k]; if (!s2) return; s2.lit = color; s2.flash = 1.6; s2.glowM.color.set(color); if (s2.flag) s2.flag.material.color.set(color); },
+      reset() { want = null; for (const s2 of seats) { s2.lit = null; s2.glowM.opacity = 0; if (s2.flag) s2.flag.material.color.set('#ffffff'); } },
+      tick(dt) {
+        t += dt;
+        if (want === null) spin += dt * 0.16; // turning slowly
+        else { spin += (want - spin) * Math.min(1, dt * 2.2); if (Math.abs(want - spin) < 0.002) spin = want; }
+        deck.rotation.y = spin;
+        for (const s2 of seats) { if (!s2.lit) continue; s2.flash = Math.max(0, (s2.flash || 0) - dt); s2.glowM.opacity = 0.55 + Math.sin(t * 3 + s2.angle) * 0.12 + s2.flash * 0.3; }
+      },
+    };
   }
 }

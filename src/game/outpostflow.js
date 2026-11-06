@@ -70,6 +70,7 @@ export class OutpostFlow {
   showNext() {
     const v = this.visit, step = v.next();
     if (!step) { this.onStepDone(true); return; }
+    if (v.families && this.mode === 'seize' && this.placeShown !== v.family) { this.placeShown = v.family; this.ui.onPlaceStart?.(v.family); } // the carousel turns to the place
     if (v.families) { // each family in its own place's activity
       this.card.setCoach(`${PLACE_OF[v.family] ? PLACE_OF[v.family] + ' · ' : ''}${FAMILY_NAME[v.family]}${v.coach ? ': ' + v.coach : ''}`); this.card.show(step, { theme: FAMILY_STATION[v.family] || this.zone.id }); return;
     }
@@ -96,8 +97,9 @@ export class OutpostFlow {
       this.cocoaRight = correctFirstTry; recordItem(this.up, 0, { correctFirstTry, itemId }); this.writeSave(this.save);
       if (correctFirstTry) this.ui.onStar?.(); return;
     }
-    const v = this.visit;
+    const v = this.visit, up = v.bannersUp, fam = v.family;
     v.answer(correctFirstTry);
+    if (this.mode === 'seize' && v.families && v.bannersUp > up) this.ui.onPlaceDone?.(fam); // a place's task is done: its landmark lights up
     recordItem(this.up, 0, { correctFirstTry, itemId }); this.writeSave(this.save);
     this.card.setProgress(v.progress);
     if (correctFirstTry) {
@@ -145,7 +147,7 @@ export class OutpostFlow {
   }
   finishDefend() { const z = this.zone; this.card.close(); this.plant(false); this.mode = null; this.zone = null; this.held(z); }
   // stage mode: only this outpost opens a card, and the stage runner decides when the final wave ends
-  setStage(z) { this.stageZone = z; this.extraDone = null; if (z) { this.visits.delete(z.id); this.defendVisit = null; this.waveZone = null; this.mode = null; this.zone = null; this.streak = 0; } }
+  setStage(z) { this.stageZone = z; this.extraDone = null; this.placeShown = null; if (z) { this.visits.delete(z.id); this.defendVisit = null; this.waveZone = null; this.mode = null; this.zone = null; this.streak = 0; } }
   stageStats(z) { const v = this.visits.get(z.id), d = this.defendVisit, x = this.extraDone || { firstTry: 0, done: 0 }; return { firstTry: (v?.firstTry || 0) + (d?.firstTry || 0) + x.firstTry, total: (v?.done || 0) + (d?.done || 0) + x.done }; }
   abort() { if (this.mode) { this.card.close(); this.plant(false); if (this.zone) this.zone.seizing = false; } this.mode = null; this.zone = null; this.waveZone = null; }
   held(z) {

@@ -240,6 +240,7 @@ async function startGame(myTeam, kit, pace) {
       showWall: cells => showWall(cells), onGone: list => { dropSnowmen(list); dropGoneKids(); }, recruited: (c, R) => fx.number(c.x, c.z, `${c.name} · ${R.name}`, 'word'), rebuildWorld: z => rebuildWorld(z), markRival: z => world.setOwner(z.id, rivCol), fireworks,
       seizeButton: on => { $('#seizebtn').hidden = !on; },
       hush: () => { clearTimeout(coach.t); $('#coach').hidden = true; },
+      carousel: { face: k => world.carousel?.face(k), light: k => world.carousel?.light(k, myCol), reset: () => world.carousel?.reset(), seatPos: k => world.carousel?.seatPos(k) },
       wallet: (n, pop) => { const el = $('#stars'); el.hidden = n == null; if (n != null) { el.querySelector('b').textContent = n; if (pop) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); } } },
       build: { open: i => buildUI.open(i), refresh: (i, bought) => buildUI.refresh(i, bought), close: () => buildUI.close() },
       fx, hunt: w => { const el = $('#hunt'), clean = s => String(s ?? '').replace(/[&<>"']/g, ''); el.hidden = !w; if (w) el.innerHTML = `<small>${w.reveal ? 'Time!' : 'Freeze the snowman that means'}</small><span class="hunt-word">${w.pic ? `<img src="${clean(w.pic)}" alt="">` : ''}<b>${clean(w.tr)}</b></span>`; },

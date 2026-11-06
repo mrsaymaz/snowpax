@@ -4,8 +4,7 @@ import { readFileSync } from 'node:fs';
 import { buildTileArena } from '../src/game/tilemap.mjs';
 
 // Arena 1 (Kasımpaşa) is one purpose-built field (no real map, no real streets): the Kasımpaşa
-// outpost, the Kızılay fountain at its centre and the neighbourhood's other four landmarks round
-// it, framed by the look of the neighbourhood: a cobbled lane, snowed-in houses, buried roofs,
+// outpost, a carousel with the five places' landmarks riding round a ship's mast, framed by the look of the neighbourhood: a cobbled lane, snowed-in houses, buried roofs,
 // lamps, trees, stalls.
 const def = JSON.parse(readFileSync(new URL('../public/arenas/arena1.json', import.meta.url), 'utf8'));
 const field = () => { const o = def.outposts[0]; return { id: o.id, i: o.i, j: o.j, ...o.arena }; };
@@ -32,23 +31,15 @@ test('the field is 22 × 34, mirrored left–right, with open ground and some co
   assert.ok(cover > 0.06 && cover < 0.3, `cover ${cover.toFixed(2)}`);
 });
 
-test('the outpost is the Kızılay fountain, a solid 4×4 centrepiece in a round plaza at the north end; the other four places stand round the field', () => {
-  const o = def.outposts[0];
-  for (let j = o.j - 2; j < o.j + 2; j++) for (let i = o.i - 2; i < o.i + 2; i++) assert.equal(def.rows[j][i], 'O', 'core');
-  assert.ok(def.landmarks.find(l => l.outpost === o.id && l.centre && l.type === 'fountain'));
-  assert.equal(def.rows[o.j + 3][o.i], 'P', 'plaza');
+test('the outpost is the carousel: a round solid core in a plaza at the north end, the five places\' landmarks riding it in the order their tasks are played', () => {
+  const o = def.outposts[0], f = field();
+  const lm = def.landmarks.find(l => l.outpost === o.id && l.centre); assert.equal(lm.type, 'carousel');
+  assert.deepEqual(lm.seats, ['treehouse', 'archers-lodge', 'fountain', 'snow-castle', 'admiral']);
+  for (let dj = -3; dj < 3; dj++) for (let di = -3; di < 3; di++) { const r = Math.hypot(dj + 0.5, di + 0.5), c = def.rows[o.j + dj][o.i + di]; if (r <= 3.1) assert.equal(c, 'O', `core ${di},${dj}`); else assert.notEqual(c, 'O'); }
+  assert.equal(def.rows[o.j + 3][o.i], 'P', 'plaza'); assert.ok(o.r > 4, 'the circle goes round the carousel');
   assert.ok(o.arena.back < o.arena.front / 3, 'the outpost is at the rivals\' end');
-  const around = def.landmarks.filter(l => !l.centre && ['archers-lodge', 'snow-castle', 'treehouse', 'admiral'].includes(l.type));
-  assert.deepEqual(around.map(l => l.outpost).sort(), ['archery', 'boulevard', 'sururi', 'waterfront']);
-  const f = field();
-  for (const l of around) { // outside the field, inside the frame the stage shows
-    for (let j = l.j; j < l.j + l.h; j++) for (let i = l.i; i < l.i + l.w; i++) {
-      const d = j + 0.5 - f.j, v = i + 0.5 - f.i;
-      assert.ok(d < -f.back || d > f.front || Math.abs(v) > f.hw, `${l.type} is outside the field`);
-      assert.ok(d > -f.back - 7 && d < f.front + 7 && Math.abs(v) < f.hw + 7, `${l.type} is in the frame`);
-      assert.equal(def.rows[j][i], 'O');
-    }
-  }
+  assert.equal(def.landmarks.filter(l => !l.centre && l.type !== 'stall').length, 0, 'no other landmarks round the field');
+  assert.ok(f.back >= 6);
 });
 
 test('the neighbourhood round the field: a lane with lamps, snowed-in houses, buried roofs and trees; stalls behind the home spawn', () => {

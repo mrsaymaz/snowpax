@@ -27,11 +27,15 @@ export class StageRunner {
     this.mode = 'map'; this.lives = new Lives(); this.wall = []; this.waves = []; this.runFlakes = 0; this.runBalls = 0; this.ridesDone = 0;
     flow.ui.onCaptured = z => this.captured(z); flow.ui.onHeld = z => this.held(z); flow.ui.onHalf = z => this.startBuild('strike', () => this.startStrike(z)); flow.ui.onStar = () => this.addFlake(); flow.ui.onRecruit = (id, right) => this.recruitAnswer(id, right);
     flow.ui.onExtraDone = () => this.startBuild('final', () => this.startShowdown());
+    flow.ui.onPlaceStart = f => { const k = this.seatOf(f); if (k >= 0) this.ui.carousel?.face(k); };
+    flow.ui.onPlaceDone = f => { const k = this.seatOf(f); if (k >= 0 && !this.lit.includes(k)) { this.lit.push(k); this.ui.carousel?.light(k); } };
     this.bindInput();
     // rival kids wait off the field until their wave
     for (const c of this.sim.chars) if (c.side === 'rival') this.bench(c);
   }
   get stage() { return this.cur; }
+  // the carousel seat of a place's task family (the seats ride in the order the tasks are played)
+  seatOf(f) { return this.cur?.parts ? this.cur.parts.flat().indexOf(f) : -1; }
   bench(c) { c.guard = null; c.benched = true; c.x = -999; c.z = -999; c.vx = c.vz = 0; c.travel = null; }
 
   // ---------- the stage map ----------
@@ -90,6 +94,7 @@ export class StageRunner {
     const st = this.cur, sim = this.sim, z = sim.zones.find(q => q.id === st.outpost), grid = this.match.grid;
     this.save.snowflakes = (this.save.snowflakes || 0) + this.runFlakes; this.writeSave(this.save);
     this.ui.rebuildWorld?.(z); // v2 look: build only this stage's area
+    this.lit = []; this.seatT = 2; this.seatK = 0; this.ui.carousel?.reset();
     this.mode = 'outpost'; document.body.classList.remove('sledding'); $('#runhud').hidden = true; $('#hud').hidden = false;
     this.zone = z; this.tStand = 0; this.waveIdx = 0; this.waves = []; this.finalT = null; sim.activeZone = z;
     // longer fights with English inside them (fights.mjs): the stage's plan, two parts of English
@@ -246,6 +251,14 @@ export class StageRunner {
     const P = this.plan, z = this.zone, fighting = this.phase === 'fight' || this.phase === 'strike' || this.phase === 'showdown';
     const goal = this.phase === 'fight' ? this.yardGoal : z;
     if (this.phase === 'showdown') this.updateShowdown(dt);
+    if (fighting && this.lit.length) { // the lit landmarks on the carousel throw snowballs at the rivals (never at the captain or a word snowman)
+      this.seatT -= dt;
+      if (this.seatT <= 0) {
+        this.seatT = 3.2 / this.lit.length; const k = this.lit[this.seatK++ % this.lit.length], from = this.ui.carousel?.seatPos(k) || { x: z.x, z: z.z };
+        const t = this.sim.chars.filter(c => c.side === 'rival' && !c.benched && !c.gone && !c.frozen && !c.thaw && !c.captain && !c.word && Math.hypot(c.x - from.x, c.z - from.z) < 14).sort((a, b) => Math.hypot(a.x - from.x, a.z - from.z) - Math.hypot(b.x - from.x, b.z - from.z))[0];
+        if (t) { const P0 = this.match.player; this.sim.lobAt(from, t, P0.side, P0.team); }
+      }
+    }
     if (fighting) {
       this.trickleT += dt;
       const live = this.sim.chars.filter(c => c.role === 'minion' && !c.gone && !c.word && !c.frozen).length;
@@ -283,6 +296,7 @@ export class StageRunner {
   // stops while rivals stand in the circle with nobody of ours)
   startStrike(z) {
     if (this.mode !== 'outpost' || z !== this.zone) return;
+    this.ui.carousel?.face(-1); // turning again
     this.phase = 'strike'; this.flow.stageHold = true; this.tStrike = 0; this.strikeLeft = this.plan ? this.plan.strike.seconds : 20; this.trickleT = 0;
     this.ui.banner('THEY STRIKE BACK!', 'lose', 1.6); this.ui.play('whoosh');
     this.ui.coach(`Part 1 is done! Now hold the circle for ${Math.round(this.strikeLeft)} seconds. Freeze anyone who steps in.`, 5);
@@ -327,6 +341,7 @@ export class StageRunner {
   // after a moment without a hit, so it takes steady throwing (the boosts) to freeze it in time.
   startShowdown() {
     const S = this.plan.showdown, z = this.zone;
+    this.ui.carousel?.face(-1);
     this.phase = 'showdown'; this.tShow = 0; this.ui.hush?.(); this.flow.stageHold = true; this.trickleT = 0; this.ui.seizeButton?.(false);
     this.waves[2] = null; this.spawnWave(2);
     this.captain = this.waves[2].members.find(c => c.minion === 'captain') || null;

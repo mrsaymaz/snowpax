@@ -344,6 +344,11 @@ export class Sim {
     this.emit('blast', { zone: z.id, x: z.x, z: z.z, n: targets.length });
     return targets.length;
   }
+  // a snowball lobbed from (x, z) at a rival: the carousel's lit landmarks (Kasımpaşa) help the team
+  lobAt(from, t, side, team, dmg = 18) {
+    this.balls.push({ owner: -2, side, team, kit: 'lobber', kind: 'lob', x: from.x, z: from.z, y: 2.2, x0: from.x, z0: from.z, x1: t.x + t.vx * 0.6, z1: t.z + t.vz * 0.6, T: 0.85, t: 0, dmg, splash: 0.8 });
+    this.emit('seatLob', { x: from.x, z: from.z });
+  }
   refillTeam(side) { for (const c of this.chars) if (c.side === side && !c.frozen) c.ammo = c.ammoMax || F.ammoMax; }
   // the cocoa question was answered
   cocoaResult(pickupId, c, right) {
