@@ -253,21 +253,20 @@ export function tersaneStation(s, { color = '#f5b616' } = {}) {
   for (let k = 0; k < 9; k++) { const b = add(crane, new BoxGeometry(0.5, 0.05, 0.05), yellow, 0, 0.8 + k * 0.52, 0.22); b.rotation.z = k % 2 ? 0.6 : -0.6; const b2 = add(crane, new BoxGeometry(0.05, 0.05, 0.5), yellow, 0.22, 0.8 + k * 0.52, 0); b2.rotation.x = k % 2 ? 0.6 : -0.6; }
   const slew = new Group(); slew.position.y = CR.y; crane.add(slew); // turns about the tower
   add(slew, new BoxGeometry(0.7, 0.55, 0.8), L('#3d4a6b'), 0, 0.3, -0.1); add(slew, new PlaneGeometry(0.4, 0.26), new MeshBasicMaterial({ color: '#ffd98a' }), 0, 0.35, 0.31);
-  const jib = add(slew, new BoxGeometry(0.26, 0.24, 9.4), yellow, 0, 0.12, 4.4); add(slew, new BoxGeometry(0.28, 0.06, 9.4), snowM, 0, 0.27, 4.4);
+  const jib = add(slew, new BoxGeometry(0.2, 0.22, 5.6), yellow, 0, 0.12, 2.6); add(slew, new BoxGeometry(0.22, 0.05, 5.6), snowM, 0, 0.25, 2.6); // a short arm: it works over the ship, never across the foreground
   add(slew, new BoxGeometry(0.24, 0.22, 2.4), yellow, 0, 0.12, -1.4); add(slew, new BoxGeometry(0.6, 0.6, 0.6), stone, 0, -0.1, -2.4); // the counter-jib and its weight
   const trolley = new Group(); slew.add(trolley); add(trolley, new BoxGeometry(0.34, 0.14, 0.34), dark, 0, -0.07, 0);
   const cable = new Mesh(new CylinderGeometry(0.012, 0.012, 1, 4), dark); P.add(cable);
   const hook = new Group(); P.add(hook); add(hook, new BoxGeometry(0.3, 0.16, 0.2), L('#e0463c'), 0, 0.08, 0); { const h = add(hook, new TorusGeometry(0.09, 0.025, 6, 12, Math.PI * 1.4), dark, 0, -0.06, 0); h.rotation.z = Math.PI * 0.8; }
-  let ang = 0.4, rad = 4.2, hy = 4.4, job = null; const jobs = [], idle = [];
+  let ang = 0.4, rad = 3.2, hy = 4.4, job = null, shake = 0; const jobs = [], idle = [];
   const target = (x, z) => { const dx = x - CR.x, dz = z - CR.z; return { a: Math.atan2(dx, dz), r: Math.max(1.2, Math.hypot(dx, dz)) }; };
   const turn = (a0, a1) => { let d = a1 - a0; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
   const E = k => k * k * (3 - 2 * k);
   const hookAt = () => new Vector3(CR.x + Math.sin(ang) * rad, hy, CR.z + Math.cos(ang) * rad);
-  const start = () => { if (job || !jobs.length) { if (!job && !jobs.length) while (idle.length) idle.shift()(); return; } job = jobs.shift(); job.t = 0; job.phase = 0; job.from = { a: ang, r: rad, y: hy }; };
+  const start = () => { if (job || !jobs.length) { if (!job && !jobs.length) while (idle.length) idle.shift()(); return; } if (!jobs[0].ready) return; job = jobs.shift(); job.t = 0; job.phase = 0; job.from = { a: ang, r: rad, y: hy }; };
   const H2 = 0.22; // half a plank's height: the hook rides just above it
   const phases = j => { // each phase: [seconds, angle/radius target, hook height]
     const p = target(j.mesh.position.x, j.mesh.position.z), up = Math.max(4.2, (j.to?.[1] || 2) + 1.3);
-    if (j.back) return [[0.32, p, j.mesh.position.y + H2 + 0.2], [0.12, p, j.mesh.position.y + H2 + 0.04, 'grab'], [0.25, p, j.mesh.position.y + 1.4], [0.3, { a: p.a + 0.25, r: p.r }, j.mesh.position.y + 1.4], [0.3, p, j.mesh.position.y + H2 + 0.04, 'drop']];
     const q = target(j.to[0], j.to[2]);
     return [[0.32, p, j.mesh.position.y + H2 + 0.2], [0.12, p, j.mesh.position.y + H2 + 0.04, 'grab'], [0.22, p, up], [0.42, q, up], [0.24, q, j.to[1] + H2 + 0.04, 'drop']];
   };
@@ -276,16 +275,16 @@ export function tersaneStation(s, { color = '#f5b616' } = {}) {
     const ph = job.plan || (job.plan = phases(job)), [T2, goal, gy, act] = ph[job.phase];
     job.t += dt; const k = E(Math.min(1, job.t / T2)), f = job.from;
     ang = f.a + turn(f.a, goal.a) * k; rad = f.r + (goal.r - f.r) * k; hy = f.y + (gy - f.y) * k;
-    if (job.held) { const h = hookAt(); job.mesh.position.set(h.x, h.y - H2 - 0.04, h.z); job.mesh.rotation.y = job.rot0 * (1 - Math.min(1, job.t / 0.4)) + (job.back ? Math.sin(job.t * 9) * 0.1 : 0); }
+    if (job.held) { const h = hookAt(); job.mesh.position.set(h.x, h.y - H2 - 0.04, h.z); job.mesh.rotation.y = job.rot0 * (1 - Math.min(1, job.t / 0.4)); }
     if (job.t < T2) return;
     if (act === 'grab') { job.held = true; job.rot0 = job.mesh.rotation.y; job.home = job.mesh.position.clone(); s.sound?.('tap'); }
-    if (act === 'drop') { job.held = false; if (job.back) { job.mesh.position.copy(job.home); job.mesh.rotation.y = job.rot0; } else { job.mesh.position.set(...job.to); job.mesh.rotation.y = 0; } s.sound?.('thunk'); job.done?.(); }
+    if (act === 'drop') { job.held = false; job.mesh.position.set(...job.to); job.mesh.rotation.y = 0; s.sound?.('thunk'); job.done?.(); }
     job.phase++; job.t = 0; job.from = { a: ang, r: rad, y: hy };
     if (job.phase >= ph.length) { job = null; start(); }
   };
   const place = () => { // the trolley, the cable and the hook follow the crane every frame
     slew.rotation.y = ang; trolley.position.z = rad; const h = hookAt(), top = CR.y - 0.12;
-    hook.position.copy(h); hook.rotation.y = ang; cable.position.set(h.x, (top + h.y + 0.16) / 2, h.z); cable.scale.y = Math.max(0.05, top - h.y - 0.16);
+    shake = Math.max(0, shake - 1 / 60); h.x += Math.sin(shake * 40) * shake * 0.25; hook.position.copy(h); hook.rotation.y = ang; cable.position.set(h.x, (top + h.y + 0.16) / 2, h.z); cable.scale.y = Math.max(0.05, top - h.y - 0.16);
   };
   const canopy = new Group(); canopy.position.set(5.2, 0, 2.6); P.add(canopy);
   for (const [x, z] of [[-1.4, -1], [1.4, -1], [-1.4, 1], [1.4, 1]]) add(canopy, new CylinderGeometry(0.05, 0.05, 2.4, 6), L('#3d4a6b'), x, 1.2, z);
@@ -299,10 +298,11 @@ export function tersaneStation(s, { color = '#f5b616' } = {}) {
   let t = 0;
   return {
     base, top: base, courses: 0, flag: fl, flagLow: 7.4, flagTop: 8.4, raise() {}, brickColor: '#e2b07a', pieceName: 'plank',
-    carry(mesh, to, done) { jobs.push({ mesh, to, done }); start(); },
-    carryBack(mesh) { if (jobs.some(j => j.mesh === mesh) || job?.mesh === mesh) return; jobs.push({ mesh, back: true }); start(); },
+    // a tapped plank slides to the quay edge under its own spot; the crane lifts it from there onto the deck
+    carry(mesh, to, done) { const j = { mesh, to, done, ready: false }; jobs.push(j); mesh.rotation.y = 0; s.fly(mesh, [to[0], 0.24, 0.55], { T: 0.32, lift: 0.5, done: () => { if (j.hurried) { mesh.position.set(...to); return; } j.ready = true; start(); } }); },
+    carryBack(mesh) { s.wobble(mesh); shake = 0.5; }, // the hook shakes: not that one
     idle(fn) { if (!job && !jobs.length) fn(); else idle.push(fn); },
-    hurry() { const all = [job, ...jobs].filter(Boolean); job = null; jobs.length = 0; for (const j of all) { if (!j.back) { j.mesh.position.set(...j.to); j.mesh.rotation.y = 0; j.done?.(); } else if (j.home) j.mesh.position.copy(j.home); } while (idle.length) idle.shift()(); },
+    hurry() { const all = [job, ...jobs].filter(Boolean); job = null; jobs.length = 0; for (const j of all) { j.hurried = true; j.mesh.position.set(...j.to); j.mesh.rotation.y = 0; j.done?.(); } while (idle.length) idle.shift()(); },
     A, K, colors: [color, '#ffffff', '#ffd166', '#7cc4f0'],
     tick(dt) { t += dt; K.tick(dt); A?.tick(dt); step(dt); place(); if (!s.reduceMotion) fl.rotation.y = Math.sin(t * 3) * 0.15; mast.position.y = 4.3; },
   };
