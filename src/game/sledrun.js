@@ -1,8 +1,9 @@
 // The sled journeys between outposts: an endless-runner ride through snowy Kasımpaşa.
 // The sled runs forward by itself in three lanes: left/right to change lane, up to jump, down to
 // duck. Jump over buried cars, snowmen and fences; duck under frozen laundry lines, low branches,
-// awnings and swooping gulls; steer round sleeping cats. Collect snowflakes, golden word
-// snowflakes (English word + Turkish meaning) and, on some runs, the letters of a word to spell
+// awnings and swooping gulls; steer round sleeping cats. Collect snowballs (lots of them, the
+// ride's score) and a few rare golden word snowflakes (English word + Turkish meaning: each one is
+// a ❄ to spend in the Snow Shop) and, on some runs, the letters of a word to spell
 // (practice: never counted toward the 80%). A crash costs a life. Each run has its own themed
 // scenery and ends at the next outpost. The track winds: it turns left and right, banks into the
 // curves and rolls over gentle hills (the lane rules stay the same, in the track's own frame).
@@ -67,6 +68,7 @@ const THEMES = {
   boulevard: { fog: '#c8cbe8', props: ['plane', 'plane', 'lamp', 'house'], finish: 'Boulevard Park', end: 'plane', gap: 3.2 },
   archery: { fog: '#cfcbe4', props: ['stone', 'target', 'pine', 'pennant', 'house'], finish: 'Archery Ground', end: 'stone', gap: 3.6 },
   kizilay: { fog: '#c6cfe6', props: ['kiosk', 'cart', 'plane', 'house', 'lamp'], finish: 'Kızılay Square', end: 'kiosk', gap: 3.4 },
+  kasimpasa: { fog: '#c6cfe6', props: ['kiosk', 'plane', 'house', 'lamp', 'cart', 'target', 'house', 'castle'], finish: 'Kasımpaşa', end: 'kiosk', gap: 3.3 },
   sururi: { fog: '#d3cdea', props: ['castle', 'slide', 'pine', 'pennant', 'house'], finish: 'Sururi Park', end: 'castle', gap: 3.5 },
   waterfront: { fog: '#c4d2ea', props: ['bollard', 'lamp', 'bollard', 'house'], sea: true, finish: 'Waterfront Park', end: 'ferry', gap: 3.0 },
   home: { fog: '#cfc6e4', props: ['house', 'lamp', 'pine', 'plane'], finish: 'Our School', end: 'school', gap: 3.2 },
@@ -85,14 +87,15 @@ const tagTex = (text, gold = true) => { const c = document.createElement('canvas
 const letterTex = (ch, col) => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect(4, 4, 120, 120, 22); g.fill(); g.lineWidth = 8; g.strokeStyle = col; g.stroke(); g.fillStyle = '#2b3556'; g.font = '900 82px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(ch, 64, 70); const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; return t; };
 
 export class SledRun {
-  // words: [{en, tr}] for golden word flakes; spell: {en, tr} or null; lives: Lives
+  // words: [{en, tr}] for the golden word snowflakes (all of them on the track, spread out);
+  // spell: {en, tr} or null; lives: Lives
   constructor({ theme = 'boulevard', seconds = 50, pace = 'relaxed', team = 'hufflepuff', kit = 'thrower', look = null, words = [], spell = null, lives, rng = Math.random, first = false, reduceMotion = false, on = {} }) {
     Object.assign(this, { theme, seconds, pace, words, spell, lives, rng, first, reduceMotion, on });
     const T = this.T = THEMES[theme] || THEMES.boulevard;
     this.vmax = pace === 'challenge' ? 12.5 : 10.2; this.v = 6; this.dist = 0;
     this.length = Math.round(seconds * this.vmax * 0.88);
     this.react = pace === 'challenge' ? 1.15 : 1.5; // seconds between things that need a move
-    this.lane = 1; this.x = 0; this.y = 0; this.vy = 0; this.duckT = 0; this.stumbleT = 0; this.blinkT = 0; this.flakes = 0; this.spelled = ''; this.finished = false; this.time = 0;
+    this.lane = 1; this.x = 0; this.y = 0; this.vy = 0; this.duckT = 0; this.stumbleT = 0; this.blinkT = 0; this.flakes = 0; this.snowballs = 0; this.spelled = ''; this.finished = false; this.time = 0;
     this.hintDone = new Set();
 
     const scene = this.scene = new Scene(); scene.background = new Color(T.fog); scene.fog = new Fog(T.fog, 18, 60);
@@ -184,6 +187,7 @@ export class SledRun {
   // ---------- lay out the whole run ----------
   plan() {
     const rng = this.rng, L = this.length, items = this.items, gap = () => this.vmax * this.react * (0.95 + rng() * 0.5);
+    const wordGap = (L - 110) / Math.max(1, this.words.length - 1); // the rare word snowflakes, evenly from near the start to near the end
     let d = 26, wordK = 0, nextWord = 40, spellAt = this.spell ? L * 0.38 : Infinity, spellI = 0;
     const kinds = ['car', 'snowman', 'crate', 'fence', 'line', 'branch', 'awning', 'gull'];
     while (d < L - 30) {
@@ -194,8 +198,8 @@ export class SledRun {
         for (let l = 0; l < 3; l++) items.push({ kind: 'letter', d, lane: l, ch: l === lane ? ch : wrong.pop(), right: l === lane, idx: spellI });
         spellI++; d += this.vmax * 1.7; continue;
       }
-      // a word snowflake now and then
-      if (d >= nextWord && this.words.length) { items.push({ kind: 'word', d, lane: Math.floor(rng() * 3), word: this.words[wordK++ % this.words.length], y: 0.9 }); nextWord = d + this.vmax * 8; d += this.vmax * 0.9; }
+      // a rare golden word snowflake now and then (each word once)
+      if (d >= nextWord && wordK < this.words.length) { items.push({ kind: 'word', d, lane: Math.floor(rng() * 3), word: this.words[wordK++], y: 0.9 }); nextWord += wordGap; d += this.vmax * 0.9; }
       // an obstacle (harder mix as the run goes on)
       const prog = d / L, pick = kinds[Math.floor(rng() * Math.min(kinds.length, 3 + Math.floor(prog * 6)))];
       const o = OBST[pick];
@@ -204,12 +208,12 @@ export class SledRun {
         const n = o.lanes || (rng() < 0.35 + prog * 0.3 ? 2 : 1), start = Math.floor(rng() * (4 - n));
         for (let l = start; l < start + n; l++) items.push({ kind: pick, d, lane: l, needs: o.needs });
         const free = [0, 1, 2].filter(l => l < start || l >= start + n);
-        // snowflakes in a free lane before it, or an arc over a jump
+        // snowballs in a free lane before it, or an arc over a jump
         const fl = free[Math.floor(rng() * free.length)];
-        if (o.needs === 'j' && rng() < 0.5) for (let k = -2; k <= 2; k++) items.push({ kind: 'flake', d: d + k * 0.9, lane: start, y: 0.6 + 1.3 * Math.cos(k / 2.5 * Math.PI / 2) });
-        else for (let k = 0; k < 5; k++) items.push({ kind: 'flake', d: d - 6 + k * 1.3, lane: fl, y: 0.6 });
+        if (o.needs === 'j' && rng() < 0.5) for (let k = -2; k <= 2; k++) items.push({ kind: 'ball', d: d + k * 0.9, lane: start, y: 0.6 + 1.3 * Math.cos(k / 2.5 * Math.PI / 2) });
+        else for (let k = 0; k < 5; k++) items.push({ kind: 'ball', d: d - 6 + k * 1.3, lane: fl, y: 0.6 });
       }
-      if (rng() < 0.12 && prog > 0.2) { const l = Math.floor(rng() * 3); items.push({ kind: 'ramp', d: d + gap() * 0.5, lane: l, needs: 'ramp' }); for (let k = 0; k < 6; k++) items.push({ kind: 'flake', d: d + gap() * 0.5 + 3 + k * 1.1, lane: l, y: 2.2 + Math.sin(k / 5 * Math.PI) * 0.8 }); }
+      if (rng() < 0.12 && prog > 0.2) { const l = Math.floor(rng() * 3); items.push({ kind: 'ramp', d: d + gap() * 0.5, lane: l, needs: 'ramp' }); for (let k = 0; k < 6; k++) items.push({ kind: 'ball', d: d + gap() * 0.5 + 3 + k * 1.1, lane: l, y: 2.2 + Math.sin(k / 5 * Math.PI) * 0.8 }); }
       d += gap();
     }
     items.sort((a, b) => a.d - b.d);
@@ -241,8 +245,8 @@ export class SledRun {
   crash() {
     if (this.blinkT > 0 || this.finished) return;
     this.stumbleT = 0.9; this.blinkT = 1.8; this.v = 3.5;
-    const lost = Math.min(3, this.flakes); this.flakes -= lost;
-    this.spark(this.x, 0.8, 0, 26, '#ffffff', 4); if (lost) this.spark(this.x, 1, 0, lost * 4, '#ffc93c', 3);
+    const lost = Math.min(5, this.snowballs); this.snowballs -= lost; // a crash spills snowballs (never the snowflakes)
+    this.spark(this.x, 0.8, 0, 26 + lost * 3, '#ffffff', 4);
     this.on.crash?.(lost);
   }
 
@@ -263,7 +267,7 @@ export class SledRun {
       if (Math.abs(dz) > 0.55) continue;
       const sameLane = it.full || it.lane === laneNow;
       if (!sameLane) continue;
-      if (it.kind === 'flake' || it.kind === 'word') { if (Math.abs((it.y || 0.6) - (this.y + 0.6)) > 1.1 && it.kind === 'flake') continue; it.done = true; this.collect(it); continue; }
+      if (it.kind === 'ball' || it.kind === 'word') { if (Math.abs((it.y || 0.6) - (this.y + 0.6)) > 1.1 && it.kind === 'ball') continue; it.done = true; this.collect(it); continue; }
       if (it.kind === 'letter') { it.done = true; this.letter(it); continue; }
       if (it.kind === 'ramp') { it.done = true; if (this.y < 0.2) { this.vy = 10.5; this.on.sound?.('sled'); } continue; }
       if (it.needs === 'j' && this.y < (OBST[it.kind].h || 1) * 0.55) { it.done = true; this.crash(); }
@@ -272,15 +276,15 @@ export class SledRun {
     }
     // first ride: say what to do just before each new kind of obstacle
     if (this.first) for (const it of this.items) { const dz = it.d - this.dist; if (dz > this.v * 1.3) break; if (dz < 0 || this.hintDone.has(it.needs) || !it.needs || it.needs === 'ramp') continue; this.hintDone.add(it.needs); this.on.hint?.(it.needs === 'j' ? 'JUMP! Swipe up' : 'DUCK! Swipe down'); }
-    if (this.dist >= this.length + 4) { this.finished = true; this.on.done?.({ flakes: this.flakes, spelled: this.spelled, word: this.spell }); }
+    if (this.dist >= this.length + 4) { this.finished = true; this.on.done?.({ flakes: this.flakes, snowballs: this.snowballs, spelled: this.spelled, word: this.spell }); }
     this.on.progress?.(Math.min(1, this.dist / this.length));
     this.place(dt);
   }
 
   collect(it) {
-    if (it.kind === 'word') { this.flakes += 5; this.on.word?.(it.word); this.spark(LANES[it.lane], 1, 0, 18, '#ffd166', 2.5); this.on.sound?.('sparkle'); }
-    else { this.flakes += 1; this.spark(LANES[it.lane], it.y, 0, 5, '#ffd166', 1.5); if (this.flakes % 5 === 0) this.on.sound?.('pickup'); }
-    this.on.flakes?.(this.flakes);
+    if (it.kind === 'word') { this.flakes += 1; this.on.word?.(it.word); this.spark(LANES[it.lane], 1, 0, 30, '#ffd166', 3); this.on.sound?.('sparkle'); }
+    else { this.snowballs += 1; this.spark(LANES[it.lane], it.y, 0, 5, '#ffffff', 1.5); if (this.snowballs % 5 === 0) this.on.sound?.('pickup'); }
+    this.on.count?.();
   }
   letter(it) {
     if (it.idx !== this.spelled.length) return;
@@ -306,14 +310,15 @@ export class SledRun {
     for (const it of this.items) {
       const dz = it.d - d;
       if (dz < -6 || dz > 70) { if (it.m) { it.m.visible = false; it.m = null; if (it.tag) it.tag.visible = false; } continue; }
-      if (it.done && (it.kind === 'flake' || it.kind === 'word' || it.kind === 'letter')) { if (it.m) { it.m.visible = false; it.m = null; } if (it.tag) it.tag.visible = false; continue; }
+      if (it.done && (it.kind === 'ball' || it.kind === 'word' || it.kind === 'letter')) { if (it.m) { it.m.visible = false; it.m = null; } if (it.tag) it.tag.visible = false; continue; }
       if (!it.m) {
-        if (it.kind === 'flake' || it.kind === 'word') { it.m = this.flakeMesh(it.kind === 'word'); if (it.kind === 'word') it.tag = this.wordTag(it.word.en); }
+        if (it.kind === 'ball') it.m = this.ballMesh();
+        else if (it.kind === 'word') { it.m = this.flakeMesh(true); it.tag = this.wordTag(it.word.en); }
         else if (it.kind === 'letter') it.m = this.letterMesh(it.ch);
         else it.m = this.mesh(it.kind);
       }
       const x = it.full ? 0 : LANES[it.lane];
-      if (it.kind === 'flake' || it.kind === 'word') { this.put(it.m, it.d, x, (it.y || 0.6) + Math.sin(this.time * 3 + it.d) * 0.08, this.time * 2 + it.d); it.m.scale.setScalar(it.kind === 'word' ? 1.6 : 0.9); if (it.tag) { it.tag.visible = true; this.at(it.d, x, 1.9, it.tag.position); } }
+      if (it.kind === 'ball' || it.kind === 'word') { this.put(it.m, it.d, x, (it.y || 0.6) + Math.sin(this.time * 3 + it.d) * 0.08, this.time * 2 + it.d); it.m.scale.setScalar(it.kind === 'word' ? 2.1 : 1); if (it.tag) { it.tag.visible = true; this.at(it.d, x, 1.9, it.tag.position); } }
       else if (it.kind === 'letter') { this.put(it.m, it.d, x, 1.0 + Math.sin(this.time * 3 + it.lane) * 0.06); }
       else if (it.kind === 'gull') { this.put(it.m, it.d, x + Math.sin(this.time * 2 + it.d) * 0.3, 1.05 + Math.sin(this.time * 6) * 0.05); it.m.rotation.z = Math.sin(this.time * 12) * 0.3; }
       else if (it.kind === 'branch') this.put(it.m, it.d, x, 0, it.lane === 0 ? Math.PI : 0);
@@ -342,6 +347,13 @@ export class SledRun {
     const m = new Mesh(this.geo.flake, this.flakeMat);
     const halo = new Sprite(new SpriteMaterial({ map: this.halo, blending: AdditiveBlending, depthWrite: false, transparent: true })); halo.scale.setScalar(big ? 1.4 : 0.9); m.add(halo);
     this.scene.add(m); list.push(m); return m;
+  }
+  // a snowball to pick up (the common thing on the track)
+  ballMesh() {
+    const list = this.pool.get('ball') || []; this.pool.set('ball', list);
+    const free = list.find(m => !m.visible); if (free) { free.visible = true; return free; }
+    if (!this.geo.ball) { this.geo.ball = new SphereGeometry(0.2, 12, 9); this.ballMat = new MeshLambertMaterial({ color: '#ffffff', emissive: '#c9dcff', emissiveIntensity: 0.35 }); }
+    const m = new Mesh(this.geo.ball, this.ballMat); this.scene.add(m); list.push(m); return m;
   }
   wordTag(text) { const sp = new Sprite(new SpriteMaterial({ map: tagTex(text), depthWrite: false, transparent: true })); sp.scale.set(2.2, 0.55, 1); this.scene.add(sp); return sp; }
   letterMesh(ch) { const m = new Mesh(SHAPES.letter(), [new MeshLambertMaterial({ color: '#ffffff' }), new MeshLambertMaterial({ color: '#ffffff' }), new MeshLambertMaterial({ color: '#ffffff' }), new MeshLambertMaterial({ color: '#ffffff' }), new MeshBasicMaterial({ map: letterTex(ch, '#7cc4f0') }), new MeshBasicMaterial({ map: letterTex(ch, '#7cc4f0') })]); this.scene.add(m); return m; }

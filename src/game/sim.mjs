@@ -169,6 +169,7 @@ export class Sim {
     if (c.frozen || c.thaw || c.shield > 0 || c.dodge > 0 || c.benched) return false;
     if (c.coat > 0) { c.coat--; c.flash = 0.12; this.emit('coat', { id: c.id, x: c.x, z: c.z }); return true; } // a warm coat: this hit does not count
     let dmgMul = mul;
+    if (c.duel && ball.owner !== c.duel.id) dmgMul *= c.duel.others; // the Final Showdown's captain: only the student's own snowballs really count
     if (c.shieldFront && ball.kind === 'straight') { const bl = Math.hypot(ball.vx, ball.vz) || 1; if ((ball.vx * Math.sin(c.face) + ball.vz * Math.cos(c.face)) / bl < -0.3) dmgMul *= c.shieldFront; } // the lid takes it
     const dmg = Math.round(ball.dmg * dmgMul);
     c.warmth = Math.max(c.planted ? 1 : 0, c.warmth - dmg); // answering a task: never frozen, only chilled

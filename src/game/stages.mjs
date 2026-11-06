@@ -1,22 +1,20 @@
-// Arena 1 as stages (inspired by Growbloom's garden path and solMaxima's gates): a sled journey
-// to each outpost, nearest first, then a stand there against waves of rivals while the student
-// answers English tasks; the sixth stage is the ride home and the Schoolyard Showdown.
-// Rules only (no DOM), tested in node.
+// Arena 1 (Kasımpaşa) as one stage: the sled ride into the neighbourhood, then its one outpost,
+// taken in two parts: Part 1 is the tasks of two places (Boulevard Park, Archery Ground), Part 2
+// the other three (Kızılay Square, Sururi Park, the Pier), with fights and the Snow Shop between,
+// and the Final Showdown at the end. Later arenas (İstiklal Street, …) are one stage each in the
+// same way. Rules only (no DOM), tested in node.
 import { CONFIG } from '../config.js';
 
 export const LIVES = 3;
 
-// The order: Our School → nearest outpost → … → furthest, then home.
-// ride: the themed sled track; spell: the run has letters to spell a word (practice only).
-// newRival: the rival type this stage introduces ("New rivals!" card).
+// parts: the task families of Part 1 and Part 2 (each family opens in its own place's scene);
+// ride: the sled ride in (its word snowflakes are the first ❄; spell: letters to spell a word);
+// newRival: the rival type met in the first fight ("New rivals!" card); the captain comes last.
 export const STAGES = [
-  { id: 'boulevard', outpost: 'boulevard', family: 'answer', halves: ['sort', 'answer'], fights: 'long', title: 'Boulevard Park', ride: { theme: 'boulevard', seconds: 45, spell: false }, newRival: 'waddler' },
-  { id: 'archery', outpost: 'archery', family: 'sort', halves: ['match', 'sort'], fights: 'long', title: 'Archery Ground', ride: { theme: 'archery', seconds: 45, spell: true }, newRival: 'shield' },
-  { id: 'kizilay', outpost: 'kizilay', family: 'match', halves: ['listen', 'match'], fights: 'long', title: 'Kızılay Square', ride: { theme: 'kizilay', seconds: 45, spell: false }, newRival: 'sledder' },
-  { id: 'sururi', outpost: 'sururi', family: 'build', halves: ['answer', 'build'], fights: 'long', title: 'Sururi Park', ride: { theme: 'sururi', seconds: 45, spell: true }, newRival: 'lobber' },
-  { id: 'waterfront', outpost: 'waterfront', family: 'listen', halves: ['build', 'listen'], fights: 'long', title: 'Waterfront Park', ride: { theme: 'waterfront', seconds: 45, spell: false }, newRival: null },
-  { id: 'showdown', outpost: null, family: null, fights: 'long', title: 'Schoolyard Showdown', ride: { theme: 'home', seconds: 45, spell: true }, newRival: 'captain', final: true },
+  { id: 'kasimpasa', outpost: 'kasimpasa', family: 'match', parts: [['answer', 'sort'], ['match', 'build', 'listen']], fights: 'long', title: 'Kasımpaşa', ride: { theme: 'kasimpasa', seconds: 50, spell: true, flakes: 5 }, newRival: 'shield' },
 ];
+// the place each task family belongs to (its landmark and its scene)
+export const PLACE_OF = { answer: 'Boulevard Park', sort: 'Archery Ground', match: 'Kızılay Square', build: 'Sururi Park', listen: 'The Pier' };
 export const stageById = id => STAGES.find(s => s.id === id);
 
 // Stars for a finished stage, from its first-try accuracy.
@@ -28,8 +26,7 @@ export function stageState(unitProgress) {
   if (!a.stages) a.stages = {};
   return a.stages;
 }
-// A stage is open when the one before it is done (the first always is). The Showdown also needs
-// all five outposts.
+// A stage is open when the one before it is done (the first always is).
 export function isUnlocked(unitProgress, id) {
   const st = stageState(unitProgress), i = STAGES.findIndex(s => s.id === id);
   if (i <= 0) return i === 0;

@@ -80,13 +80,13 @@ export class WorldTasks {
     document.body.classList.add('worldtask', 'station'); this.layer.hidden = false;
     return s;
   }
-  // a right answer: a star flies from what was tapped into the progress bar, and the camera nudges in
+  // a right answer: a snowflake flies from what was tapped into the progress bar, and the camera nudges in
   reward(ok) {
     const s = this.session; if (!s || !ok) return;
     s.kick = 1;
     const from = this.lastTap?.getBoundingClientRect(), bar = document.querySelector('#taskcard .tc-bar')?.getBoundingClientRect();
     if (!from || !bar || this.reduceMotion) return;
-    const st = document.createElement('div'); st.className = 'wt-star'; st.textContent = '★'; document.body.appendChild(st);
+    const st = document.createElement('div'); st.className = 'wt-star'; st.textContent = '❄'; document.body.appendChild(st);
     const x0 = from.left + from.width / 2, y0 = from.top + from.height / 2, x1 = bar.left + bar.width * (0.2 + Math.random() * 0.6), y1 = bar.top + bar.height / 2;
     st.animate([{ transform: `translate(${x0}px, ${y0}px) translate(-50%, -50%) scale(0.6)`, opacity: 1 }, { transform: `translate(${(x0 + x1) / 2}px, ${Math.min(y0, y1) - 60}px) translate(-50%, -50%) scale(1.4)`, opacity: 1, offset: 0.5 }, { transform: `translate(${x1}px, ${y1}px) translate(-50%, -50%) scale(0.5)`, opacity: 0.2 }], { duration: 650, easing: 'cubic-bezier(.4,.1,.3,1)' }).onfinish = () => st.remove();
   }
@@ -94,7 +94,7 @@ export class WorldTasks {
   // Returns how long to stay in the station before going back to the fight.
   celebrate(text = 'Well done!') {
     const s = this.session; if (!s) return 0;
-    this.stopTour(); s.say(`★ ${text} ★`); this.sound?.('fanfare');
+    this.stopTour(); s.say(`🎉 ${text}`); this.sound?.('fanfare');
     const K = s.set?.K, c = s.set?.colors || ['#ffd166', '#ffffff', '#7cc4f0', '#f3a6c8'];
     s.set?.A?.cheer(true); s.set?.ring?.(); s.set?.celebrate?.();
     if (K && !this.reduceMotion) { // bursts just above what the camera looks at, in front of the set

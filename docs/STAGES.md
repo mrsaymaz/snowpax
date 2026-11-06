@@ -1,205 +1,168 @@
-# Arena 1 as stages (M3)
+# Arena 1: Kasımpaşa (M3)
 
-Inspired by Growbloom's garden path, solMaxima's gates and Tower Swarm's waves. Arena 1 is six
-stages played in order:
+From Mr. Saymaz's fifth talk: **one outpost per arena**. Arena 1 is Kasımpaşa; later arenas (for
+example İstiklal Street) are built the same way. The neighbourhood's places are no longer separate
+outposts: they are all part of the Kasımpaşa outpost, each with its own English task in its own
+scene, and there is no sled travel between them. That brings the arena from about 32 minutes to
+about **9** (see Timing), with every task type still in it.
 
-| # | Stage | Sled ride | English (part 1 → part 2) | New rival |
-|---|---|---|---|---|
-| 1 | Boulevard Park | 45 s, plane-tree avenue | Sorting → Answer | snowmen (waddlers) |
-| 2 | Archery Ground | 45 s, record stones and targets, spelling letters | Matching → Sorting | shield snowmen |
-| 3 | Kızılay Square | 45 s, tiled kiosks and simit carts | Listening → Matching | sledder snowmen |
-| 4 | Sururi Park | 45 s, snow castles and slides, spelling letters | Answer → Builder | lobber snowmen |
-| 5 | Waterfront Park | 45 s, along the frozen Golden Horn | Builder → Listening | — (everything mixed) |
-| 6 | Schoolyard Showdown | 45 s, home to Our School | all five (five banners) | the rival captain |
+| Place | English task | Its scene | Its landmark on the field |
+|---|---|---|---|
+| Boulevard Park | Answer | the treehouse | the treehouse, west side |
+| Archery Ground | Sorting | the archers' lodge | the archers' lodge, behind the rivals (north-west) |
+| Kızılay Square | Matching | the fountain | **the fountain: the outpost's centre** |
+| Sururi Park | Builder | the snow castle | the snow castle, behind the rivals (north-east) |
+| The Pier | Listening | the waterfront | the admiral's statue, east side |
 
-Every stage prepares, then fights (see below): a camp with neighbourhood children to recruit, build
-moments, long fights. Each outpost is taken in two halves of English, its own task type last, so
-every type comes twice in the arena (and twice more in the Showdown's banners).
+Part 1 is Boulevard Park and Archery Ground; Part 2 is Kızılay Square, Sururi Park and the Pier
+(`parts` in `stages.mjs`, `PLACE_OF` for the names).
 
-## Look, time of day and dressing
+## Three symbols, one job each
 
-There is no real map and there are no real streets. Arena 1 is six purpose-built fields
-(`tools/build-world.mjs`), one per stage, and only the look of the neighbourhood is kept round each
-one: a cobbled lane with old lamps, snowed-in houses with lit windows and tea on the sills, buried
-roofs, the stage's own trees and street stalls (and the frozen Golden Horn with a ferry and a pier
-by the waterfront). Beyond that is a painted backdrop.
+The star used to mean four things. Now:
+- **★ stars** only rate how well the stage went (3 at 90% right first time, 2 at 70%), on the
+  results card and the arena card.
+- **❄ snowflakes** are the Snow Shop's money. They are rare: the sled ride's golden word
+  snowflakes, and every English answer right first time (the camp's children, Part 1, Part 2, the
+  snowflake round).
+- **⚪ snowballs** are the common thing on the sled track: the ride's score. A crash spills a few
+  of them, never snowflakes.
 
-The bold look (cartoon shading, outlines, glow, a build of only the stage's field) is the
-default. `?look=v1` brings back the old diorama look.
+Super start's icon is a comet (☄️) and its badge on the kid is a glowing snowball in a gold ring.
+A right answer in a scene sends a little ❄ flying into the progress bar.
 
-Each stage has its own time of day (`STAGE_LIGHT` in `brawl.js`, presets in `DAYLIGHT` in
-`render/village.js`, each with its own colour grade), so Arena 1 runs from morning to evening:
+## The stage, start to finish
 
-| Stage | Time of day | Field and frame (`ARENAS` and `PLACES` in `tools/build-world.mjs`) |
-|---|---|---|
-| Boulevard Park | crisp blue morning, long shadows | park hedges down the sides and in the middle lane, L-shaped snow walls; plane trees; chestnut, çay and salep stalls |
-| Archery Ground | bright white noon | a wooden practice ground: long barricades and crates, a long open middle; spruces and birches; salep and chestnut stalls |
-| Kızılay Square | lavender afternoon | a town square: snow-wall corners, wall stubs from the edges, a wide bush in the middle; birches and plane trees; simit, çay and roasted-corn stalls |
-| Sururi Park | warm golden hour | snow ramparts, a pillar in the middle lane, an icy middle; rowans and spruces; salep and roasted-corn stalls |
-| Waterfront Park | pink sunset, lamps coming on | the quay: cargo crates and wide ice; the frozen Golden Horn behind the outpost; fish-sandwich, simit and çay stalls |
-| Schoolyard Showdown | evening, lamps and windows lit | the playground: low walls, benches, a snowman; Our School behind the circle, five banners and the bell |
-
-## Battlefields (Brawl-style principles, from the second play-test)
-
-Every stage is played on a purpose-built field (`ARENAS` in `tools/build-world.mjs`), each with
-its own layout.
-- **The rivals hold the outpost.** Its landmark stands at the north end of the field, behind the
-  rival team; our team spawns at the south end. The team has to beat the rival team in the open
-  field first (frozen rivals go back to their camp; after 45 s the ones still standing run back
-  too, so nobody is stuck), then run up and seize the outpost with English. Until then the circle
-  shows the rivals' colour. Later waves come round the outpost from the camp behind it.
-- **Size, from 3v3 brawler maps:** those are about 21 × 33 tiles, with heroes running about 2.5
-  tiles/s and throwing 3–10 tiles. Our kids run 3.4 tiles/s and throw 5–7.5 tiles, so the same
-  footprint gives the same rhythm: the field is **22 × 34 tiles** (the old ring was 25 across
-  with the outpost in the middle: 377 tiles to move in; the field has 642). About 6 s from
-  spawn to the first fight, room to dodge sideways, cover every 4–6 tiles, about 12% of the
-  field covered (walls, barricades, crates, bushes).
-- **Layout:** the long axis runs up the screen (portrait-first). Three lanes, cover between them
-  (something in the middle lane, so nobody throws spawn to spawn), a wall or barricade shielding
-  the home spawn, cover on the rival line to fight from. Mirrored left–right, so neither flank is
-  the better route. The test checks every field: the fence closes it, both teams can walk from
-  their end to the outpost, and the spots the waves use are open.
-- **Six fields, apart:** the fields sit side by side in the world file with nothing between them;
-  a stage builds and shows only its own field and frame.
-- **Rival team AI:** the defenders hold their line in front of the outpost and come out to meet
-  anyone within 11 m of it; the snowmen walk out to the middle of the field.
-- **Camera:** on a battlefield the camera pulls back 10% and looks a little ahead, up the field;
-  rivals just out of view show as arrows at the screen edge (now within 30 m).
-- **Environment kit** (`render/village.js`): rounded snow walls with a fat white cap, wooden
-  barricades with snow along the top, bevelled crates, frosted bushes, glassy ice patches. All
-  the same proportions, bevelled, with thick snow caps.
-- **Colour:** the battlefield floor is lilac-tinted packed snow, so plain white means wall or out
-  of bounds; ice is glassy blue.
-- During a stand there are no blizzards or sun bursts, so the light stays steady; each stage
-  keeps its own time of day.
-
-## Prepare, then fight (every stage)
-
-From the third play-test talk: fewer, bigger outposts, each taken in two halves of English with
-real fights round them. English and fighting are kept apart, so nobody has to read while being
-hit, but the English decides the fights: right answers **recruit neighbourhood children** to your
-team and earn **⭐ snow stars** to spend on boosts in the Snow Shop. Archery Ground was the sample; every
-stage plays this way now (`fights` and `halves` in `stages.mjs`; the plan, the roles and the shop
-in `fights.mjs`).
-
-1. **Camp:** three neighbourhood children wait at the home end in plain beige coats, each with a
-   "Can I join?" bubble and their name. Walk up to one and the camera cuts to a **close-up, face
-   to face** (`cards/talk.js`, like Languini's customer conversations): the child asks one of the
-   unit's questions in a speech bubble, read aloud ("What colour is your school uniform?"), and
-   your three replies are chat bubbles ("It is green."). Right first time: a big smile, "Yes! I'm
-   on your team!", a puff of snow, and out they come in your team's colour and puffer jacket, plus
-   a ⭐. A miss: a surprised face, "Hmm… not quite! Try the glowing one.", and they ask again in a
-   moment (4 s). No rivals on the field yet. Counted toward the 80% (answered calmly).
-2. **The Snow Shop** (35 s at most, or tap Fight!; `cards/shop.js`): the camera cuts to a snowy
-   market stall with a striped awning in your team's colour, and your own kid stands in the
-   middle looking at you, like a clothes shop in an open-world game. The four boosts are price
-   tags on the parts they change: super start by the head, warm coat at the shoulder, big gloves
-   and quick hands at the hands. Buy one and you see it on your kid at once, with a puff of
-   sparkles and a cheer (`render/gear.js`): big red mittens, glowing wristbands with a bolt, a
-   fluffy collar and a longer coat, a gold star badge and a warm glow at the feet. Your kid wears
-   the same gear in the fight (the warm coat's collar goes when it has saved you from a hit).
-   A slim bar shows your stars, the time and Fight!.
-3. **The opening round:** the rival team keeps coming back from its camp; freeze **12 rivals**
-   to break the line (90 s at most). Each friend brings one more snowman to the rivals' side, so
-   the fight stays exciting.
-4. **Part 1 of 2** (at Archery Ground: Matching, in the fountain activity; each task type keeps its
-   own activity wherever it is played): every right first try is also a ⭐. Build.
-5. **"They strike back!":** hold the circle for **50 s** (the clock stops while rivals stand in
+1. **The arena card:** "Arena 1 · Kasımpaşa", the stars for the stage (of 3) and the first-try
+   score against the 80% goal.
+2. **The sled ride in** (50 s, `sledrun.js`, the Kasımpaşa theme: kiosks, plane trees, targets,
+   snow castles). Swipe or use the arrow keys or the buttons: left and right steer, up jumps
+   (buried cars, snowmen, crates with sleeping cats, fences), down ducks (laundry lines, branches,
+   awnings, gulls); ramps give big jumps with snowballs up high. Collect **snowballs** (lots) and
+   **5 golden word snowflakes**, spread along the track: each shows an English word with its
+   Turkish meaning, reads it aloud and is **+1 ❄**. On the spelling letters (a word given in
+   Turkish), spelling it right is +1 ❄ more. A crash costs a life. The first ride says "JUMP!" or
+   "DUCK!" before each new kind of obstacle.
+3. **The camp:** three neighbourhood children wait at the home end in plain beige coats. Walk up
+   to one and the camera cuts to a **close-up, face to face** (`cards/talk.js`, like Languini's
+   customer conversations): the child asks one of the unit's questions in a speech bubble, read
+   aloud, and your three replies are chat bubbles. Right first time: "Yes! I'm on your team!", a
+   puff of snow, out they come in your team's colour and puffer jacket, and **+1 ❄**. A miss: "Hmm…
+   not quite! Try the glowing one.", and they ask again in a moment. No rivals on the field yet.
+4. **The Snow Shop** (35 s at most, or tap Fight!; `cards/shop.js`): your own kid stands in the
+   middle of a market stall looking at you, like a clothes shop in an open-world game. The four
+   boosts are price tags on the parts they change: super start by the head, warm coat at the
+   shoulder, big gloves and quick hands at the hands. **Every boost costs ❄ 5 and lasts the whole
+   outpost.** Buy one and you see it on your kid at once (`render/gear.js`): big red mittens,
+   glowing wristbands with a bolt, a fluffy collar and a longer coat, the super-snowball badge and
+   a glow at the feet. Your kid wears the same gear in the fights. A slim bar shows your ❄, the
+   time and Fight!. The "New rivals!" card says who you will meet.
+5. **The opening round:** the rival team keeps coming back from its camp behind the fountain;
+   freeze **12 rivals** to break the line (90 s at most, so nobody is stuck). Then "SEIZE IT!":
+   run into the circle (or tap ▶ Seize; after 8 s the kid walks in).
+6. **Part 1 of 2:** Boulevard Park (Answer), then Archery Ground (Sorting), about 4 items each,
+   each in its own scene. Every right first try is **+1 ❄**.
+7. **The Snow Shop** again.
+8. **"They strike back!":** hold the circle for **50 s** (the clock stops while rivals stand in
    it alone).
-6. **Part 2 of 2** (the outpost's own task type, at Archery Ground Sorting), ⭐ again. Build, then
-   the **final wave** (30 s at most), and the outpost is yours. The friends go home after the stage.
+9. **Part 2 of 2:** Kızılay Square (Matching), Sururi Park (Builder), the Pier (Listening), +1 ❄
+   for each right first try.
+10. **The Snow Shop** again, with the rival captain's card.
+11. **The Final Showdown** (80 s): the rival captain comes with the whole rival team. **Only your
+    own snowballs really freeze the captain** (your team's count for a little: they keep the
+    others busy), and the captain warms up again after 2.5 s without a hit, so it takes steady
+    throwing: this is where the boosts count. Freeze the captain and the rivals give up: bells,
+    fireworks, the outpost is yours. If the time runs out: "The captain holds on!", a short
+    **snowflake round** (4 tasks from the five places, +1 ❄ each), the shop, and the Showdown
+    again (straight back in if every boost is already yours). The captain is a little more tired
+    on each try (20% less warmth), so nobody is ever stuck.
+12. **Results:** ★ for the stage, right first time (this stage and the unit, against the 80% goal),
+    snowballs, snowflakes earned and the time. Play again, or back to the arena card.
 
-**The Showdown** prepares the same way (camp, build, the opening round against the rival team in
-the schoolyard). Then the five banners are raised calmly with English (no waves while answering),
-a build moment, and the finale: the rival captain comes and the giant snowball rolls.
+**Being frozen in a fight never costs a life:** the kid goes back to the spawn for a moment. With
+no lives left (sled crashes) the stage starts again; English answers already given still count.
+The friends go home after the stage, and the boosts too.
 
-| Friends who join at the camp (3 at most) | Boosts in the Snow Shop (for your kid) | ⭐ |
+### The money: why the English decides the Showdown
+
+| When | ❄ you can have | What it buys |
 |---|---|---|
-| ❄️ Quick thrower: fast snowballs, runs in | Big gloves: 4 snowballs instead of 3 (the whole stage) | 2 |
-| 🌨️ Lobber: throws over walls | Quick hands: snowballs come back faster (the whole stage) | 2 |
-| 💨 Sprayer: three snowballs up close | Super start: half a super for the next fight | 1 |
-| | Warm coat: the first hit in the next fight does not count | 1 |
+| Shop 1 | the sled's 5 word snowflakes (+1 for spelling) and the camp's 3 children: up to 9 | one boost |
+| Shop 2 | Part 1: about 8–10 items, +1 each right first time | one more if it went well |
+| Shop 3 | Part 2: about 12–14 items | two more |
+
+The test checks these numbers (`tests/fights.test.mjs`). In a headless trial of the Showdown (a
+simple scripted player who keeps just out of the captain's reach and throws), the captain was
+frozen in time in 1 of 12 tries without boosts and in 4 to 6 of 12 with boosts. Real students
+should settle the numbers: `showdown` in `FIGHT_PLANS.long` (`seconds`, `captainWarmth`,
+`regenDelay`, `regenRate`, `others`, `tired`).
+
+| Friends who join at the camp (3 at most) | Boosts in the Snow Shop (❄ 5 each, for the whole outpost) |
+|---|---|
+| ❄️ Quick thrower: fast snowballs, runs in | 🧤 Big gloves: 4 snowballs instead of 3 |
+| 🌨️ Lobber: throws over walls | ⚡ Quick hands: snowballs come back faster |
+| 💨 Sprayer: three snowballs up close | ☄️ Super start: every fight starts with half a super |
+| | 🧥 Warm coat: the first hit in each fight does not count |
 
 Only neighbourhood children join (first names like Elif, Can, Zeynep, Emir), girls and boys. Each
 friend is a bot that follows the student, and a team seat a classmate could take one day.
-The fights stay winnable without any friends.
 
-**Being frozen in a fight never costs a life:** the kid goes back to the spawn for a moment.
+## Look, time of day and dressing
 
-**Calm fights** (from the fourth play-test): during a fight the screen shows what you need to
-play, and little else. Mr. Saymaz says each line at most once and not more often than every 12 s
-(the HUD line already says what to do); there is no list of who froze whom; floating numbers and
-"FROZEN!" only for your own hits; no wave banners (the phase banners say it); "RIGHT WORD!" is a
-word at the snowman, not a banner; at most 3 arrows at the screen edge. While a close-up is open,
-the game's other panels hide.
+There is no real map and there are no real streets. The arena is one purpose-built field
+(`tools/build-world.mjs`), and only the look of the neighbourhood is kept round it: a cobbled lane
+with old lamps, snowed-in houses with lit windows and tea on the sills, buried roofs, trees and
+street stalls (chestnut, simit, çay, salep), and the four other places' landmarks just behind the
+snowbank fence. Beyond that is a painted backdrop.
+
+The bold look (cartoon shading, outlines, glow, a build of only the field) is the default.
+`?look=v1` brings back the old diorama look.
+
+Kasımpaşa is played in a lavender afternoon (`STAGE_LIGHT` in `brawl.js`, presets in `DAYLIGHT` in
+`render/village.js`). The field (`ARENAS.kasimpasa`) is a neighbourhood square: an eyebrow wall
+shielding the spawn, barricades at the heads of the side lanes, L-shaped snow walls, a crate and a
+bush in the middle lane, ice on the flanks, cover on the rival line.
+
+## The battlefield (Brawl-style principles, from the second play-test)
+
+- **The rivals hold the outpost.** Its landmark stands at the north end of the field, behind the
+  rival team; our team spawns at the south end. Until it is seized the circle shows the rivals'
+  colour. Later waves come round the outpost from the camp behind it.
+- **Size, from 3v3 brawler maps:** those are about 21 × 33 tiles, with heroes running about 2.5
+  tiles/s and throwing 3–10 tiles. Our kids run 3.4 tiles/s and throw 5–7.5 tiles, so the same
+  footprint gives the same rhythm: the field is **22 × 34 tiles**. About 6 s from spawn to the
+  first fight, room to dodge sideways, cover every 4–6 tiles, about 12% of the field covered
+  (walls, barricades, crates, bushes).
+- **Layout:** the long axis runs up the screen (portrait-first). Three lanes, cover between them
+  (something in the middle lane, so nobody throws spawn to spawn), a wall shielding the home
+  spawn, cover on the rival line to fight from. Mirrored left–right, so neither flank is the
+  better route. The test checks the field: the fence closes it, both teams can walk from their
+  end to the outpost, and the spots the waves use are open.
+- **One field per arena:** a stage builds and shows only its field and the frame round it. Later
+  arenas add their own field to the world builder (one `PLACES` entry each).
+- **Rival team AI:** the defenders hold their line in front of the outpost and come out to meet
+  anyone within 11 m of it; the snowmen walk out to the middle of the field.
+- **Camera:** the camera pulls back 10% and looks a little ahead, up the field; rivals just out of
+  view show as arrows at the screen edge.
+- **Environment kit** (`render/village.js`): rounded snow walls with a fat white cap, wooden
+  barricades with snow along the top, bevelled crates, frosted bushes, glassy ice patches.
+- **Colour:** the battlefield floor is lilac-tinted packed snow, so plain white means wall or out
+  of bounds; ice is glassy blue.
+- During the stage there are no blizzards or sun bursts, so the light stays steady.
+
+## Calm fights
+
+From the fourth play-test: during a fight the screen shows what you need to play, and little
+else. Mr. Saymaz says each line at most once and not more often than every 12 s (the HUD line
+already says what to do); there is no list of who froze whom; floating numbers and "FROZEN!" only
+for your own hits; no wave banners (the phase banners say it); "RIGHT WORD!" is a word at the
+snowman, not a banner; at most 3 arrows at the screen edge. While a close-up is open, the game's
+other panels hide.
 
 **Word snowmen** stay in the fights, but tidy: three snowmen walk out together in a row, side by
 side, slowly, in their own lanes, and never throw. The top of the screen shows a Turkish word with
 its picture; freeze the snowman with the right English word ("RIGHT WORD!", +2 toward the 12, a
 boost for the super). Teammates leave them to the student. Practice only.
-
-## A stage
-
-1. **Stage map.** Six stops showing locked, open or done with stars, plus the first-try score
-   against the 80% target. Finished stages can be replayed for more stars.
-2. **Sled journey** (`sledrun.js`).
-   - **Controls:** the sled runs by itself in three lanes. Swipe or use the arrow keys or the
-     buttons: left and right steer, up jumps, down ducks.
-   - **Jump over:** buried cars, snowmen, crates with sleeping cats, fences.
-   - **Duck under:** frozen laundry lines, low branches, shop awnings, gulls.
-   - **Ramps:** these give big jumps with snowflakes up high.
-   - **Collect:**
-     - snowflakes
-     - golden word snowflakes, which show the English word with its Turkish meaning and read it
-       aloud
-     - on spelling rides, the letters of a word of the unit, given in Turkish (practice only,
-       never counted toward the 80%)
-   - **Crashes:** a crash costs a life and drops 3 snowflakes.
-   - **First ride:** the first ride says "JUMP!" or "DUCK!" before each new kind of obstacle.
-3. **Stand at the outpost** (since the play-test: a fight comes first)
-   - **The field:** the team arrives at the south end; the rival team holds the north end, in front
-     of the outpost.
-   - **The opening fight:** beat the rival team (see Battlefields above). Then "SEIZE IT!": run up
-     to the glowing circle (or tap ▶ Seize; after 8 s the kid walks in) and the station opens.
-   - **Controls:** move with the stick on the left; tap a rival to throw at it, tap your own kid
-     to throw at the nearest rival, or use the throw button (tap = nearest, drag = aim). (`stagerun.js`, `waves.mjs`).
-   - **Arrival:** snowbanks close the field all round. Later waves come round the outpost from
-     the rivals' camp behind it.
-   - **Waves:**
-     - Wave 1 comes on arrival.
-     - Wave 2 comes after three answers, once wave 1 is nearly cleared (or after 30 s).
-     - When the bar is full, the final wave "They want it back!" comes.
-     - When the final wave is beaten (or after 8 s of it) the outpost is yours.
-   - **Banners:** WAVE and WAVE CLEAR banners, and a "New rivals!" card with a tip.
-   - **Answers:** each right answer fires the landmark's attack, snowballs arcing from the top of
-     the landmark onto the nearest rivals.
-   - **Lives:** being frozen at the outpost costs a life. Answering a card never does.
-4. **Results.** Stars (3 at 90% or more, 2 at 70% or more), right first time, snowflakes and time.
-   Then the next stage, or the stage map.
-
-## The Schoolyard Showdown (stage 6)
-
-1. **The ride home** to Our School (spelling letters on the way).
-2. **The schoolyard field:** the rivals have taken the schoolyard. Our School stands at the north
-   end behind the circle; the team arrives at the south end and has to beat the rival team first,
-   like at the outposts. Five banner poles stand behind the circle, one per outpost won, and the
-   school bell hangs on its frame.
-3. **Raise the banners:** one mixed task card takes about two items from each family in turn:
-   Boulevard (answer), Archery (sorting), Kızılay (matching), Sururi (builder), Waterfront
-   (listening). Each family done raises its banner, and the banner fires a volley at the rivals.
-   Right answers still fire snowballs too.
-4. **Waves come with the banners:** "The last stand" on arrival, "The rival captain!" after two
-   banners, "Everyone at once!" after four.
-5. **The giant snowball:** with all five banners up, a giant snowball rolls out at the captain and
-   freezes everything in its path. The rivals give up, the school bell rings, fireworks.
-6. **Arena results:** stars for all six stages, right first time across Arena 1 against the 80%
-   goal, snowflakes and the arena time.
-
-**Lives:** three per stage. With none left the stage starts again from the ride. English answers
-already given still count.
-
-**Saves:** progress is stored per unit (`arenas[0].stages`). Outposts from finished stages stay
-held on the map.
 
 **Rival snowmen** (`MINIONS` in `sim.mjs`):
 
@@ -209,32 +172,23 @@ held on the map.
 | Shield | A dustbin lid blocks straight shots from the front |
 | Sledder | Fast, short range |
 | Lobber | Throws over walls |
-| Captain | Big, tough, with a crown (the Showdown) |
+| Captain | Big, tough, with a crown; in the Final Showdown it warms up again after a moment without a hit |
 
 Frozen snowmen melt away. Each one wears the rival team's colours and has a ring in that colour.
 
-**Timing:** `arenaTime()` in `timing.mjs` times the real tasks each stage deals (from the unit),
-using what a Grade 5 student needs per item on the Relaxed pace (choice 7 s, listening 9 s,
-spelling or ordering 12 s, a match pair or sort card 5 s, plus 1.5 s of feedback per step), plus
-the rides and the moments between (arriving, the opening fight, the final wave, the station's
-celebration, results). Arena 1 comes to about **11.9 minutes** for every Grade 5 unit:
+**Saves:** progress is stored per unit (`arenas[0].stages`).
 
-| Stage | Ride | Tasks (items) | Between | Total |
-|---|---|---|---|---|
-| Boulevard | 28 s | 51 s (6) | 29 s | 1:48 |
-| Archery | 28 s | 33 s (6) | 29 s | 1:30 |
-| Kızılay | 30 s | 33 s (6) | 29 s | 1:32 |
-| Sururi | 30 s | 81 s (6) | 29 s | 2:20 |
-| Waterfront | 32 s | 63 s (6) | 29 s | 2:04 |
-| Showdown | 24 s | 98 s (12) | 31 s | 2:33 |
+## Timing
 
-After the first play-test the rides became 45 s and wind (curves, banked turns, gentle hills), and
-every stand opens with a fight. Since the second play-test that fight is on a full field against
-the whole rival team (about 21 s: the run up the field and the fight, plus about 3 s to walk into
-the circle). That brings Arena 1 to about **15 minutes**, over the brief's 10–12; the
-class play-test should decide what to trim. The table above is from before these changes. The test checks 10
-seeds. Real play with students should confirm the per-item seconds.
+`arenaTime()` in `timing.mjs` times the real tasks the outpost deals (from the unit), using what a
+Grade 5 student needs per item on the Relaxed pace (choice 7 s, listening 9 s, spelling or ordering
+12 s, a match pair or sort card 5 s, plus 1.5 s of feedback per step), plus the sled ride, the camp
+(35 s), three shop visits (12 s each), the opening round (60 s), the strike-back (50 s), the Final
+Showdown won first time (60 s) and the moments between. For Grade 5 Unit 1 that is about **8.6
+minutes** (the ride 50 s, the English 196 s for 24 items, the rest 260 s); five outposts and a
+Showdown came to about 32. The test keeps it between 7 and 13 minutes. Real play with students
+should confirm the per-item seconds.
 
 **Test links:**
-- `?family=` changes the task type at every outpost.
+- `?family=` changes the task type everywhere.
 - `?pace=challenge` turns on the timer.

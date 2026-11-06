@@ -2,7 +2,7 @@
 // own kid stands in the middle, looking at you, in front of a snowy market stall, and the four
 // boosts are price tags on the parts they change (big gloves at a hand, quick hands at the other,
 // a warm coat at the shoulder, super start by the head). Buy one and you see it on your kid at
-// once (gear.js): red mittens, glowing wristbands, a fluffy collar and coat, a gold star and glow.
+// once (gear.js): red mittens, glowing wristbands, a fluffy collar and coat, a super-snowball badge and glow.
 import { Group, Mesh, MeshLambertMaterial, MeshBasicMaterial, MeshStandardMaterial, BoxGeometry, CylinderGeometry, SphereGeometry, CapsuleGeometry, TorusGeometry, ExtrudeGeometry, PlaneGeometry, Shape, Vector3, CanvasTexture, SRGBColorSpace } from 'three';
 import { stage, pines, mounds, actor } from './stationkit.js';
 import { SHOP } from '../fights.mjs';
@@ -45,9 +45,9 @@ export function shopScene(s, { info, buy, color }) {
   s.onTick(() => { if (kid) tickGear(kid, performance.now() / 1000); });
   const render = inf => {
     for (const { id, el } of tags) {
-      const b = SHOP.boosts[id], has = (b.keep ? inf.boosts : inf.next).has(id), can = !has && inf.stars >= b.cost;
+      const b = SHOP.boosts[id], has = (b.keep ? inf.boosts : inf.next).has(id), can = !has && inf.flakes >= b.cost;
       el.className = 'wt-label shop-tag' + (has ? ' owned' : can ? '' : ' poor');
-      el.innerHTML = `<span class="shop-icon">${b.icon}</span><b>${esc(b.name)}</b><small>${esc(b.tip)}</small><span class="shop-price">${has ? (b.keep ? '✓ Yours' : '✓ Ready') : `Buy ⭐${b.cost}`}</span>`;
+      el.innerHTML = `<span class="shop-icon">${b.icon}</span><b>${esc(b.name)}</b><small>${esc(b.tip)}</small><span class="shop-price">${has ? (b.keep ? '✓ Yours' : '✓ Ready') : `Buy ❄ ${b.cost}`}</span>`;
     }
   };
   render(info);

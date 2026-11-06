@@ -1,5 +1,5 @@
-// Rival waves at each outpost stage (Tower Swarm-style): two waves while the student seizes,
-// a final wave after the capture. Each stage brings in one new kind of rival snowman.
+// Rival waves at the outpost (Tower Swarm-style): the rival team, the strike-back and the Final
+// Showdown with the rival captain.
 // Also the stage walls (a ring of snowbanks round the outpost) and the entry points the waves
 // walk in from. Rules only, tested in node.
 import { GRID } from './grid.mjs';
@@ -12,48 +12,16 @@ export const RIVAL_INFO = {
   captain: { name: 'The rival captain', tip: 'The rival captain is big and tough, with a crown. The whole team must work together!' },
 };
 
-// m: snowmen by type; kids: how many rival kids join this wave
+// m: snowmen by type; kids: how many rival kids join this wave. Three waves at the outpost: the
+// rival team (the opening round), the strike-back between the parts, and the Final Showdown with
+// the rival captain.
 export const WAVES = {
-  boulevard: [
-    { name: 'The rival team', m: { waddler: 2 }, kids: 2 }, // on the battlefield: the team that holds the outpost
-    { name: 'More snowmen!', m: { waddler: 4 }, kids: 1 },
-    { name: 'They want it back!', m: { waddler: 3 }, kids: 2, final: true },
-  ],
-  archery: [
+  kasimpasa: [
     { name: 'The rival team', m: { waddler: 2, shield: 1 }, kids: 2 },
-    { name: 'Shield wall', m: { shield: 2, waddler: 2 }, kids: 1 },
-    { name: 'They want it back!', m: { shield: 2, waddler: 2 }, kids: 2, final: true },
-  ],
-  kizilay: [
-    { name: 'The rival team', m: { waddler: 2, sledder: 2 }, kids: 2 },
-    { name: 'Rush hour', m: { sledder: 3, shield: 1 }, kids: 1 },
-    { name: 'They want it back!', m: { sledder: 2, waddler: 2, shield: 1 }, kids: 2, final: true },
-  ],
-  sururi: [
-    { name: 'The rival team', m: { waddler: 2, lobber: 1 }, kids: 2 },
-    { name: 'Mixed snow', m: { lobber: 2, shield: 1, sledder: 1 }, kids: 1 },
-    { name: 'They want it back!', m: { lobber: 2, shield: 1, waddler: 2 }, kids: 2, final: true },
-  ],
-  waterfront: [
-    { name: 'The rival team', m: { waddler: 2, sledder: 2, lobber: 1 }, kids: 2 },
-    { name: 'The big push', m: { shield: 2, lobber: 2, sledder: 1 }, kids: 2 },
-    { name: 'They want it back!', m: { shield: 2, lobber: 1, sledder: 2, waddler: 1 }, kids: 3, final: true },
-  ],
-  // the Schoolyard Showdown: waves come with the banners (see stagerun.js), the captain in the second
-  showdown: [
-    { name: 'The rival team', m: { waddler: 2, shield: 1, sledder: 1 }, kids: 2 },
-    { name: 'The rival captain!', m: { captain: 1, waddler: 2 }, kids: 1 },
-    { name: 'Everyone at once!', m: { lobber: 2, shield: 1, sledder: 2 }, kids: 2, final: true },
+    { name: 'They strike back!', m: { shield: 2, sledder: 2 }, kids: 1 },
+    { name: 'The Final Showdown', m: { captain: 1, lobber: 2, shield: 1, sledder: 1 }, kids: 3, final: true },
   ],
 };
-// The five banners of the Showdown: one per outpost won, each raised by that outpost's task family.
-export const BANNERS = [
-  { outpost: 'boulevard', family: 'answer', name: 'Boulevard' },
-  { outpost: 'archery', family: 'sort', name: 'Archery' },
-  { outpost: 'kizilay', family: 'match', name: 'Kızılay' },
-  { outpost: 'sururi', family: 'build', name: 'Sururi' },
-  { outpost: 'waterfront', family: 'listen', name: 'Waterfront' },
-];
 export const minionList = wave => Object.entries(wave.m).flatMap(([type, n]) => Array(n).fill(type));
 
 // The ring of snowbanks that closes a stage: walkable cells between rIn and rOut of the centre.
@@ -94,19 +62,4 @@ export function entryPoints(grid, z, r = 11.2, n = 3) {
   const picked = [];
   for (const s of spots.sort((p, q) => q.road - p.road)) if (picked.every(p => Math.abs(Math.atan2(Math.sin(p.a - s.a), Math.cos(p.a - s.a))) > 1.4)) { picked.push(s); if (picked.length === n) break; }
   return picked.length ? picked : spots.slice(0, 1);
-}
-
-// The Showdown circle in the schoolyard: the most open spot near Our School, so the team has
-// room to fight and the waves have streets to come in by.
-export function schoolyardSpot(grid, base, r = 2.6) {
-  let best = null;
-  for (let dz = -12; dz <= 12; dz += 1) for (let dx = -12; dx <= 12; dx += 1) {
-    const x = base.x + dx, z = base.z + dz, d = Math.hypot(dx, dz);
-    if (d < 2.5 || d > 12 || !grid.freeCircle(x, z, r)) continue;
-    let open = 0, n = 0;
-    for (let k = 0; k < 24; k++) for (const rr of [4, 6.5, 9]) { const a = k / 24 * Math.PI * 2; n++; if (grid.freeCircle(x + Math.sin(a) * rr, z + Math.cos(a) * rr, 0.4)) open++; }
-    const score = open / n - d * 0.012;
-    if (!best || score > best.score) best = { x, z, score };
-  }
-  return best ? { x: best.x, z: best.z, r } : { x: base.x, z: base.z, r };
 }

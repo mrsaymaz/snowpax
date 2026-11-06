@@ -42,15 +42,15 @@ test('a cocoa question is one choice from this unit; snowflake words come from t
   for (const w of words) assert.ok(unit.words.some(u => u.id === w.id && u.en === w.en && u.tr === w.tr));
 });
 
-test('the world has five cocoa cups at most, and plenty of snowflakes', () => {
+test('the world has one cocoa cup and no loose snowflakes (snowflakes are rare: the sled ride\'s word snowflakes)', () => {
   const kinds = def.pickups.map(p => p.kind);
-  assert.ok(kinds.filter(k => k === 'cocoa').length <= 5 && kinds.filter(k => k === 'cocoa').length >= 3);
-  assert.ok(kinds.filter(k => k === 'flake').length >= 25);
+  assert.equal(kinds.filter(k => k === 'cocoa').length, 1);
+  assert.equal(kinds.filter(k => k === 'flake').length, 0);
 });
 
 test('seizing by answers: a planted student is never frozen, rivals cannot take the circle meanwhile, a full bar captures', () => {
   const m = createMatch({ arena: buildTileArena(def), myTeam: 'hufflepuff', rivalTeam: 'gryffindor', rng: makeRng(3) });
-  const sim = m.sim, P = m.player, z = sim.zones.find(q => q.id === 'kizilay'), rival = sim.chars.find(c => c.side === 'rival');
+  const sim = m.sim, P = m.player, z = sim.zones[0], rival = sim.chars.find(c => c.side === 'rival');
   P.x = z.x; P.z = z.z + z.r - 0.5; P.planted = true; z.seizing = true;
   rival.x = z.x + 1; rival.z = z.z + z.r - 0.6;
   for (let k = 0; k < 10; k++) sim.hit(P, { dmg: 30, owner: rival.id, kind: 'straight', vx: 1, vz: 0, x: P.x, z: P.z });

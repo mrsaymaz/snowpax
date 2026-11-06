@@ -7,7 +7,7 @@
 // (DEFEND): after the wave, one short round refills everyone's snowballs. Then it is HELD.
 // Every item counts toward the arena's first-try accuracy (the 80% rule) and missed words come
 // back more often.
-import { BANNERS } from './waves.mjs';
+import { PLACE_OF } from './stages.mjs';
 import { CONFIG } from '../config.js';
 import { FAMILIES } from '../tasks/subtasks.mjs';
 import { recordItem, holdOutpost, accuracyOf } from '../rules/progress.mjs';
@@ -22,7 +22,7 @@ export const OUTPOST_THEME = {
   kizilay: { theme: 'kizilay', name: 'Kızılay Fountain' },
   boulevard: { theme: 'boulevard', name: 'The Treehouse' },
   sururi: { theme: 'sururi', name: 'The Snow Castle' },
-  schoolyard: { theme: 'schoolyard', name: 'Schoolyard Showdown' },
+  kasimpasa: { theme: 'kizilay', name: 'Kasımpaşa' },
 };
 const FAMILY_NAME = Object.fromEntries(FAMILIES.map(f => [f.id, f.name]));
 const T = CONFIG.timing;
@@ -53,29 +53,38 @@ export class OutpostFlow {
   plant(on) { this.player.planted = on; this.player.guarding = on; document.body.classList.toggle('reading', on); }
 
   // ---------- seize ----------
+  // z.parts: the task families of Part 1 and Part 2 (fights and the Snow Shop between); each family
+  // gets z.perFamily items, in its own place's scene
   begin(z) {
     const fam = this.familyOf(z);
     let v = this.visits.get(z.id);
-    // two halves (z.halves: two task families, fights between): one round of each family
-    if (!v) { v = new Visit({ unit: this.unit, family: fam, arena: 1, rng: this.rng, history: this.history, speech: speech.available || !speech.checked, families: z.showdown ? BANNERS.map(b => b.family) : z.halves || null, perFamily: z.halves ? CONFIG.demand.itemsPerRound : 2 }); this.visits.set(z.id, v); }
+    if (!v) { v = new Visit({ unit: this.unit, family: fam, arena: 1, rng: this.rng, history: this.history, speech: speech.available || !speech.checked, families: z.parts ? z.parts.flat() : null, perFamily: z.perFamily || CONFIG.demand.itemsPerRound }); this.visits.set(z.id, v); }
     this.mode = 'seize'; this.zone = z; z.seizing = true; this.shown = Math.max(0, z.progress); this.plant(true);
     const th = OUTPOST_THEME[z.id] || { theme: 'kizilay', name: z.label }, part = v.halfDone ? 2 : 1;
-    this.card.open({ theme: th.theme, title: z.showdown ? `${th.name} · Raise the banners!` : z.halves ? `${th.name} · Part ${part} of 2` : `${th.name} · ${FAMILY_NAME[fam]}`, coach: '' });
+    this.card.open({ theme: th.theme, title: z.parts ? `${th.name} · Part ${part} of 2` : `${th.name} · ${FAMILY_NAME[fam]}`, coach: '' });
     this.card.setProgress(v.progress);
-    if (z.showdown) this.ui.coach('Every task raises a banner. Raise all five for the giant snowball!', 5);
-    else if (!this.seenSeize) { this.seenSeize = true; this.ui.coach('Answer the questions to seize the outpost. Your team will guard you!', 5); }
+    if (!this.seenSeize) { this.seenSeize = true; this.ui.coach('Answer the questions to seize the outpost. Every right answer first time is a ❄ for the Snow Shop!', 5); }
     this.showNext();
   }
+  get visit() { return this.mode === 'defend' ? this.defendVisit : this.mode === 'extra' ? this.extraVisit : this.visits.get(this.zone?.id); }
   showNext() {
-    const v = this.mode === 'defend' ? this.defendVisit : this.visits.get(this.zone?.id);
-    const step = v.next();
+    const v = this.visit, step = v.next();
     if (!step) { this.onStepDone(true); return; }
-    if (this.zone.halves) { // two halves: each family in its own activity
-      this.card.setCoach(`${FAMILY_NAME[v.family]}${v.coach ? ': ' + v.coach : ''}`); this.card.show(step, { theme: FAMILY_STATION[v.family] || this.zone.id }); return;
+    if (v.families) { // each family in its own place's activity
+      this.card.setCoach(`${PLACE_OF[v.family] ? PLACE_OF[v.family] + ' · ' : ''}${FAMILY_NAME[v.family]}${v.coach ? ': ' + v.coach : ''}`); this.card.show(step, { theme: FAMILY_STATION[v.family] || this.zone.id }); return;
     }
-    const b = v.families && BANNERS[v.famIdx];
-    this.card.setCoach(b ? `🚩 ${b.name} banner (${v.famIdx + 1} of ${BANNERS.length}) · ${FAMILY_NAME[v.family]}${v.coach ? ': ' + v.coach : ''}` : v.coach || ''); this.card.show(step, b ? { theme: b.outpost } : undefined); // Showdown: each banner in its own outpost's scene
+    this.card.setCoach(v.coach || ''); this.card.show(step);
   }
+  // A short snowflake round (after the Final Showdown ran out of time): a few items from the
+  // outpost's places, each right first try a ❄, then the shop and the Showdown again.
+  startExtra(z, n = 4) {
+    const fams = z.parts.flat().slice().sort(() => this.rng() - 0.5).slice(0, n);
+    this.extraVisit = new Visit({ unit: this.unit, family: fams[0], arena: 1, rng: this.rng, history: this.history, speech: speech.available || !speech.checked, families: fams, perFamily: 1 });
+    this.mode = 'extra'; this.zone = z; this.plant(true);
+    this.card.open({ theme: (OUTPOST_THEME[z.id] || { theme: 'kizilay' }).theme, title: 'Snowflake round · earn ❄ for boosts', coach: '', leave: false }); this.card.setProgress(0);
+    this.showNext();
+  }
+  finishExtra() { const z = this.zone, v = this.extraVisit; this.extraDone = { firstTry: (this.extraDone?.firstTry || 0) + v.firstTry, done: (this.extraDone?.done || 0) + v.done }; this.card.close(); this.plant(false); this.mode = null; this.zone = null; this.ui.onExtraDone?.(z); }
   leave() {
     if (this.mode !== 'seize') return;
     this.card.close(); this.plant(false); this.zone.seizing = false; this.outside.delete(this.zone.id); this.mode = null; this.zone = null;
@@ -83,16 +92,16 @@ export class OutpostFlow {
 
   onItem({ itemId, correctFirstTry }) {
     if (this.mode === 'cocoa') { this.cocoaRight = correctFirstTry; return; }
-    if (this.mode === 'supply' || this.mode === 'recruit') { // camp questions: count toward the 80% (answered calmly), a star when right first time
+    if (this.mode === 'supply' || this.mode === 'recruit') { // camp questions: count toward the 80% (answered calmly), a ❄ when right first time
       this.cocoaRight = correctFirstTry; recordItem(this.up, 0, { correctFirstTry, itemId }); this.writeSave(this.save);
       if (correctFirstTry) this.ui.onStar?.(); return;
     }
-    const v = this.mode === 'defend' ? this.defendVisit : this.visits.get(this.zone.id);
+    const v = this.visit;
     v.answer(correctFirstTry);
     recordItem(this.up, 0, { correctFirstTry, itemId }); this.writeSave(this.save);
     this.card.setProgress(v.progress);
     if (correctFirstTry) {
-      if (this.mode === 'seize' && this.zone?.halves) this.ui.onStar?.(); // the halves earn stars for the next fight
+      if ((this.mode === 'seize' && this.zone?.parts) || this.mode === 'extra') this.ui.onStar?.(); // a ❄ for the Snow Shop
       this.ui.play('sparkle'); this.streak = (this.streak || 0) + 1;
       if (this.stageZone) this.sim.blast(this.player, this.zone, this.mode === 'seize' ? 3 : 4); // the landmark's (or the banners') attack
       else if (this.mode === 'seize') this.sim.volley(this.player, this.zone, 2);
@@ -105,14 +114,15 @@ export class OutpostFlow {
     if (this.mode === 'cocoa') return this.finishCocoa();
     if (this.mode === 'supply') return this.finishSupply();
     if (this.mode === 'recruit') return this.finishRecruit();
-    const v = this.mode === 'defend' ? this.defendVisit : this.visits.get(this.zone.id);
-    if (this.mode === 'seize' && this.zone.halves && !v.halfDone && v.famIdx === 0 && v.famDone >= v.perFamily && !v.finished) { // half way: a fight before the second half
-      v.halfDone = true; this.mode = 'half'; this.card.setCoach('Half of it is yours! Get ready…');
-      if (this.card.inWorld) this.celebrateT = this.card.world.celebrate('Half the outpost is yours!');
+    const v = this.visit;
+    if (this.mode === 'extra') { if (!v.finished && !empty) return this.showNext(); return this.finishExtra(); }
+    if (this.mode === 'seize' && this.zone.parts && !v.halfDone && v.famIdx === this.zone.parts[0].length - 1 && v.famDone >= v.perFamily && !v.finished) { // Part 1 done: a fight before Part 2
+      v.halfDone = true; this.mode = 'half'; this.card.setCoach('Part 1 done! Get ready…');
+      if (this.card.inWorld) this.celebrateT = this.card.world.celebrate('Part 1 is done!');
       return;
     }
     if (!v.finished && !empty) return this.showNext();
-    if (this.mode === 'seize') { this.card.setCoach('Great work! Hold on…'); this.mode = 'seize-fill'; if (this.card.inWorld) this.celebrateT = this.card.world.celebrate(this.zone.showdown ? 'All five banners are up!' : 'Outpost seized!'); } // fireworks in the station first // the bar catches up, then the outpost is yours
+    if (this.mode === 'seize') { this.card.setCoach('Great work! Hold on…'); this.mode = 'seize-fill'; if (this.card.inWorld) this.celebrateT = this.card.world.celebrate('Part 2 is done!'); } // fireworks in the station first // the bar catches up, then the outpost is yours
     else if (this.mode === 'defend') this.finishDefend();
   }
 
@@ -121,7 +131,7 @@ export class OutpostFlow {
     this.card.close(); this.plant(false); z.seizing = false; this.mode = null; this.zone = null;
     this.waveZone = z; this.waveT = this.stageZone ? Infinity : Math.min(14, T.defendWave * 0.7); // stages: the final wave decides
     this.ui.onCaptured?.(z);
-    if (z.showdown) return; // the Showdown ends with the giant snowball instead
+    if (this.stageZone) return; // stages: the shop, then the Final Showdown
     this.ui.banner('DEFEND!', 'lose', 1.6); this.ui.coach('The rivals are coming back! Throw snowballs to keep your outpost.', 4.5);
   }
   openDefendTask(z) {
@@ -135,8 +145,8 @@ export class OutpostFlow {
   }
   finishDefend() { const z = this.zone; this.card.close(); this.plant(false); this.mode = null; this.zone = null; this.held(z); }
   // stage mode: only this outpost opens a card, and the stage runner decides when the final wave ends
-  setStage(z) { this.stageZone = z; if (z) { this.visits.delete(z.id); this.defendVisit = null; this.waveZone = null; this.mode = null; this.zone = null; this.streak = 0; } }
-  stageStats(z) { const v = this.visits.get(z.id), d = this.defendVisit; return { firstTry: (v?.firstTry || 0) + (d?.firstTry || 0), total: (v?.done || 0) + (d?.done || 0) }; }
+  setStage(z) { this.stageZone = z; this.extraDone = null; if (z) { this.visits.delete(z.id); this.defendVisit = null; this.waveZone = null; this.mode = null; this.zone = null; this.streak = 0; } }
+  stageStats(z) { const v = this.visits.get(z.id), d = this.defendVisit, x = this.extraDone || { firstTry: 0, done: 0 }; return { firstTry: (v?.firstTry || 0) + (d?.firstTry || 0) + x.firstTry, total: (v?.done || 0) + (d?.done || 0) + x.done }; }
   abort() { if (this.mode) { this.card.close(); this.plant(false); if (this.zone) this.zone.seizing = false; } this.mode = null; this.zone = null; this.waveZone = null; }
   held(z) {
     holdOutpost(this.up, 0, this.familyOf(z)); this.writeSave(this.save); this.waveZone = null;
@@ -167,14 +177,14 @@ export class OutpostFlow {
     if (this.mode) { p.asking = false; return; }
     this.mode = 'supply'; this.cocoaId = pickupId; this.cocoaRight = false; this.plant(true);
     this.card.open({ theme: 'cocoa', title: 'Supply crate!', coach: '', leave: false }); this.card.setProgress(0);
-    this.card.show(cocoaQuestion(this.unit, this.rng)); this.card.setCoach('Answer right first time for a ⭐ to build with before the fight!');
+    this.card.show(cocoaQuestion(this.unit, this.rng)); this.card.setCoach('Answer right first time for a ❄ to spend in the Snow Shop!');
   }
   finishSupply() {
     const right = this.cocoaRight;
     this.card.close(); this.plant(false); this.mode = null;
     this.sim.supplyResult(this.cocoaId, this.player, right);
-    if (right) { this.ui.banner('+1 ⭐', 'win', 1.2); this.ui.play('superReady'); }
-    else this.ui.coach('Not quite this time, so no star from this crate. Try the next one!', 3);
+    if (right) { this.ui.banner('+1 ❄', 'win', 1.2); this.ui.play('superReady'); }
+    else this.ui.coach('Not quite this time, so no snowflake from this crate. Try the next one!', 3);
   }
 
   // ---------- hot cocoa ----------

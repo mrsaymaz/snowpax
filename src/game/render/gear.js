@@ -1,12 +1,12 @@
 // What the Snow Shop's boosts look like on a kid (the shop's close-up and the student's kid in the
 // fight): big red mittens (big gloves), glowing wristbands with little bolts (quick hands), a fluffy
-// collar and a longer coat (warm coat), a gold star badge and a warm glow at the feet (super start).
+// collar and a longer coat (warm coat), a glowing super-snowball badge and a glow at the feet (super
+// start; no stars here: in the game ★ only means how well a stage went).
 // Works on a built (and baked) kid from kids2.js: arms are groups at the shoulders, hands at -0.42.
 import { Group, Mesh, MeshStandardMaterial, MeshBasicMaterial, SphereGeometry, TorusGeometry, CylinderGeometry, RingGeometry, ExtrudeGeometry, Shape, AdditiveBlending, DoubleSide } from 'three';
 
 const mat = (c, extra = {}) => new MeshStandardMaterial({ color: c, roughness: 0.7, ...extra });
 const bolt = () => { const sh = new Shape(); sh.moveTo(0.02, 0.12); sh.lineTo(-0.05, 0.01); sh.lineTo(0, 0.01); sh.lineTo(-0.03, -0.1); sh.lineTo(0.05, 0.03); sh.lineTo(0.005, 0.03); sh.lineTo(0.04, 0.12); return new ExtrudeGeometry(sh, { depth: 0.02, bevelEnabled: false }); };
-const star = (R = 0.09, r = 0.04) => { const sh = new Shape(); for (let k = 0; k < 10; k++) { const a = Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? r : R; if (k) sh.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); else sh.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); } sh.closePath(); return new ExtrudeGeometry(sh, { depth: 0.025, bevelEnabled: true, bevelSize: 0.008, bevelThickness: 0.008, bevelSegments: 1 }); };
 
 function build(id, kid, color) {
   const g = new Group(); g.name = 'gear-' + id;
@@ -29,9 +29,11 @@ function build(id, kid, color) {
     for (const y of [0.85, 0.65]) { const t = new Mesh(new SphereGeometry(0.035, 8, 6), mat('#6b4a32')); t.position.set(0, y, 0.38); g.add(t); }
     kid.add(g);
   }
-  if (id === 'super') { // a gold star badge and a warm glow at the feet
-    const s = new Mesh(star(), mat('#f2c14e', { emissive: '#e8a10a', emissiveIntensity: 0.6, metalness: 0.4, roughness: 0.35 })); s.position.set(-0.17, 0.86, 0.4); g.add(s);
-    const ring = new Mesh(new RingGeometry(0.5, 0.72, 32), new MeshBasicMaterial({ color: '#ffd166', transparent: true, opacity: 0.55, depthWrite: false, blending: AdditiveBlending })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; g.add(ring); g.userData.ring = ring;
+  if (id === 'super') { // a glowing super-snowball badge (a ball in a gold ring) and a glow at the feet
+    const badge = new Group(); badge.position.set(-0.17, 0.86, 0.4); g.add(badge);
+    badge.add(new Mesh(new TorusGeometry(0.075, 0.018, 8, 20), mat('#f2c14e', { emissive: '#e8a10a', emissiveIntensity: 0.5, metalness: 0.4, roughness: 0.35 })));
+    const ball = new Mesh(new SphereGeometry(0.06, 14, 10), mat('#eaf6ff', { emissive: '#7cc4f0', emissiveIntensity: 0.9, roughness: 0.3 })); ball.position.z = 0.02; badge.add(ball);
+    const ring = new Mesh(new RingGeometry(0.5, 0.72, 32), new MeshBasicMaterial({ color: '#9fdcff', transparent: true, opacity: 0.55, depthWrite: false, blending: AdditiveBlending })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; g.add(ring); g.userData.ring = ring;
     kid.add(g);
   }
   return g;

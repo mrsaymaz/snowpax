@@ -73,7 +73,7 @@ function startScreen() {
 // ---------- the game ----------
 async function startGame(myTeam, kit, pace) {
   useBasicScenes(params.get('scenes') === 'basic'); // ?scenes=basic: the plain cards, to compare
-  // Arena 1 world (five outposts) by default; the small schoolyard feel test with ?arena=schoolyard
+  // Arena 1 world (the Kasımpaşa outpost) by default; the small schoolyard feel test with ?arena=schoolyard
   const worldDef = params.get('arena') === 'schoolyard' ? null : await (await fetch('arenas/arena1.json')).json();
   const arena = buildTileArena(worldDef || SCHOOLYARD);
   const others = TEAM_IDS.filter(t => t !== myTeam);
@@ -122,7 +122,7 @@ async function startGame(myTeam, kit, pace) {
   // ?look=v1 brings back the old diorama look
   const V2 = params.get('look') !== 'v1' && arena.world;
   // each stage at its own time of day; dusk = how far the lamps and windows are lit
-  const STAGE_LIGHT = { boulevard: ['morning', 0], archery: ['noon', 0], kizilay: ['afternoon', 0.1], sururi: ['golden', 0.35], waterfront: ['sunset', 0.7], schoolyard: ['evening', 1] };
+  const STAGE_LIGHT = { kasimpasa: ['afternoon', 0.15], boulevard: ['morning', 0], archery: ['noon', 0], kizilay: ['afternoon', 0.1], sururi: ['golden', 0.35], waterfront: ['sunset', 0.7], schoolyard: ['evening', 1] };
   let stageLight = STAGE_LIGHT.boulevard;
   // what a stage build shows: a circle round the outpost, or a battlefield's field and the street frame round it
   const fieldBox = (z, pad = 0) => { const b = z.battlefield; return { x0: z.x - b.hw - pad, x1: z.x + b.hw + pad, z0: z.z - b.back - pad, z1: z.z + b.front + pad }; };
@@ -222,7 +222,7 @@ async function startGame(myTeam, kit, pace) {
   };
   const coachShow = (text, sec = 4.5) => { $('#coach .line').textContent = text; $('#coach').hidden = false; clearTimeout(coach.t); coach.t = setTimeout(() => { $('#coach').hidden = true; }, sec * 1000); };
   const seen = new Set(), once = (key, text, sec = 4.5) => { if (seen.has(key)) return; seen.add(key); coach(text, sec); };
-  $('#flakes b').textContent = save.snowflakes || 0; $('#flakes').hidden = !arena.world;
+  $('#flakes b').textContent = save.snowflakes || 0; $('#flakes').hidden = !arena.world || !!unit; // in the stages, ❄ is the Snow Shop money (the #stars pill)
   const banner = (text, cls = '', sec = 1.6) => { const b = $('#banner'); b.textContent = text; b.className = 'show ' + cls; clearTimeout(banner.t); banner.t = setTimeout(() => { b.className = ''; }, sec * 1000); };
   // English tasks as task stations (?scenes=basic for the plain cards): a staged 3D set opens for the task, like Languini's stations
   const worldTasks = arena.world ? new WorldTasks({ layer: $('#wt-layer'), player, reduceMotion, sound: (n, o) => play(n, o), stations: { sururi: s => castleStation(s, { color: myCol }), boulevard: s => treehouseStation(s, { color: myCol }), archery: s => archeryStation(s, { color: myCol }), kizilay: s => fountainStation(s, { color: myCol }), waterfront: s => bellStation(s, { color: myCol }), recruit: s => talkStation(s, { color: myCol }), shop: s => shopStation(s, { color: myCol }) } }) : null;
@@ -240,7 +240,7 @@ async function startGame(myTeam, kit, pace) {
       showWall: cells => showWall(cells), onGone: list => { dropSnowmen(list); dropGoneKids(); }, recruited: (c, R) => fx.number(c.x, c.z, `${c.name} · ${R.name}`, 'word'), rebuildWorld: z => rebuildWorld(z), markRival: z => world.setOwner(z.id, rivCol), fireworks,
       seizeButton: on => { $('#seizebtn').hidden = !on; },
       hush: () => { clearTimeout(coach.t); $('#coach').hidden = true; },
-      stars: (n, pop) => { const el = $('#stars'); el.hidden = n == null; if (n != null) { el.querySelector('b').textContent = n; if (pop) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); } } },
+      wallet: (n, pop) => { const el = $('#stars'); el.hidden = n == null; if (n != null) { el.querySelector('b').textContent = n; if (pop) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); } } },
       build: { open: i => buildUI.open(i), refresh: (i, bought) => buildUI.refresh(i, bought), close: () => buildUI.close() },
       fx, hunt: w => { const el = $('#hunt'), clean = s => String(s ?? '').replace(/[&<>"']/g, ''); el.hidden = !w; if (w) el.innerHTML = `<small>${w.reveal ? 'Time!' : 'Freeze the snowman that means'}</small><span class="hunt-word">${w.pic ? `<img src="${clean(w.pic)}" alt="">` : ''}<b>${clean(w.tr)}</b></span>`; },
       showdown: {
@@ -320,11 +320,12 @@ async function startGame(myTeam, kit, pace) {
   };
   const dropGoneKids = () => { for (const [id, k] of kids) if (!sim.chars.some(c => c.id === id)) { scene.remove(k.root); k.dispose?.(); kids.delete(id); } };
   // the build moment: the Snow Shop opens (a 3D stall, cards/shop.js) with a slim bar for the
-  // stars, the time and Fight!
+  // ❄ snowflakes, the time and Fight!
   const buildUI = (() => {
     let info = null, open = false, shop = null;
     const el = $('#build');
-    const render = () => { el.querySelector('.bd-stars').textContent = `⭐ ${info.stars}`; el.querySelector('.bd-hint').textContent = info.stars ? 'Tap something to buy it' : 'No stars to spend this time'; };
+    const cheapest = Math.min(...Object.values(SHOP.boosts).map(b => b.cost));
+    const render = () => { el.querySelector('.bd-stars').textContent = `❄ ${info.flakes}`; el.querySelector('.bd-hint').textContent = info.flakes >= cheapest ? 'Tap a boost to buy it' : info.boosts.size >= Object.keys(SHOP.boosts).length ? 'You have every boost!' : `A boost costs ❄ ${cheapest}`; };
     el.addEventListener('click', e => { if (e.target.closest('.bd-go')) stages?.endBuild(); });
     return {
       open(i) { info = i; open = true; el.hidden = false; render(); document.body.classList.add('building'); const s = worldTasks?.open('shop'); shop = s ? shopScene(s, { info: i, buy: id => stages?.buyBoost(id), color: myCol }) : null; },

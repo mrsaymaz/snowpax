@@ -31,7 +31,7 @@ src/main.js              M0 task preview page
 tools/import-content.mjs builds content/grade5…8.json from the lesson banks
 tools/coverage.mjs       writes content/COVERAGE.md
 tools/check-content.mjs  content check (runs in npm run build)
-tools/build-world.mjs    builds Arena 1: six purpose-built stage fields (no real map), public/arenas/arena1.json
+tools/build-world.mjs    builds Arena 1 (Kasımpaşa): one purpose-built outpost field (no real map), public/arenas/arena1.json
 content/                 imported lesson content, coverage report, import log
 public/pictures/         licensed pictures copied from solMaxima and Tower Swarm, with licence
 docs/                    proposals waiting for Mr. Saymaz's decisions

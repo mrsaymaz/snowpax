@@ -65,7 +65,8 @@ test('far journeys can ride a sled run: the path goes to the start pad, then the
 
 test('the student collects glowing snowflakes; hot cocoa asks a question, then warms you right up and comes back later', () => {
   const m = world(); park(m); const P = m.player, sim = m.sim;
-  const flake = sim.pickups.find(p => p.kind === 'flake'), cocoa = sim.pickups.find(p => p.kind === 'cocoa');
+  const cocoa = sim.pickups.find(p => p.kind === 'cocoa');
+  sim.pickups.push({ id: 'ftest', kind: 'flake', x: cocoa.x + 4, z: cocoa.z }); const flake = sim.pickups.at(-1); // the world has none now; the mechanic stays
   P.x = flake.x; P.z = flake.z;
   let ev = run(m, 0.1);
   assert.ok(ev.some(e => e.type === 'collect' && e.kind === 'flake')); assert.equal(P.flakes, 1); assert.ok(flake.taken);
