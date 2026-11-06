@@ -597,6 +597,7 @@ body.intro #banner, body.intro #seizebtn, body.intro #feed, body.intro #hunt, bo
    snowy top edge: arena, team, girl or boy, snowball style, lesson and pace, Play.
    Portrait: logo, the kid, then the panel. Landscape: the panel on the left, the kid and the
    tagline on the right. */
+#start.start2[hidden] { display: none; }
 #start.start2 { display: grid; padding: 0; align-items: stretch; justify-items: stretch; grid-template-rows: auto minmax(70px, 1fr) auto; grid-template-areas: 'top' 'hero' 'panel'; overflow: hidden; }
 .start2 .st-top { grid-area: top; display: flex; align-items: flex-start; justify-content: space-between; padding: calc(10px + env(safe-area-inset-top)) 14px 0; z-index: 2; }
 .start2 #st-logo { display: block; filter: drop-shadow(0 4px 10px rgba(20, 24, 60, 0.35)); }

@@ -11,15 +11,21 @@ import { makeRng } from '../src/tasks/subtasks.mjs';
 
 const def = JSON.parse(readFileSync(new URL('../public/arenas/arena1.json', import.meta.url), 'utf8'));
 
-test('Arena 1 is one stage, Kasımpaşa: its five places\' task families in two parts (two, then three), each family once, each in its own place', async () => {
+test('one stage per arena (Kasımpaşa, the Golden Horn): five places\' task families in two parts (two, then three), each family once, each place with its view on the ride and its seat on the outpost', async () => {
   const { FAMILY_STATION } = await import('../src/game/fights.mjs');
-  const { PLACE_OF } = await import('../src/game/stages.mjs');
-  assert.equal(STAGES.length, 1); const st = STAGES[0];
-  assert.equal(st.id, 'kasimpasa'); assert.equal(st.outpost, def.outposts[0].id);
-  assert.deepEqual(st.parts, [['answer', 'sort'], ['match', 'build', 'listen']]);
-  const all = st.parts.flat(); assert.equal(new Set(all).size, 5);
-  for (const f of all) { assert.ok(FAMILY_STATION[f], `${f} has its own activity`); assert.ok(PLACE_OF[f], `${f} belongs to a place`); }
-  assert.ok(st.ride && st.ride.flakes >= 4, 'the sled ride in carries the rare word snowflakes');
+  const { CINEMA } = await import('../src/game/render/cinema.js').catch(() => ({ CINEMA: null })); // needs a DOM to load the renderer: skipped in node
+  assert.deepEqual(STAGES.map(s => [s.id, s.arena]), [['kasimpasa', 1], ['golden-horn', 2]]);
+  assert.deepEqual(STAGES[0].parts, [['answer', 'sort'], ['match', 'build', 'listen']]);
+  assert.deepEqual(STAGES[1].parts, [['listen', 'sort'], ['build', 'answer', 'match']]);
+  assert.deepEqual(Object.values(STAGES[1].places).map(p => p.title).sort(), ['Aynalıkavak Pavilion', 'Bankalar Caddesi', 'Karaköy Bridge and Pier', 'Miniatürk', 'Tersane İstanbul']);
+  for (const st of STAGES) {
+    assert.equal(st.outpost, def.outposts.find(o => o.id === st.id).id);
+    const all = st.parts.flat(); assert.equal(new Set(all).size, 5);
+    for (const f of all) { assert.ok(FAMILY_STATION[f], `${f} has its own activity`); assert.ok(st.places[f]?.id && st.places[f]?.title, `${st.id}: ${f} belongs to a place`); if (CINEMA) assert.ok(CINEMA[st.places[f].id], `${st.places[f].id} has its view`); }
+    const seats = def.landmarks.find(l => l.outpost === st.outpost && l.centre).seats; assert.equal(seats.length, 5, 'a seat on the outpost for each place');
+    assert.ok(st.ride && st.ride.flakes >= 4, 'the sled ride in carries the rare word snowflakes');
+  }
+  const up = newUnitProgress('hufflepuff', makeRng(2)); assert.ok(!isUnlocked(up, 'golden-horn')); finishStage(up, 'kasimpasa', { firstTry: 8, total: 10 }); assert.ok(isUnlocked(up, 'golden-horn'), 'the Golden Horn opens after Kasımpaşa');
 });
 
 test('stages unlock one by one; stars come from first-try accuracy and the best result is kept', () => {
@@ -38,11 +44,11 @@ test('stages unlock one by one; stars come from first-try accuracy and the best 
 // The brief asked for 10–12 minutes. Five outposts and a Showdown, each prepare-then-fight, came
 // to about 32; one outpost per arena with all five places' tasks (Mr. Saymaz's idea) brings it
 // back to about 9 minutes with the same five task families.
-test('three lives; the whole arena, timed from the real tasks it deals, takes 7 to 13 minutes', async () => {
+test('three lives; each arena, timed from the real tasks it deals, takes 7 to 13 minutes', async () => {
   const l = new Lives(); assert.equal(l.left, 3); l.lose(); l.lose(); assert.ok(!l.out); l.lose(); assert.ok(l.out); l.reset(); assert.equal(l.left, 3);
   const { arenaTime } = await import('../src/game/timing.mjs');
   const unit = JSON.parse(readFileSync(new URL('../content/grade5.json', import.meta.url), 'utf8')).units.find(u => u.id === 'g5u1');
-  for (let seed = 1; seed <= 10; seed++) { const r = arenaTime(unit, { rng: makeRng(seed) }); assert.ok(r.minutes >= 7 && r.minutes <= 13, `seed ${seed}: ${r.minutes.toFixed(1)} min ${JSON.stringify(r.parts)}`); }
+  for (let seed = 1; seed <= 10; seed++) { const r = arenaTime(unit, { rng: makeRng(seed) }); for (const p of r.parts) assert.ok(p.total / 60 >= 7 && p.total / 60 <= 13, `seed ${seed}, ${p.id}: ${(p.total / 60).toFixed(1)} min ${JSON.stringify(p)}`); }
 });
 
 test('the outpost has the rival team, the strike-back and the Final Showdown with the captain; the new rival type is used', () => {
@@ -56,7 +62,7 @@ test('the outpost has the rival team, the strike-back and the Final Showdown wit
 test('every field: the fence closes it all round, both teams can walk from their end to the outpost, the spots the waves use are open', () => {
   const m = createMatch({ arena: buildTileArena(def), myTeam: 'hufflepuff', rivalTeam: 'gryffindor', rng: makeRng(2) });
   const fields = m.sim.zones;
-  assert.equal(fields.length, 1);
+  assert.equal(fields.length, 2);
   for (const z of fields) {
     assert.ok(z.battlefield, `${z.id} is a battlefield`);
     const { back, front, hw } = z.battlefield;

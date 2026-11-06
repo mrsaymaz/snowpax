@@ -10,10 +10,15 @@ export const LIVES = 3;
 // parts: the task families of Part 1 and Part 2 (each family opens in its own place's scene);
 // ride: the sled ride in (its word snowflakes are the first ❄; spell: letters to spell a word);
 // newRival: the rival type met in the first fight ("New rivals!" card); the captain comes last.
+// places: each task family's place (its id for the sled ride's view, its name).
 export const STAGES = [
-  { id: 'kasimpasa', outpost: 'kasimpasa', family: 'match', parts: [['answer', 'sort'], ['match', 'build', 'listen']], fights: 'long', title: 'Kasımpaşa', ride: { theme: 'kasimpasa', seconds: 50, spell: true, flakes: 5 }, newRival: 'shield' },
+  { id: 'kasimpasa', arena: 1, outpost: 'kasimpasa', family: 'match', parts: [['answer', 'sort'], ['match', 'build', 'listen']], fights: 'long', title: 'Kasımpaşa', ride: { theme: 'kasimpasa', seconds: 50, spell: true, flakes: 5 }, newRival: 'shield',
+    places: { answer: { id: 'boulevard', title: 'Boulevard Park' }, sort: { id: 'archery', title: 'Archery Ground' }, match: { id: 'kizilay', title: 'Kızılay Square' }, build: { id: 'sururi', title: 'Sururi Park' }, listen: { id: 'pier', title: 'The Pier' } } },
+  // Arena 2: up the Golden Horn from its mouth; the Final Showdown at Miniatürk, among the models
+  { id: 'golden-horn', arena: 2, outpost: 'golden-horn', family: 'match', parts: [['listen', 'sort'], ['build', 'answer', 'match']], fights: 'long', title: 'The Golden Horn', ride: { theme: 'goldenhorn', seconds: 50, spell: true, flakes: 5 }, newRival: 'lobber',
+    places: { listen: { id: 'karakoy', title: 'Karaköy Bridge and Pier' }, sort: { id: 'bankalar', title: 'Bankalar Caddesi' }, build: { id: 'tersane', title: 'Tersane İstanbul' }, answer: { id: 'aynalikavak', title: 'Aynalıkavak Pavilion' }, match: { id: 'miniaturk', title: 'Miniatürk' } } },
 ];
-// the place each task family belongs to (its landmark and its scene)
+// the place each task family belongs to in Arena 1 (the stages' own `places` say it for each arena)
 export const PLACE_OF = { answer: 'Boulevard Park', sort: 'Archery Ground', match: 'Kızılay Square', build: 'Sururi Park', listen: 'The Pier' };
 // the place's id (its scene on the sled ride, render/cinema.js)
 export const PLACE_ID = { answer: 'boulevard', sort: 'archery', match: 'kizilay', build: 'sururi', listen: 'pier' };

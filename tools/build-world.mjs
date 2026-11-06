@@ -37,6 +37,10 @@ const CORE = 3, CORE_R = 3.1, RING_R = 4.6; // the carousel: a round solid core 
 const PLACES = [
   { id: 'kasimpasa', family: 'match', label: 'Kasımpaşa', landmark: 'carousel', back: 6, trees: 'TxvT', stalls: ['chestnut', 'simit', 'cay', 'salep'],
     seats: ['treehouse', 'archers-lodge', 'fountain', 'snow-castle', 'admiral'] },
+  // Arena 2: the Golden Horn (Haliç): a model of the Golden Horn with the great chain across its
+  // mouth, the places along its shores; the frozen water itself lies north of the field
+  { id: 'golden-horn', family: 'match', label: 'The Golden Horn', landmark: 'golden-horn', back: 6, trees: 'xTxv', stalls: ['fish', 'simit', 'cay', 'chestnut'], sea: true,
+    seats: ['karakoy', 'bankalar', 'tersane', 'aynalikavak', 'miniaturk'] },
 ];
 
 // Field layouts: [kind, d0, d1, v0, v1] covers the cells whose centres have d0 ≤ d ≤ d1 (rows
@@ -54,6 +58,15 @@ const ARENAS = {
     ['#', 11.5, 11.5, 6.5, 7.5],
     ['w', 9.5, 9.5, 1.5, 2.5], ['#', 6.5, 7.5, 8.5, 8.5], ['B', 4.5, 6.5, 9.5, 10.5], // the rival line
     ['z', 5.5, 5.5, 4.5, 4.5],                                         // crates at the corners of the plaza
+  ],
+  'golden-horn': [ // the quay: cargo crates, mooring barricades, wide ice, stone bollards
+    ['z', 23.5, 23.5, 2.5, 4.5], ['B', 25.5, 27.5, 9.5, 10.5],          // crates shielding the spawn, corner bushes
+    ['i', 19.5, 21.5, 4.5, 8.5],                                       // a wide icy patch each side
+    ['z', 17.5, 18.5, 0.5, 0.5],                                       // a crate stack in the middle lane
+    ['w', 15.5, 15.5, 7.5, 10.5],                                      // a mooring barricade from each edge
+    ['#', 12.5, 13.5, 2.5, 3.5],                                       // stone bollard blocks
+    ['i', 10.5, 11.5, 0.5, 1.5],
+    ['z', 9.5, 9.5, 5.5, 6.5], ['#', 6.5, 7.5, 8.5, 8.5], ['B', 4.5, 6.5, 9.5, 10.5], // the rival line
   ],
 };
 

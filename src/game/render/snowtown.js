@@ -626,6 +626,101 @@ export function buildSnowtown(ctx) {
       for (const s of [-0.45, 0.45]) K.add(new CylinderGeometry(0.05, 0.05, 1.5, 6), M('metal', '#4f6fa8'), x + s, 0.75, z);
       K.add(new CylinderGeometry(0.05, 0.05, 1.0, 6), M('metal', '#4f6fa8'), x, 1.5, z, 0, 0, Math.PI / 2); K.add(new CapsuleGeometry(0.06, 0.9, 3, 6), mSnow, x, 1.58, z, 0, 0, Math.PI / 2);
       for (const s of [-0.2, 0.2]) K.add(rbox(0.25, 0.12, 0.04, 0.01), mWood, x + s, 0.45, z);
+    } else if (lm.type === 'karakoy') { // KARAKÖY BRIDGE AND PIER: a stretch of the bridge on stone piers with its row of fishermen's rods, the ferry pier below, a ferry at the quay
+      const [x, z] = centre(lm), deck = M('stone', '#a9a5bd'), rail = M('metal', '#3d4a6b'), pierStone = M('stone', '#8f93ac'), ice = M('glow', '#a9cbea'), rod = M('wood', '#3a3036'), line = M('glow', '#f2eff6');
+      const cream = M('plaster', '#f3e9d8'), trim = M('wood', '#3f5f9a'), roofM = M('shingle', '#5d6f9e');
+      K.add(rbox(4.6, 4.4, 0.06, 0.02), ice, x, 0.01, z); // the frozen water under it all
+      const bz = z - 1.15;
+      for (const px of [-1.65, 0, 1.65]) { K.add(rbox(0.5, 1.0, 1.32, 0.06), pierStone, x + px, 0, bz); K.add(GEO.snowCap, mSnow, x + px, 0.04, bz + 0.5, 0, 0, 0, 0.5, 0.18, 0.3); }
+      K.add(rbox(4.7, 1.35, 0.3, 0.05), deck, x, 1.32, bz); K.add(rbox(4.65, 1.3, 0.1, 0.05), mSnow, x, 1.6, bz);
+      for (const s2 of [-0.62, 0.62]) { K.add(rbox(4.7, 0.06, 0.07, 0.02), rail, x, 2.02, bz + s2); for (let k = 0; k < 9; k++) K.add(new CylinderGeometry(0.025, 0.025, 0.42, 6), rail, x - 2.25 + k * 0.56, 1.82, bz + s2); }
+      for (const px of [-1.85, 1.85]) { K.add(new CylinderGeometry(0.04, 0.055, 1.35, 8), rail, x + px, 2.3, bz + 0.6); lantern(x + px, 2.95, bz + 0.6); }
+      for (let k = 0; k < 7; k++) { // the fishermen's rods leaning out over the front rail, lines down to the ice
+        const rx = x - 1.95 + k * 0.65 + (k % 2) * 0.08, lean = 0.75 + (k % 3) * 0.12;
+        K.add(new CylinderGeometry(0.012, 0.022, 1.7, 5), rod, rx, 2.0, bz + 0.62, lean);
+        const tipY = 2.0 + 0.85 * Math.cos(lean), tipZ = bz + 0.62 + 0.85 * Math.sin(lean);
+        K.add(new CylinderGeometry(0.004, 0.004, tipY - 0.05, 3), line, rx, tipY / 2 + 0.02, tipZ);
+        if (k % 2 === 0) K.add(new CylinderGeometry(0.07, 0.06, 0.16, 8), M('plaster', '#d9443a'), rx + 0.12, 1.72, bz + 0.45); // a bucket by the rod
+      }
+      const px = x + 1.05, pz = z + 1.05; // the ferry pier: a little wooden hall with a deep roof, a clock and warm windows
+      K.add(rbox(2.1, 1.7, 0.18, 0.04), mWood, px, 0.05, pz); K.add(rbox(1.45, 1.1, 1.0, 0.05), cream, px, 0.23, pz);
+      { const r2 = new ConeGeometry(1.3, 0.7, 4); r2.rotateY(Math.PI / 4); r2.scale(1, 1, 0.8); K.add(r2, roofM, px, 1.58, pz); const s3 = new ConeGeometry(1.2, 0.62, 4); s3.rotateY(Math.PI / 4); s3.scale(1, 1, 0.8); K.add(s3, mSnow, px, 1.68, pz); }
+      K.add(new CircleGeometry(0.17, 16), M('glow', '#fff8e6'), px, 1.0, pz + 0.565); K.add(new TorusGeometry(0.17, 0.03, 5, 16), trim, px, 1.0, pz + 0.565);
+      for (const s2 of [-0.45, 0.45]) K.add(new PlaneGeometry(0.3, 0.36), mGlass, px + s2, 0.62, pz + 0.56);
+      const fx = x - 1.05, fz = z + 1.25; // a ferry at the quay: navy hull, white cabin, warm windows, a yellow funnel
+      K.add(rbox(2.1, 0.85, 0.42, 0.16), M('wood', '#2f3b63'), fx, 0.04, fz); K.add(rbox(1.6, 0.7, 0.42, 0.06), M('plaster', '#f6f3f8'), fx, 0.46, fz); K.add(rbox(1.65, 0.75, 0.06, 0.02), mSnow, fx, 0.88, fz);
+      for (let k = 0; k < 4; k++) K.add(new PlaneGeometry(0.22, 0.18), mGlass, fx - 0.55 + k * 0.37, 0.68, fz + 0.356);
+      K.add(new CylinderGeometry(0.1, 0.12, 0.42, 10), M('plaster', '#f2c14e'), fx + 0.4, 1.1, fz); K.add(new TorusGeometry(0.16, 0.04, 6, 12), M('plaster', '#e8584a'), fx - 0.75, 0.62, fz + 0.37);
+      smokeSources.push([fx + 0.4, 1.35, fz]);
+      const sg = sign('Karaköy', 1.4); sg.position.set(px, 2.15, pz + 0.62); group.add(sg);
+      flagAt(lm.outpost, x - 2.2, 3.05, bz - 0.6); lights.push([x, 2.6, bz + 0.6]); life.perches.push([x + 1.4, 2.08, bz + 0.62], [px, 1.95, pz]);
+    } else if (lm.type === 'bankalar') { // BANKALAR CADDESİ: the street of grand old banks; the great stone bank building at its heart (today a library and gallery)
+      const [x, z] = centre(lm), stone = M('stone', '#e6ddd0'), stoneD = M('stone', '#b9ae9e'), rust = M('stone', '#cfc4b2'), bronze = M('metal', '#8a6a3a'), W = 4.2, D = 2.5, bz = z - 0.5, fz = bz + D / 2;
+      K.add(rbox(4.7, 3.6, 0.16, 0.04), mStone, x, 0, z + 0.1);
+      K.add(rbox(W, D, 1.3, 0.05), rust, x, 0.16, bz); for (let k = 0; k < 5; k++) K.add(rbox(W + 0.02, D + 0.02, 0.035, 0.01), stoneD, x, 0.36 + k * 0.22, bz); // the rusticated ground floor
+      K.add(rbox(W + 0.25, D + 0.25, 0.18, 0.04), stoneD, x, 1.44, bz);
+      K.add(rbox(W - 0.1, D - 0.1, 1.85, 0.05), stone, x, 1.6, bz);
+      K.add(rbox(W + 0.35, D + 0.35, 0.22, 0.05), stoneD, x, 3.42, bz); K.add(rbox(W + 0.3, D + 0.3, 0.12, 0.05), mSnow, x, 3.64, bz);
+      for (let k = 0; k < 13; k++) K.add(new CylinderGeometry(0.04, 0.05, 0.26, 6), stone, x - 1.92 + k * 0.32, 3.9, fz + 0.12); K.add(rbox(W + 0.2, 0.14, 0.08, 0.02), stone, x, 4.02, fz + 0.12); K.add(rbox(W + 0.2, 0.18, 0.08, 0.03), mSnow, x, 4.1, fz + 0.12);
+      K.add(prism(1.9, 0.3, 0.55), stone, x, 3.64, fz - 0.02); K.add(prism(2.0, 0.34, 0.2), mSnow, x, 4.0, fz - 0.02);
+      for (let k = 0; k < 6; k++) { const cx = x - 1.75 + k * 0.7; K.add(new CylinderGeometry(0.09, 0.1, 1.7, 12), stone, cx, 2.48, fz + 0.1); K.add(rbox(0.26, 0.26, 0.1, 0.02), stoneD, cx, 3.32, fz + 0.1); K.add(rbox(0.24, 0.24, 0.1, 0.02), stoneD, cx, 1.62, fz + 0.1); }
+      for (let k = 0; k < 5; k++) { const wx = x - 1.4 + k * 0.7; for (const wy of [2.0, 2.8]) { K.add(new PlaneGeometry(0.3, 0.46), mGlass, wx, wy, fz + 0.01); K.add(new CircleGeometry(0.15, 12, 0, Math.PI), mGlass, wx, wy + 0.23, fz + 0.011); } }
+      for (const k of [-2, -1, 1, 2]) { const wx = x + k * 0.72; K.add(new PlaneGeometry(0.34, 0.55), mGlass, wx, 0.72, fz + 0.01); K.add(new TorusGeometry(0.2, 0.05, 5, 12, Math.PI), stoneD, wx, 1.0, fz + 0.03); }
+      K.add(rbox(0.72, 0.1, 0.92, 0.03), bronze, x, 0.16, fz + 0.03); K.add(new TorusGeometry(0.36, 0.07, 6, 14, Math.PI), stoneD, x, 1.08, fz + 0.05); K.add(new CircleGeometry(0.34, 14, 0, Math.PI), M('glow', '#ffcf7a'), x, 1.08, fz + 0.04); // the great bronze door
+      for (let k = 0; k < 2; k++) K.add(rbox(1.5 - k * 0.3, 0.42, 0.08, 0.02), stoneD, x, k * 0.08, fz + 0.3 - k * 0.1);
+      for (const s2 of [-1, 1]) { K.add(new CylinderGeometry(0.045, 0.06, 1.4, 8), M('metal', '#2b3556'), x + s2 * 1.25, 0.7, fz + 0.55); lantern(x + s2 * 1.25, 1.45, fz + 0.55, s2 < 0); }
+      const sg = sign('Bankalar Caddesi', 1.8); sg.position.set(x, 1.28, fz + 0.12); group.add(sg);
+      flagAt(lm.outpost, x, 4.95, bz); lights.push([x, 1.0, fz + 0.9]); life.perches.push([x - 1.8, 4.1, fz + 0.12], [x + 1.8, 4.1, fz + 0.12], [x, 4.25, fz]);
+    } else if (lm.type === 'tersane') { // TERSANE İSTANBUL: the old shipyard on the water: a restored brick workshop with tall arched windows and its chimney, a dry dock with a ship, a crane, and the new open-air promenade: glass canopies, café terraces, lit shop fronts
+      const [x, z] = centre(lm), brick = M('stone', '#b8735a'), brickD = M('stone', '#8f5644'), slate = M('metal', '#5d6f9e'), stoneL = M('stone', '#e6ddd0'), yellow = M('metal', '#e8a10a'), glassC = M('glow', '#d6ecff', { transparent: true, opacity: 0.42, depthWrite: false });
+      const wx0 = x - 0.85, wz0 = z - 1.15; // the workshop
+      K.add(rbox(2.7, 1.5, 1.65, 0.05), brick, wx0, 0, wz0);
+      { const r2 = prism(1.75, 2.85, 0.62); r2.rotateY(Math.PI / 2); K.add(r2, slate, wx0, 1.65, wz0); const s3 = prism(1.6, 2.8, 0.56); s3.rotateY(Math.PI / 2); K.add(s3, mSnow, wx0, 1.72, wz0); }
+      for (let k = 0; k < 4; k++) { const ax = wx0 - 1.0 + k * 0.66; K.add(new PlaneGeometry(0.32, 0.78), mGlass, ax, 0.72, wz0 + 0.756); K.add(new CircleGeometry(0.16, 12, 0, Math.PI), mGlass, ax, 1.11, wz0 + 0.757); K.add(new TorusGeometry(0.17, 0.04, 5, 12, Math.PI), stoneL, ax, 1.11, wz0 + 0.77); }
+      K.add(new CylinderGeometry(0.15, 0.2, 2.7, 12), brickD, wx0 - 1.15, 1.35, wz0 - 0.5); K.add(new CylinderGeometry(0.2, 0.2, 0.12, 12), stoneL, wx0 - 1.15, 2.72, wz0 - 0.5); smokeSources.push([wx0 - 1.15, 2.85, wz0 - 0.5]);
+      const dx = x + 1.3, dz = z - 0.75; // the dry dock and a ship standing in it
+      K.add(rbox(1.5, 2.5, 0.28, 0.05), stoneL, dx, 0, dz); K.add(rbox(1.2, 2.2, 0.04, 0.02), M('stone', '#59607e'), dx, 0.27, dz);
+      for (const s2 of [-0.6, 0.6]) K.add(rbox(0.16, 0.16, 0.22, 0.02), mWood, dx, 0.3, dz + s2);
+      K.add(rbox(0.72, 1.9, 0.5, 0.18), M('plaster', '#c8443c'), dx, 0.5, dz); K.add(rbox(0.78, 1.95, 0.32, 0.1), M('wood', '#2f3b63'), dx, 0.98, dz); K.add(rbox(0.74, 1.9, 0.05, 0.02), mSnow, dx, 1.3, dz);
+      K.add(rbox(0.46, 0.7, 0.36, 0.05), M('plaster', '#f6f3f8'), dx, 1.32, dz + 0.25); K.add(new CylinderGeometry(0.03, 0.04, 1.3, 6), mWood, dx, 1.95, dz - 0.3);
+      const cx = x + 2.05, cz2 = z - 1.95; // a shipyard crane
+      K.add(rbox(0.32, 0.32, 3.3, 0.03), yellow, cx, 0, cz2); for (let k = 0; k < 6; k++) K.add(rbox(0.36, 0.36, 0.04, 0.01), M('metal', '#2b3556'), cx, 0.4 + k * 0.5, cz2);
+      K.add(rbox(0.42, 0.42, 0.35, 0.04), M('metal', '#3d4a6b'), cx, 3.3, cz2); K.add(rbox(2.6, 0.16, 0.16, 0.03), yellow, cx - 1.05, 3.55, cz2); K.add(rbox(0.7, 0.16, 0.16, 0.03), yellow, cx + 0.5, 3.55, cz2); K.add(rbox(0.3, 0.3, 0.3, 0.03), M('stone', '#6b6f86'), cx + 0.7, 3.4, cz2);
+      K.add(new CylinderGeometry(0.01, 0.01, 1.4, 4), M('metal', '#2b3556'), cx - 2.0, 2.85, cz2); K.add(new TorusGeometry(0.07, 0.02, 4, 10), M('metal', '#2b3556'), cx - 2.0, 2.12, cz2);
+      const pz = z + 1.35; // the promenade: a glass canopy on slim posts, a shop front, a café terrace, string lights
+      for (const px of [-1.9, -0.65, 0.6, 1.85]) K.add(new CylinderGeometry(0.035, 0.035, 1.6, 6), M('metal', '#3d4a6b'), x + px, 0.8, pz + 0.4);
+      K.add(rbox(4.1, 1.15, 0.05, 0.02), glassC, x, 1.6, pz); K.add(rbox(4.15, 0.06, 0.06, 0.01), M('metal', '#3d4a6b'), x, 1.6, pz + 0.57);
+      K.add(rbox(3.2, 0.5, 0.05, 0.02), mSnow, x - 0.2, 1.66, pz - 0.2);
+      K.add(rbox(1.6, 0.6, 1.0, 0.03), M('metal', '#2b3556'), x - 1.05, 0, pz - 0.1); K.add(new PlaneGeometry(1.45, 0.82), M('glow', '#ffd98a'), x - 1.05, 0.5, pz + 0.205); K.add(rbox(1.62, 0.1, 0.08, 0.02), M('plaster', '#e8584a'), x - 1.05, 0.98, pz + 0.22);
+      for (const [tx, tz] of [[0.45, 0.1], [1.1, 0.35], [1.7, 0.05]]) { K.add(new CylinderGeometry(0.16, 0.16, 0.04, 12), M('plaster', '#f6f3f8'), x + tx, 0.52, pz + tz); K.add(new CylinderGeometry(0.025, 0.025, 0.5, 6), M('metal', '#3d4a6b'), x + tx, 0.26, pz + tz); for (const s2 of [-0.24, 0.24]) K.add(rbox(0.14, 0.14, 0.3, 0.02), mWood, x + tx + s2, 0, pz + tz); }
+      for (let k = 0; k < 9; k++) glows.push([x - 2.0 + k * 0.5, 1.48 - Math.sin(k / 8 * Math.PI) * 0.08, pz + 0.6, 0.35]);
+      const sg = sign('Tersane İstanbul', 1.8); sg.position.set(x, 1.86, pz + 0.6); group.add(sg);
+      flagAt(lm.outpost, wx0 + 0.6, 3.6, wz0); lights.push([x - 1.05, 0.8, pz + 0.7]); life.perches.push([wx0, 2.3, wz0], [cx - 1.8, 3.65, cz2], [dx, 1.35, dz - 0.6]);
+    } else if (lm.type === 'aynalikavak') { // AYNALIKAVAK PAVILION: an Ottoman waterside pavilion on a stone base, wide eaves, rows of mirror-bright windows, cypresses and a pool in the garden
+      const [x, z] = centre(lm), white = M('plaster', '#f6f1e6'), trimW = M('wood', '#8a5a3c'), roofM = M('shingle', '#7a6f9e'), stone = M('stone', '#bdb4c8'), mirror = M('glow', '#dcefff'), bz = z - 0.55, fz = bz + 1.1;
+      K.add(rbox(3.7, 2.7, 0.56, 0.05), stone, x, 0, bz); K.add(rbox(3.25, 2.25, 1.22, 0.04), white, x, 0.56, bz);
+      for (let k = 0; k < 7; k++) for (const wy of [0.92, 1.38]) { const wx = x - 1.35 + k * 0.45; K.add(rbox(0.34, 0.04, 0.42, 0.01), trimW, wx, wy - 0.21, fz + 0.01); K.add(new PlaneGeometry(0.26, 0.34), mirror, wx, wy, fz + 0.04); }
+      for (const s2 of [-1, 1]) for (let k = 0; k < 4; k++) { const wz = bz - 0.75 + k * 0.5; K.add(new PlaneGeometry(0.26, 0.34), mirror, x + s2 * 1.63, 1.15, wz, 0, s2 * Math.PI / 2); }
+      K.add(rbox(4.3, 3.3, 0.12, 0.04), trimW, x, 1.76, bz);
+      { const r2 = new ConeGeometry(2.65, 0.85, 4); r2.rotateY(Math.PI / 4); r2.scale(1, 1, 0.72); K.add(r2, roofM, x, 2.3, bz); const s3 = new ConeGeometry(2.4, 0.74, 4); s3.rotateY(Math.PI / 4); s3.scale(1, 1, 0.72); K.add(s3, mSnow, x, 2.4, bz); }
+      K.add(new SphereGeometry(0.08, 8, 6), M('glow', '#e8b84a'), x, 2.78, bz);
+      for (let k = 0; k < 3; k++) K.add(rbox(1.1 - k * 0.12, 0.3, 0.18, 0.02), stone, x, k * 0.18, fz + 0.5 - k * 0.22);
+      K.add(rbox(1.7, 0.85, 0.14, 0.05), stone, x, 0, z + 1.55); K.add(rbox(1.5, 0.65, 0.02, 0.01), M('glow', '#a9d6ff'), x, 0.14, z + 1.55); K.add(new CylinderGeometry(0.05, 0.08, 0.3, 8), stone, x, 0.24, z + 1.55);
+      for (const [cx, cz] of [[-1.95, 1.35], [1.95, 1.35], [-2.0, -1.6], [2.0, -1.6]]) { K.add(new CylinderGeometry(0.03, 0.34, 2.0, 8), M('plaster', '#2f5a4a'), x + cx, 1.05, z + cz); K.add(new ConeGeometry(0.12, 0.3, 8), mSnow, x + cx, 2.0, z + cz); }
+      for (const s2 of [-1, 1]) { K.add(new CylinderGeometry(0.035, 0.045, 0.7, 8), M('metal', '#2b3556'), x + s2 * 0.75, 0.35, fz + 0.95); lantern(x + s2 * 0.75, 0.72, fz + 0.95, s2 < 0); } // lamps on posts at the foot of the steps
+      const sg = sign('Aynalıkavak Pavilion', 1.9); sg.position.set(x, 0.3, fz + 0.18); group.add(sg);
+      flagAt(lm.outpost, x, 3.95, bz); lights.push([x, 1.3, fz + 1.0]); life.perches.push([x - 1.5, 2.0, bz], [x + 1.5, 2.0, bz]);
+    } else if (lm.type === 'miniaturk') { // MİNİATÜRK: the park of little models on snowy lawns: an old stone tower, a tower on a rock in the sea, a clock tower, a little bridge over a stream, and the big sign
+      const [x, z] = centre(lm), hedge = M('plaster', '#3f7a5a'), stone = M('stone', '#d9cfc3'), stoneD = M('stone', '#9a8f86'), slate = M('metal', '#5d5f86'), water = M('glow', '#9fc8ec'), white = M('plaster', '#f6f3f8');
+      K.add(rbox(4.5, 4.1, 0.16, 0.06), mSnow, x, 0, z); for (const [hx, hz, hw, hd] of [[0, -2.0, 4.5, 0.18], [-2.2, 0, 0.18, 4.1], [2.2, 0, 0.18, 4.1]]) K.add(rbox(hw, hd, 0.32, 0.05), hedge, x + hx, 0.1, z + hz);
+      K.add(rbox(0.6, 4.0, 0.03, 0.01), M('stone', '#b3adc6'), x + 0.15, 0.16, z);
+      { const tx = x + 1.35, tz = z - 1.25; K.add(new CylinderGeometry(0.24, 0.28, 1.2, 14), stone, tx, 0.76, tz); K.add(new TorusGeometry(0.29, 0.04, 5, 16), stoneD, tx, 1.36, tz, Math.PI / 2); K.add(new CylinderGeometry(0.25, 0.25, 0.2, 14), stone, tx, 1.48, tz); K.add(new ConeGeometry(0.29, 0.5, 14), slate, tx, 1.83, tz); K.add(new ConeGeometry(0.25, 0.16, 14), mSnow, tx, 1.68, tz); for (let k = 0; k < 6; k++) { const a = k / 6 * 6.28; K.add(new PlaneGeometry(0.06, 0.12), mGlass, tx + Math.sin(a) * 0.255, 1.48, tz + Math.cos(a) * 0.255, 0, a); } }
+      { const tx = x - 1.3, tz = z - 1.2; K.add(new CylinderGeometry(0.62, 0.62, 0.06, 20), water, tx, 0.18, tz); K.add(new SphereGeometry(0.28, 10, 6, 0, 6.29, 0, Math.PI / 2), stoneD, tx, 0.2, tz); K.add(rbox(0.36, 0.28, 0.24, 0.02), white, tx - 0.05, 0.36, tz); K.add(new CylinderGeometry(0.08, 0.1, 0.5, 10), white, tx + 0.12, 0.6, tz); K.add(new ConeGeometry(0.11, 0.2, 10), slate, tx + 0.12, 0.95, tz); }
+      { const tx = x - 1.35, tz = z + 0.75; K.add(rbox(0.36, 0.36, 0.55, 0.02), stone, tx, 0.16, tz); K.add(rbox(0.3, 0.3, 0.45, 0.02), stone, tx, 0.71, tz); K.add(rbox(0.24, 0.24, 0.3, 0.02), stone, tx, 1.16, tz); K.add(new SphereGeometry(0.12, 10, 6, 0, 6.29, 0, Math.PI / 2), slate, tx, 1.46, tz); for (const [a, b] of [[0, 0.151], [0.151, 0], [0, -0.151], [-0.151, 0]]) K.add(new CircleGeometry(0.07, 12), M('glow', '#fff8e6'), tx + a, 0.93, tz + b, 0, Math.atan2(a, b)); }
+      { const tx = x + 1.3, tz = z + 0.85; K.add(rbox(1.4, 0.32, 0.03, 0.01), water, tx, 0.17, tz); for (const s2 of [-0.5, 0.5]) { K.add(rbox(0.07, 0.07, 0.72, 0.01), M('metal', '#c8443c'), tx + s2, 0.17, tz - 0.1); K.add(rbox(0.07, 0.07, 0.72, 0.01), M('metal', '#c8443c'), tx + s2, 0.17, tz + 0.1); } K.add(rbox(1.5, 0.28, 0.05, 0.01), M('metal', '#5d6b8f'), tx, 0.34, tz); for (const s2 of [-1, 1]) K.add(new CylinderGeometry(0.008, 0.008, 0.62, 3), M('glow', '#e8e4ee'), tx + s2 * 0.28, 0.6, tz, 0, 0, s2 * 1.0); }
+      for (const s2 of [-1, 1]) K.add(rbox(0.1, 0.1, 2.2, 0.02), mWood, x + 0.15 + s2 * 0.85, 0, z - 1.85);
+      const sg = sign('Miniatürk', 1.7, '#7a1f1f'); sg.position.set(x + 0.15, 1.95, z - 1.8); group.add(sg); lantern(x - 0.7, 2.35, z - 1.85); lantern(x + 1.0, 2.35, z - 1.85); // the big sign at the back, over the models
+      flagAt(lm.outpost, x - 1.95, 2.3, z - 1.85); lights.push([x, 1.4, z + 1.6]); life.perches.push([x + 1.35, 2.1, z - 1.25], [x - 1.35, 1.6, z + 0.75]);
     } else if (lm.type === 'giant-snowman') { // the builders' project: a giant snowman with a ladder
       const [x, z] = centre(lm);
       K.add(new SphereGeometry(1.0, 16, 12), mSnow, x, 0.85, z); K.add(new SphereGeometry(0.72, 16, 12), mSnow, x, 2.2, z); K.add(new SphereGeometry(0.5, 16, 12), mSnow, x, 3.2, z);
@@ -636,7 +731,7 @@ export function buildSnowtown(ctx) {
       shovel(x - 1.1, z + 0.4, 0.4); barrel(x + 1.3, z - 0.6);
     }
   };
-  for (const lm of arena.landmarks) if (lm.type !== 'carousel') landmarkBody(lm);
+  for (const lm of arena.landmarks) if (lm.type !== 'carousel' && lm.type !== 'golden-horn') landmarkBody(lm);
 
   // ---------- the carousel outpost (Kasımpaşa) ----------
   // A big wooden carousel: a ship's mast in the middle with an anchor and the KASIMPAŞA sign (the
@@ -645,15 +740,80 @@ export function buildSnowtown(ctx) {
   // and moved onto the deck (their pieces taken back out of the shared kit).
   const car = arena.landmarks.find(l => l.type === 'carousel');
   if (car && ctx.Kit) ctx.carousel = buildCarousel(car);
+  const horn = arena.landmarks.find(l => l.type === 'golden-horn');
+  if (horn && ctx.Kit) ctx.carousel = buildHorn(horn); // the same interface as the carousel (face, light, seatPos, …)
+  // ---------- the Golden Horn outpost (Arena 2) ----------
+  // A big stone table with a model of the Golden Horn: the frozen water curving inland from its
+  // mouth, the five places as miniatures along its shores in task order, a little ferry going up
+  // and down, and across the mouth the great chain between two stone towers (the Byzantines closed
+  // the Golden Horn with a chain). The ferry sails to the place being played; a place lights up in
+  // the team's colour when its task is done; with all five lit, the chain glows.
+  function buildHorn(lm) {
+    const [cx, cz] = centre(lm), root = new Group(); root.position.set(cx, 0, cz); group.add(root);
+    const R = 3.0, stone = M('stone', '#9a96b0'), stoneD = M('stone', '#7d7a96'), land = M('snow', '#f6f8ff'), iron = M('metal', '#3d4660');
+    const KB = new ctx.Kit();
+    KB.add(new CylinderGeometry(R + 0.15, R + 0.3, 0.3, 40), mStone, 0, 0.15, 0); KB.add(new TorusGeometry(R + 0.2, 0.09, 6, 40), mSnow, 0, 0.3, 0, Math.PI / 2);
+    KB.add(new CylinderGeometry(R, R, 0.12, 40), land, 0, 0.34, 0);
+    // the water: a horn-shaped band from the mouth (west) curving north-east and narrowing
+    const at2 = t => [-1.6 + 3.6 * t + 0.5 * Math.sin(Math.PI * t), 1.7 - 3.4 * t], wid = t => 1.35 * (1 - t) + 0.28; // the mouth at the front left (towards the camera, with its chain), the water winding back inland
+    const pts = [], idx = [], N = 28;
+    for (let i = 0; i <= N; i++) { const t = i / N, [x, z] = at2(t), [x2, z2] = at2(Math.min(1, t + 0.01)), [x1, z1] = at2(Math.max(0, t - 0.01)), dx = x2 - x1, dz = z2 - z1, L = Math.hypot(dx, dz) || 1, nx = -dz / L, nz = dx / L, w = wid(t) / 2; pts.push(x + nx * w, 0.41, z + nz * w, x - nx * w, 0.41, z - nz * w); if (i < N) { const a = i * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); } }
+    const wg = new BufferGeometry(); wg.setAttribute('position', new Float32BufferAttribute(pts, 3)); wg.setIndex(idx); wg.computeVertexNormals();
+    KB.add(wg, M('glow', '#86b6e6'), 0, 0, 0);
+    for (let k = 0; k < 9; k++) { const t = 0.08 + k * 0.1, [x, z] = at2(t); KB.add(new CylinderGeometry(0.1 + (k % 3) * 0.04, 0.12, 0.03, 7), M('glow', '#e6f3ff'), x + ((k % 2) - 0.5) * 0.3 * wid(t), 0.43, z); } // ice floes
+    // the great chain across the mouth, hanging between two stone towers
+    const [mx, mz] = at2(0), [m2x, m2z] = at2(0.02), mL = Math.hypot(m2x - mx, m2z - mz), nX = -(m2z - mz) / mL, nZ = (m2x - mx) / mL, half = wid(0) / 2 + 0.3;
+    const tA = [mx + nX * half, mz + nZ * half], tB = [mx - nX * half, mz - nZ * half];
+    for (const [tx, tz] of [tA, tB]) { KB.add(new CylinderGeometry(0.34, 0.42, 2.1, 14), stone, tx, 1.4, tz); for (let k = 0; k < 7; k++) { const a = k / 7 * Math.PI * 2; KB.add(rbox(0.16, 0.16, 0.2, 0.02), stone, tx + Math.sin(a) * 0.32, 2.45, tz + Math.cos(a) * 0.32); } KB.add(new ConeGeometry(0.3, 0.24, 14), mSnow, tx, 2.58, tz); KB.add(new TorusGeometry(0.38, 0.05, 6, 16), stoneD, tx, 2.0, tz, Math.PI / 2); KB.add(new TorusGeometry(0.2, 0.06, 6, 12), M('metal', '#4a4f66'), tx, 2.05, tz + 0.02); }
+    const chainM = M('metal', '#4a4f66'), linkV = new TorusGeometry(0.2, 0.07, 8, 14), linkH = new TorusGeometry(0.2, 0.07, 8, 14); linkV.scale(1.55, 1, 1); linkH.scale(1.55, 1, 1); linkH.rotateX(Math.PI / 2);
+    const chain = new Group(); root.add(chain); const links = [], LN = 7, ry = Math.atan2(-(tB[1] - tA[1]), tB[0] - tA[0]);
+    for (let k = 0; k < LN; k++) { const u = (k + 0.5) / LN, x = tA[0] + (tB[0] - tA[0]) * u, z = tA[1] + (tB[1] - tA[1]) * u, y = 2.05 - Math.sin(u * Math.PI) * 1.2, slope = -Math.cos(u * Math.PI) * 1.2 * Math.PI / (Math.hypot(tB[0] - tA[0], tB[1] - tA[1])), m = new Mesh(k % 2 ? linkH : linkV, chainM); m.position.set(x, y, z); m.rotation.set(0, ry, Math.atan(slope)); m.castShadow = true; chain.add(m); links.push(m); }
+    // a sign at the front of the table
+    for (const s2 of [-1, 1]) KB.add(new CylinderGeometry(0.05, 0.05, 0.7, 6), mWood, 1.1 + s2 * 0.95, 0.35, R + 0.35);
+    const still = new Group(); KB.build(still, true); root.add(still);
+    const sg = sign('HALİÇ · The Golden Horn', 2.4, '#7a1f1f'); sg.position.set(1.1, 0.62, R + 0.38); sg.rotation.x = -0.45; root.add(sg);
+    flagAt(lm.outpost, cx + tA[0], 3.4, cz + tA[1]); // the outpost's flag on the north tower
+    lights.push([cx, 1.6, cz + 1.4]); glows.push([cx + tA[0], 2.0, cz + tA[1], 0.8], [cx + tB[0], 2.0, cz + tB[1], 0.8]);
+    // the five places along the shores, in task order, alternating north and south bank, facing the front
+    const T5 = [0.2, 0.36, 0.53, 0.7, 0.88], seats = (lm.seats || []).map((type, k) => {
+      const t = T5[k] ?? (k + 0.5) / lm.seats.length, [x, z] = at2(t), [x2, z2] = at2(Math.min(1, t + 0.01)), L = Math.hypot(x2 - x, z2 - z) || 1, side = k % 2 ? 1 : -1, off = wid(t) / 2 + 0.62;
+      let sx = x + (-(z2 - z) / L) * off * side, sz = z + ((x2 - x) / L) * off * side; const r = Math.hypot(sx, sz); if (r > R - 0.65) { sx *= (R - 0.65) / r; sz *= (R - 0.65) / r; }
+      const seat = new Group(); seat.position.set(sx, 0.4, sz); root.add(seat);
+      const { g, flag } = miniature(type, 20 + k); g.scale.setScalar(0.27); seat.add(g);
+      const glowM = new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0, depthWrite: false, blending: AdditiveBlending });
+      const pad = new Mesh(new CircleGeometry(0.72, 24), glowM); pad.rotation.x = -Math.PI / 2; pad.position.y = 0.03; seat.add(pad);
+      return { type, seat, t, flag, glowM, lit: null, x: sx, z: sz };
+    });
+    // the ferry: a little white boat going up and down the water
+    const ferry = new Group(); root.add(ferry);
+    { const hull = new Mesh(new BoxGeometry(0.42, 0.1, 0.18), M('wood', '#2f3b63')); hull.position.y = 0.47; const cab = new Mesh(new BoxGeometry(0.3, 0.1, 0.14), M('plaster', '#f6f3f8')); cab.position.y = 0.57; const fun = new Mesh(new CylinderGeometry(0.03, 0.035, 0.1, 8), M('plaster', '#f2c14e')); fun.position.set(0.05, 0.66, 0); ferry.add(hull, cab, fun); }
+    let ft = 0.4, dir = 1, want = null, rate = 0.06, t = 0, allLit = false;
+    return {
+      root, seats,
+      setRate(r) { rate = r * 0.4; },
+      seatPos(k) { const s2 = seats[k]; return s2 ? { x: cx + s2.x, z: cz + s2.z } : null; },
+      face(k) { const s2 = seats[k]; want = s2 ? s2.t : null; },
+      light(k, color) { const s2 = seats[k]; if (!s2) return; s2.lit = color; s2.flash = 1.6; s2.glowM.color.set(color); if (s2.flag) s2.flag.material.color.set(color); if (seats.every(q => q.lit)) { allLit = true; chainM.emissive?.set(color); if (chainM.emissiveIntensity !== undefined) chainM.emissiveIntensity = 0.5; } },
+      reset() { want = null; allLit = false; chainM.emissive?.set('#000000'); for (const s2 of seats) { s2.lit = null; s2.glowM.opacity = 0; if (s2.flag) s2.flag.material.color.set('#ffffff'); } },
+      tick(dt) {
+        t += dt;
+        if (want === null) { ft += dir * rate * dt; if (ft > 0.95) { ft = 0.95; dir = -1; } if (ft < 0.05) { ft = 0.05; dir = 1; } }
+        else ft += (want - ft) * Math.min(1, dt * 1.5);
+        const [x, z] = at2(ft), [x2, z2] = at2(Math.min(1, ft + 0.02)); ferry.position.set(x, Math.sin(t * 2) * 0.01, z); ferry.rotation.y = Math.atan2(-(z2 - z), x2 - x) + (want === null && dir < 0 ? Math.PI : 0);
+        for (const s2 of seats) { if (!s2.lit) continue; s2.flash = Math.max(0, (s2.flash || 0) - dt); s2.glowM.opacity = 0.55 + Math.sin(t * 3 + s2.t * 9) * 0.12 + s2.flash * 0.3; }
+        if (allLit) chain.children.forEach((m, k) => { m.position.y += Math.sin(t * 2 + k * 0.6) * 0.0006; });
+      },
+    };
+  }
   function miniature(type, k) {
     const snapS = new Map([...K.statics].map(([m, l]) => [m, l.length])), snapI = new Map([...K.inst].map(([key, v]) => [key, v.list.length]));
-    const nG = glows.length, nL = lights.length, nP = life.perches.length, nC = group.children.length;
+    const nG = glows.length, nL = lights.length, nP = life.perches.length, nC = group.children.length, nS = smokeSources.length;
     const far = { type, i: -400 - k * 12, j: -400, w: 4, h: 4, outpost: 'mini-' + type }, [fx, fz] = centre(far);
     landmarkBody(far);
     const K2 = new ctx.Kit(), back = new Matrix4().makeTranslation(-fx, 0, -fz);
     for (const [m, l] of K.statics) { const add = l.splice(snapS.get(m) || 0); if (add.length) { if (!K2.statics.has(m)) K2.statics.set(m, []); for (const g of add) K2.statics.get(m).push(g.translate(-fx, 0, -fz)); } }
     for (const [key, v] of K.inst) { const add = v.list.splice(snapI.get(key) || 0); if (add.length) K2.inst.set(key, { geo: v.geo, mat: v.mat, list: add.map(mx => mx.premultiply(back)) }); }
-    glows.splice(nG); lights.splice(nL); life.perches.splice(nP);
+    glows.splice(nG); lights.splice(nL); life.perches.splice(nP); smokeSources.splice(nS);
     const g = new Group(); K2.build(g, true);
     for (const o of group.children.splice(nC)) { o.position.x -= fx; o.position.z -= fz; o.parent = null; g.add(o); }
     return { g, flag: ctx.centreFlags.get(far.outpost) || null };

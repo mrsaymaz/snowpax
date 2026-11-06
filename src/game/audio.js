@@ -161,6 +161,8 @@ const TRACKS = {
     for (const [at, n, len] of ARCHERY_MELODY) if (at === k) { synth(t, hz(n), sp * len * 0.7, { type: 'sawtooth', gain: 0.06, attack: 0.004, release: 0.25, cutoff: 2200, dest }); synth(t, hz(n + 12), sp * len * 0.4, { type: 'triangle', gain: 0.02, attack: 0.004, release: 0.2, dest }); }
   } },
 };
+// the Golden Horn's places borrow the first arena's themes for now
+Object.assign(TRACKS, { karakoy: TRACKS.pier, bankalar: TRACKS.kizilay, tersane: TRACKS.sururi, aynalikavak: TRACKS.archery, miniaturk: TRACKS.boulevard });
 function schedule() {
   if (!ctx) return;
   const ahead = ctx.currentTime + 0.15;

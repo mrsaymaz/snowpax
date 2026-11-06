@@ -22,7 +22,7 @@ const FIGHT_MAX = 14; // seconds of the opening fight at most
 const FIELD_MAX = 45; // on a battlefield: beat the rival team, or after this long they run back to camp
 const FAMILY_NAME = Object.fromEntries(FAMILIES.map(f => [f.id, f.name]));
 const STAR = n => '★'.repeat(n) + '☆'.repeat(3 - n);
-const ICON = { kasimpasa: 'kizilay' };
+const ICON = { kasimpasa: 'kizilay', 'golden-horn': 'waterfront' };
 
 export class StageRunner {
   constructor({ match, flow, unit, unitProgress, save, writeSave, pace, rng, team, kit, reduceMotion, ui }) {
@@ -48,10 +48,11 @@ export class StageRunner {
     const nodes = STAGES.map((s, i) => {
       const open = isUnlocked(this.up, s.id), done = st[s.id]?.done, cls = done ? 'done' : open ? 'open' : 'locked';
       return `<button type="button" class="sm-node ${cls} ${next === s ? 'next' : ''}" data-id="${s.id}" style="--i:${i}" ${open ? '' : 'disabled'}>
-        <span class="sm-icon">${THEME_ICON[ICON[s.id]] || ''}</span><b>${i + 1}. ${esc(s.title)}</b><span class="sm-stars">${done ? STAR(st[s.id].stars) : open ? 'Play!' : '🔒'}</span></button>`;
+        <span class="sm-icon">${THEME_ICON[ICON[s.id]] || ''}</span><b>Arena ${s.arena || i + 1} · ${esc(s.title)}</b><span class="sm-stars">${done ? STAR(st[s.id].stars) : open ? 'Play!' : '🔒'}</span></button>`;
     }).join('');
-    $('#stagemap').innerHTML = `<div class="sm-card"><h2>Arena 1 · Kasımpaşa</h2><p class="sm-sub">${esc(this.unit.title)} · ★ ${totalStars(this.up)} of ${STAGES.length * 3}${acc !== null ? ` · Right first time ${acc}% (need ${Math.round(UNLOCK * 100)}%)` : ''}</p>
-      <div class="sm-path">${nodes}</div><p class="sm-tip">Sled into Kasımpaşa and take its outpost from the rival team: English at Boulevard Park, Archery Ground, Kızılay Square, Sururi Park and the Pier earns ❄ for boosts. You will need them for the Final Showdown!</p></div>`;
+    const tipOf = s => Object.values(s.places || {}).map(p => p.title), go = next || STAGES[0], places = tipOf(go);
+    $('#stagemap').innerHTML = `<div class="sm-card"><h2>Your arenas</h2><p class="sm-sub">${esc(this.unit.title)} · ★ ${totalStars(this.up)} of ${STAGES.length * 3}${acc !== null ? ` · Right first time ${acc}% (need ${Math.round(UNLOCK * 100)}%)` : ''}</p>
+      <div class="sm-path">${nodes}</div><p class="sm-tip">Sled into ${esc(go.title)} and take its outpost from the rival team: English at ${esc(places.slice(0, -1).join(', '))} and ${esc(places.at(-1) || '')} earns ❄ for boosts. You will need them for the Final Showdown!</p></div>`;
     $('#stagemap').hidden = false;
     $('#stagemap').onclick = e => { const b = e.target.closest('.sm-node'); if (b && !b.disabled) this.start(stageById(b.dataset.id)); };
   }
@@ -67,7 +68,7 @@ export class StageRunner {
     const spellPool = this.unit.words.filter(w => /^[a-z]{3,7}$/i.test(w.en)), spell = st.ride.spell && spellPool.length ? spellPool[Math.floor(this.rng() * spellPool.length)] : null;
     this.sled?.dispose();
     // the places on the way, in the order their tasks are played: a scene where the camera turns to each
-    const cinema = (st.parts || []).flatMap((fams, p) => fams.map(f => ({ id: PLACE_ID[f], title: PLACE_OF[f], task: FAMILY_NAME[f], part: p + 1 })));
+    const cinema = (st.parts || []).flatMap((fams, p) => fams.map(f => ({ id: st.places?.[f]?.id || PLACE_ID[f], title: st.places?.[f]?.title || PLACE_OF[f], task: FAMILY_NAME[f], part: p + 1 })));
     this.sled = new SledRun({ theme: st.ride.theme, seconds: st.ride.seconds, pace: this.pace, team: this.team, kit: this.kit, look: this.match.player.look, words, spell, lives: this.lives, rng: this.rng, first: this.ridesDone === 0, reduceMotion: this.reduceMotion, cinema,
       on: {
         cinema: e => this.cinema(e),
@@ -123,7 +124,7 @@ export class StageRunner {
     this.mode = 'outpost'; document.body.classList.remove('sledding'); $('#runhud').hidden = true; $('#hud').hidden = false;
     this.zone = z; this.tStand = 0; this.waveIdx = 0; this.waves = []; this.finalT = null; sim.activeZone = z;
     // longer fights with English inside them (fights.mjs): the stage's plan, two parts of English
-    this.plan = st.fights ? FIGHT_PLANS[st.fights] : null; z.parts = st.parts || null; z.perFamily = this.plan?.perFamily || null;
+    this.plan = st.fights ? FIGHT_PLANS[st.fights] : null; z.parts = st.parts || null; z.places = st.places || null; z.perFamily = this.plan?.perFamily || null;
     this.score = 0; this.hunt = null; this.huntT = 0; this.trickleT = 0; this.toldFrozen = false; this.showTries = 0;
     if (this.plan) { this.huntNext = this.plan.hunt.first; this.words = this.words || new WordHunt(this.unit, this.rng, this.plan.hunt.size); this.arm = new Armoury(this.plan.recruits); this.arm.earn(this.runFlakes); } // the sled ride's snowflakes come along
     // close the stage with snowbanks, find where the waves come in
@@ -166,7 +167,7 @@ export class StageRunner {
     // the finale of the ride in: the camera arrives at the carousel first, the rival team lined up in front of it
     const lineUp = this.plan && z.battlefield ? this.sim.chars.filter(c => c.side === 'rival' && c.role !== 'minion').slice(0, 3) : [];
     lineUp.forEach((c, k) => Object.assign(c, { benched: false, x: z.x + (k - 1) * 2.3, z: z.z + 6.4 + (k === 1 ? 0.5 : 0), face: 0, frozen: 0, thaw: 0, vx: 0, vz: 0, travel: null }));
-    const wait = this.ui.intro ? this.ui.intro(z, { title: st.title, kicker: 'Arena 1 · The outpost', line: `Welcome to ${st.title}! Let's take it back!`, onDone: () => { for (const c of lineUp) this.bench(c); } }) || 0 : 0;
+    const wait = this.ui.intro ? this.ui.intro(z, { title: st.title, kicker: `Arena ${st.arena || 1} · The outpost`, line: `Welcome to ${st.title}! Let's take it back!`, onDone: () => { for (const c of lineUp) this.bench(c); } }) || 0 : 0;
     this.introWait = wait;
     setTimeout(() => { if (this.mode === 'outpost') this.ui.banner(st.title.toUpperCase(), 'go', 1.6); }, wait);
     this.ui.hush?.(); // a calm arrival: nothing left over from the ride

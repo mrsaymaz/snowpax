@@ -42,9 +42,9 @@ test('a cocoa question is one choice from this unit; snowflake words come from t
   for (const w of words) assert.ok(unit.words.some(u => u.id === w.id && u.en === w.en && u.tr === w.tr));
 });
 
-test('the world has one cocoa cup and no loose snowflakes (snowflakes are rare: the sled ride\'s word snowflakes)', () => {
+test('the world has one cocoa cup per arena and no loose snowflakes (snowflakes are rare: the sled ride\'s word snowflakes)', () => {
   const kinds = def.pickups.map(p => p.kind);
-  assert.equal(kinds.filter(k => k === 'cocoa').length, 1);
+  assert.equal(kinds.filter(k => k === 'cocoa').length, def.outposts.length);
   assert.equal(kinds.filter(k => k === 'flake').length, 0);
 });
 

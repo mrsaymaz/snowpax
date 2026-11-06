@@ -264,6 +264,77 @@ const pier = vista({
   wide: [at(4, 10, 16), at(0, 1.5, -8)],
 });
 
+
+// ---------- Arena 2: up the Golden Horn, from a bright morning at its mouth to dusk at Miniatürk ----------
+// Karaköy Bridge and Pier (a clear blue morning, mist on the water): the bridge with its row of
+// fishermen's rods, the pier hall, ferries in the ice, the far shore.
+const karakoy = vista({
+  hood: { landmark: 'karakoy', seed: 61, flag: '#2d6fb5', sea: 11, trees: 'xTx', plazaR: 5, props: [
+    { type: 'ferry', i: CX - 12, j: 3, w: 5, h: 2, along: 'x' }, { type: 'ferry', i: CX + 7, j: 6, w: 5, h: 2, along: 'x' }, { type: 'pier', i: CX + 7, j: 9, w: 2, h: 3, along: 'z' },
+    { type: 'stall', kind: 'fish', i: CX - 10, j: CZ + 2, w: 2, h: 1 }, { type: 'stall', kind: 'simit', i: CX + 7, j: CZ + 2, w: 2, h: 1 }] },
+  light: { sun: '#fff1d6', intensity: 2.0, sky: '#e2ecff', ground: '#9a94c6', dir: [0.5, 0.5, -0.7], top: '#5a8ede', horizon: '#dbe8fb', far: '#a3b3d8', fog: '#d8e5f8' },
+  shots: [
+    move(0, 2.6, [at(-8, 1.6, 14), at(0, 2.2, -1)], [at(-4.5, 2.6, 9.5), at(0, 2.4, -1)]), // along the quay to the bridge and its rods
+    orbit(2.6, 5.0, { r: [10, 9], a: [-0.8, 0.5], y: [2.4, 3.4], look: [at(0, 2.0, -0.5), at(0, 2.2, -0.5)] }), // round the pier hall and the ferry
+    move(5.0, 7.2, [at(2, 5, 8), at(0, 1.2, -10)], [at(5, 12, 16), at(0, 0.8, -26)]), // up and out over the frozen water
+  ],
+  wide: [at(3, 9, 15), at(0, 1.5, -6)],
+});
+// Bankalar Caddesi (bright noon): the street of grand old banks, the great stone bank building at
+// its heart with its columns and bronze door, lamps, a simit and a tea stall, plane trees.
+const bankalar = vista({
+  hood: { landmark: 'bankalar', seed: 71, flag: '#7a1f1f', trees: 'TvTT', plazaR: 5, props: [
+    { type: 'plane-tree', i: CX - 9, j: CZ + 5, w: 2, h: 2 }, { type: 'plane-tree', i: CX + 7, j: CZ + 5, w: 2, h: 2 },
+    { type: 'stall', kind: 'simit', i: CX - 6, j: CZ + 4, w: 2, h: 1 }, { type: 'stall', kind: 'cay', i: CX + 4, j: CZ + 4, w: 2, h: 1 }] },
+  light: { sun: '#fffaf0', intensity: 2.25, sky: '#eef0fb', ground: '#a49dc8', dir: [-0.3, 0.75, -0.55], top: '#6f9ae0', horizon: '#e7eefb', far: '#b0b8d8', fog: '#e6ecf8' },
+  shots: [
+    move(0, 2.6, [at(0.5, 1.4, 16), at(0, 2.4, 0)], [at(0.3, 2.2, 10), at(0, 2.9, 0)]), // up the street to the great door
+    orbit(2.6, 5.0, { r: [10, 9], a: [0.8, -0.6], y: [2.2, 3.6], look: [at(0, 2.6, 0), at(0, 3.0, 0)] }), // along the columns
+    move(5.0, 7.2, [at(-3, 6, 9), at(0, 2.5, 0)], [at(-7, 14, 18), at(0, 1.8, -1)]), // over the rooftops of the street
+  ],
+  wide: [at(-6, 11, 18), at(0, 2.5, 0)],
+});
+// Tersane İstanbul (golden afternoon): the old shipyard on the water: the brick workshop and its
+// chimney, the dry dock with a ship, the crane, the new promenade under its glass canopy.
+const tersane = vista({
+  hood: { landmark: 'tersane', seed: 81, flag: '#e8a10a', sea: 10, trees: 'xvx', plazaR: 5, props: [
+    { type: 'ferry', i: CX - 11, j: 4, w: 5, h: 2, along: 'x' }, { type: 'stall', kind: 'cay', i: CX - 10, j: CZ + 2, w: 2, h: 1 }, { type: 'stall', kind: 'chestnut', i: CX + 7, j: CZ + 2, w: 2, h: 1 }] },
+  light: { sun: '#ffdca8', intensity: 2.2, sky: '#f6e8d8', ground: '#a693bc', dir: [-0.75, 0.32, -0.55], top: '#7790d6', horizon: '#f8dcbc', far: '#b6a7c4', fog: '#f0dcc8', sunSize: 85, dusk: 0.2 },
+  shots: [
+    move(0, 2.6, [at(-9, 1.6, 13), at(0, 1.8, 0)], [at(-5.5, 2.4, 9), at(0, 2.0, 0)]), // along the promenade under the canopy
+    orbit(2.6, 5.0, { r: [11, 9.5], a: [-0.5, 0.6], y: [2.6, 4.2], look: [at(0, 2.0, -0.8), at(0, 2.6, -0.8)] }), // round the workshop and the dry dock
+    move(5.0, 7.2, [at(3, 7, 9), at(0, 2.4, -1)], [at(7, 15, 18), at(0, 1.4, -6)]), // up past the crane over the water
+  ],
+  wide: [at(4, 10, 16), at(0, 2, -2)],
+});
+// Aynalıkavak Pavilion (pink sunset): the pavilion on its stone base, wide eaves, mirror-bright
+// windows catching the sunset, cypresses and the pool, the Golden Horn behind.
+const aynalikavak = vista({
+  hood: { landmark: 'aynalikavak', seed: 91, flag: '#c8443c', sea: 9, trees: 'xyxT', plazaR: 5, props: [
+    { type: 'pier', i: CX - 7, j: 4, w: 2, h: 3, along: 'z' }, { type: 'stall', kind: 'salep', i: CX + 7, j: CZ + 2, w: 2, h: 1 }] },
+  light: { sun: '#ffb79a', intensity: 1.9, sky: '#f6d8e0', ground: '#9285bd', dir: [-0.7, 0.2, -0.68], top: '#7273c8', horizon: '#ffc6ae', far: '#a28fb8', fog: '#f2cbc2', sunDisc: '#ffb878', sunSize: 95, dusk: 0.65 },
+  shots: [
+    move(0, 2.6, [at(0.6, 1.3, 14), at(0, 1.4, 0)], [at(0.3, 1.8, 8.5), at(0, 1.8, 0)]), // low across the pool to the steps
+    orbit(2.6, 5.0, { r: [9, 8], a: [0.9, -0.5], y: [2.0, 3.0], look: [at(0, 1.6, -0.5), at(0, 1.9, -0.5)] }), // round the eaves, the windows catching the sunset
+    move(5.0, 7.2, [at(-2, 5, 7), at(0, 1.4, -6)], [at(-5, 12, 15), at(0, 0.8, -22)]), // over the roof to the water
+  ],
+  wide: [at(-5, 9, 15), at(0, 1.5, -4)],
+});
+// Miniatürk (dusk, the lamps lit): the park of little models on snowy lawns, the big sign, giant
+// snowmen among the models, the town's lights coming on beyond.
+const miniaturk = vista({
+  hood: { landmark: 'miniaturk', seed: 101, flag: '#7a1f1f', trees: 'xTxv', plazaR: 5, props: [
+    { type: 'giant-snowman', i: CX - 9, j: CZ - 3, w: 2, h: 2 }, { type: 'giant-snowman', i: CX + 7, j: CZ - 3, w: 2, h: 2 },
+    { type: 'stall', kind: 'corn', i: CX - 9, j: CZ + 3, w: 2, h: 1 }, { type: 'stall', kind: 'chestnut', i: CX + 7, j: CZ + 3, w: 2, h: 1 }] },
+  light: { sun: '#e8c8ff', intensity: 1.5, sky: '#d8d0f0', ground: '#7f78b2', dir: [-0.5, 0.25, -0.83], top: '#4c5aa8', horizon: '#d9b8d8', far: '#8f86b4', fog: '#d4c2dc', sunDisc: '#ffb0a0', sunSize: 80, dusk: 0.95 },
+  shots: [
+    move(0, 2.6, [at(0.2, 1.2, 13), at(0, 1.0, 0)], [at(0.1, 1.5, 7.5), at(0, 1.1, 0)]), // up the path between the models
+    orbit(2.6, 5.0, { r: [7.5, 6.5], a: [-0.9, 0.6], y: [1.6, 2.6], look: [at(0, 0.9, 0), at(0, 1.1, 0)] }), // low round the little towers
+    move(5.0, 7.2, [at(3, 5, 7), at(0, 1.0, 0)], [at(7, 13, 16), at(0, 0.8, -2)]), // up over the park and the giant snowmen
+  ],
+  wide: [at(4, 9, 14), at(0, 1, 0)],
+});
+
 // The scenes, by place; each one's welcome is read aloud with its name card.
 export const CINEMA = {
   boulevard: { title: 'Boulevard Park', welcome: 'Welcome to Boulevard Park!', build: boulevard },
@@ -271,6 +342,11 @@ export const CINEMA = {
   kizilay: { title: 'Kızılay Square', welcome: 'Welcome to Kızılay Square!', build: kizilay },
   sururi: { title: 'Sururi Park', welcome: 'Welcome to Sururi Park!', build: sururi },
   pier: { title: 'The Pier', welcome: 'Welcome to the Pier!', build: pier },
+  karakoy: { title: 'Karaköy Bridge and Pier', welcome: 'Welcome to Karaköy!', build: karakoy },
+  bankalar: { title: 'Bankalar Caddesi', welcome: 'Welcome to Bankalar Caddesi!', build: bankalar },
+  tersane: { title: 'Tersane İstanbul', welcome: 'Welcome to Tersane İstanbul!', build: tersane },
+  aynalikavak: { title: 'Aynalıkavak Pavilion', welcome: 'Welcome to Aynalıkavak Pavilion!', build: aynalikavak },
+  miniaturk: { title: 'Miniatürk', welcome: 'Welcome to Miniatürk!', build: miniaturk },
 };
 
 // the camera of a shot at time t: [position, look-at] in the scene's frame

@@ -71,6 +71,7 @@ const THEMES = {
   boulevard: { fog: '#c8cbe8', props: ['plane', 'plane', 'lamp', 'house'], finish: 'Boulevard Park', end: 'plane', gap: 3.2 },
   archery: { fog: '#cfcbe4', props: ['stone', 'target', 'pine', 'pennant', 'house'], finish: 'Archery Ground', end: 'stone', gap: 3.6 },
   kizilay: { fog: '#c6cfe6', props: ['kiosk', 'cart', 'plane', 'house', 'lamp'], finish: 'Kızılay Square', end: 'kiosk', gap: 3.4 },
+  goldenhorn: { fog: '#c4d2ea', props: ['bollard', 'lamp', 'house', 'bollard', 'house', 'plane'], sea: true, finish: 'The Golden Horn', end: 'ferry', gap: 3.1 },
   kasimpasa: { fog: '#c6cfe6', props: ['kiosk', 'plane', 'house', 'lamp', 'cart', 'target', 'house', 'castle'], finish: 'Kasımpaşa', end: 'kiosk', gap: 3.3 },
   sururi: { fog: '#d3cdea', props: ['castle', 'slide', 'pine', 'pennant', 'house'], finish: 'Sururi Park', end: 'castle', gap: 3.5 },
   waterfront: { fog: '#c4d2ea', props: ['bollard', 'lamp', 'bollard', 'house'], sea: true, finish: 'Waterfront Park', end: 'ferry', gap: 3.0 },

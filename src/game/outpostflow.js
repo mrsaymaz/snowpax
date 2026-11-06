@@ -23,6 +23,7 @@ export const OUTPOST_THEME = {
   boulevard: { theme: 'boulevard', name: 'The Treehouse' },
   sururi: { theme: 'sururi', name: 'The Snow Castle' },
   kasimpasa: { theme: 'kizilay', name: 'Kasımpaşa' },
+  'golden-horn': { theme: 'waterfront', name: 'The Golden Horn' },
 };
 const FAMILY_NAME = Object.fromEntries(FAMILIES.map(f => [f.id, f.name]));
 const T = CONFIG.timing;
@@ -72,7 +73,8 @@ export class OutpostFlow {
     if (!step) { this.onStepDone(true); return; }
     if (v.families && this.mode === 'seize' && this.placeShown !== v.family) { this.placeShown = v.family; this.ui.onPlaceStart?.(v.family); } // the carousel turns to the place
     if (v.families) { // each family in its own place's activity
-      this.card.setCoach(`${PLACE_OF[v.family] ? PLACE_OF[v.family] + ' · ' : ''}${FAMILY_NAME[v.family]}${v.coach ? ': ' + v.coach : ''}`); this.card.show(step, { theme: FAMILY_STATION[v.family] || this.zone.id }); return;
+      const place = this.zone.places?.[v.family]?.title || PLACE_OF[v.family];
+      this.card.setCoach(`${place ? place + ' · ' : ''}${FAMILY_NAME[v.family]}${v.coach ? ': ' + v.coach : ''}`); this.card.show(step, { theme: FAMILY_STATION[v.family] || this.zone.id }); return;
     }
     this.card.setCoach(v.coach || ''); this.card.show(step);
   }
