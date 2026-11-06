@@ -60,3 +60,15 @@ shows on the sled ride, and again, a little softer, when the place's task opens 
 | Miniatürk | a little toy parade in G: piccolo and glockenspiel, a clockwork tick, a toy drum, a bouncy bass |
 
 `measureTrack(name)` renders a theme offline and reports its length and loudness, for balancing.
+
+## What each view looks out at
+
+Each view on the sled ride faces the real skyline from that place, a little larger than life and kept clear of haze. The positions are true bearings, simplified. Domes and minarets appear only as distant scenery.
+
+| Place | Background |
+|---|---|
+| Karaköy Pier | Galata Bridge across the water, with its fishing rods and lamps; beyond it, the old city's domes and minarets |
+| Bankers Street | Galata Tower up the hill at the top of the street; the tall towers of Şişli far off |
+| Tersane İstanbul | across the water: the red-brick school on the hill at Fener, domes on the ridge, the Haliç metro bridge to the left |
+| Aynalıkavak Pavilion | straight across: Fener and Balat with the red-brick school; domes upstream; cypresses |
+| Miniatürk | the Haliç highway bridge high over the water; the cypress hill above Eyüp |

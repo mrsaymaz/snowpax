@@ -194,15 +194,15 @@ function skyline(g, L, hH, items = []) {
       const deckY = type === 'highway' ? 20 : type === 'metro' ? 11 : 4.5, grey = M(type === 'metro' ? '#eef0f6' : '#a9a5bd', r, 0.5), dark = M('#4b4f6e', r, 0.5);
       put(new BoxGeometry(len, 1.6, 7), grey, cx, deckY + y0, z, g); put(new BoxGeometry(len, 0.3, 6.6), M('#f6f8ff', r, 0.3), cx, deckY + y0 + 0.95, z, g); // the deck under snow
       const step = type === 'galata' ? 16 : type === 'highway' ? 28 : 34;
-      for (let x = x0 + step / 2; x < x1; x += step) put(new BoxGeometry(type === 'highway' ? 3 : 2.2, deckY + 1, 4.5), grey, x, (deckY + y0) / 2 - 0.5, z, g);
+      for (let x = x0 + step / 2; x < x1; x += step) put(new BoxGeometry(type === 'highway' ? 2.2 : 2.2, deckY + 1, type === 'highway' ? 3 : 4.5), grey, x, (deckY + y0) / 2 - 0.5, z, g);
       if (type === 'galata') {
         for (let x = x0 + 4; x < x1; x += 8) { put(new CylinderGeometry(0.15, 0.2, 5, 6), dark, x, deckY + y0 + 3.4, z + 3.2, g); put(new BoxGeometry(0.7, 0.8, 0.7), lit ? glow : M('#fff1c8', r, 0.3), x, deckY + y0 + 6.2, z + 3.2, g); }
         const rod = new CylinderGeometry(0.04, 0.06, 5, 4); rod.rotateX(0.9); const rods = new InstancedMesh(rod, dark, 60), o = new Object3D(); let k = 0; for (let x = x0 + 2; x < x1 && k < 60; x += len / 60, k++) { o.position.set(x, deckY + y0 + 3, z + 4.5); o.updateMatrix(); rods.setMatrixAt(k, o.matrix); } rods.count = k; g.add(rods); // the fishermen's rods over the rail
       }
       if (type === 'metro') for (const f of [0.38, 0.62]) {
         const px = x0 + len * f, top = deckY + y0 + 44; put(new BoxGeometry(2.2, top, 2.2), grey, px, top / 2, z, g);
-        const pts = []; for (let k = 1; k <= 8; k++) for (const sd of [-1, 1]) pts.push(px, top - k * 1.6, z, px + sd * k * 7.5, deckY + y0 + 1, z);
-        const geo = new BufferGeometry(); geo.setAttribute('position', new Float32BufferAttribute(pts, 3)); g.add(new LineSegments(geo, new LineBasicMaterial({ color: haze('#ffffff', r, 0.4) })));
+        const pts = []; for (let k = 1; k <= 5; k++) for (const sd of [-1, 1]) pts.push(px, top - k * 2.4, z, px + sd * k * 11, deckY + y0 + 1, z);
+        const geo = new BufferGeometry(); geo.setAttribute('position', new Float32BufferAttribute(pts, 3)); g.add(new LineSegments(geo, new LineBasicMaterial({ color: haze('#e6e9f2', r, 0.8), transparent: true, opacity: 0.7 })));
       }
     },
     // the red brick school with its domed tower on the hill at Fener: a castle in brick
@@ -342,7 +342,7 @@ const pier = vista({
     move(5.0, 7.2, [at(2, 5, 8), at(0, 1.2, -10)], [at(6, 12, 16), at(0, 0.8, -26)]), // out over the frozen Golden Horn
   ],
   wide: [at(4, 10, 16), at(0, 1.5, -8)],
-  far: [{ kind: 'ridge', a: 0.05, r: 165, s: 1.5, n: 3, span: 0.7 }, { kind: 'bridge', type: 'metro', r: 112, a0: -0.82, a1: -0.12 }], // across the Golden Horn: the old city's ridge of domes, the bridges to the left
+  far: [{ kind: 'ridge', a: 0.05, r: 165, s: 1.5, n: 3, span: 0.7 }, { kind: 'bridge', type: 'metro', r: 120, a0: -0.8, a1: -0.15 }], // across the Golden Horn: the old city's ridge of domes, the bridges to the left
 });
 
 
@@ -360,7 +360,7 @@ const karakoy = vista({
     move(5.0, 7.2, [at(2, 5, 8), at(0, 1.2, -10)], [at(5, 12, 16), at(0, 0.8, -26)]), // up and out over the frozen water
   ],
   wide: [at(3, 9, 15), at(0, 1.5, -6)],
-  far: [{ kind: 'bridge', type: 'galata', r: 70, a0: -0.95, a1: 0.95 }, { kind: 'bridge', type: 'metro', r: 112, a0: -0.65, a1: 0.55 }, { kind: 'ridge', a: -0.2, r: 168, s: 1.6, n: 3, span: 0.8 }], // Galata Bridge right across with its rods and lamps, the metro bridge beyond, the old city's domes
+  far: [{ kind: 'bridge', type: 'galata', r: 70, a0: -0.95, a1: 0.95 }, { kind: 'ridge', a: -0.2, r: 168, s: 1.6, n: 3, span: 0.8 }], // Galata Bridge right across with its rods and lamps, the old city's domes beyond
 });
 // Bankers Street (bright noon): the street of grand old banks, the great stone bank building at
 // its heart with its columns and bronze door, lamps, a simit and a tea stall, plane trees.
@@ -375,7 +375,7 @@ const bankalar = vista({
     move(5.0, 7.2, [at(-3, 6, 9), at(0, 2.5, 0)], [at(-7, 14, 18), at(0, 1.8, -1)]), // over the rooftops of the street
   ],
   wide: [at(-6, 11, 18), at(0, 2.5, 0)],
-  far: [{ kind: 'galata', a: 0.02, r: 78, s: 1.5 }, { kind: 'towers', a: 0.62, r: 265, n: 6, span: 0.22 }], // Galata Tower right at the top of the street
+  far: [{ kind: 'galata', a: 0.24, r: 118, s: 1.35 }, { kind: 'towers', a: 0.62, r: 265, n: 6, span: 0.22 }], // Galata Tower up the hill at the top of the street
 });
 // Tersane İstanbul (golden afternoon): the old shipyard on the water: the brick workshop and its
 // chimney, the dry dock with a ship, the crane, the new promenade under its glass canopy.
@@ -418,7 +418,7 @@ const miniaturk = vista({
     move(5.0, 7.2, [at(3, 5, 7), at(0, 1.0, 0)], [at(7, 13, 16), at(0, 0.8, -2)]), // up over the park and the giant snowmen
   ],
   wide: [at(4, 9, 14), at(0, 1, 0)],
-  far: [{ kind: 'bridge', type: 'highway', r: 98, a0: -0.92, a1: 0.92 }, { kind: 'cypresses', a: -0.05, r: 165, n: 220, span: 0.7 }], // the Haliç highway bridge high over the water, the cypress hill above Eyüp
+  far: [{ kind: 'bridge', type: 'highway', r: 124, a0: -0.75, a1: 0.75 }, { kind: 'cypresses', a: -0.05, r: 165, n: 220, span: 0.7 }], // the Haliç highway bridge high over the water, the cypress hill above Eyüp
 });
 
 // The scenes, by place; each one's welcome is read aloud with its name card.

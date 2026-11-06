@@ -25,3 +25,15 @@ and the Pier.
 - No shop names, brands or football club crests; stalls are generic (simit, çay, salep, chestnut).
 - No places of worship or cemeteries are in the game world, so none can ever be fought near.
 - No homes of students are marked: there is no real map at all.
+
+## What each view looks out at
+
+The sled ride's views face Kasımpaşa's real surroundings, a little larger than life. Domes and minarets appear only as distant scenery.
+
+| Place | Background |
+|---|---|
+| Boulevard Park | down the valley: the old city's domes across the water; Galata Tower on its hill |
+| Archery Ground | from the hilltop: over the Golden Horn to the old city; Galata Tower to the left |
+| Kızılay Square | up the hill to Galata Tower; the tall towers of Şişli far off |
+| Sururi Park | the towers of Şişli in the low sun; a cypress hill; Galata Tower |
+| The Pier | across the Golden Horn: the old city's ridge of domes; the bridges to the left |
