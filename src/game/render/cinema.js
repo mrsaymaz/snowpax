@@ -14,11 +14,10 @@
 import {
   Group, Mesh, MeshBasicMaterial, MeshLambertMaterial, SphereGeometry, CircleGeometry, PlaneGeometry, BoxGeometry, ConeGeometry, CylinderGeometry,
   BufferGeometry, Float32BufferAttribute, Points, PointsMaterial, Sprite, SpriteMaterial, CanvasTexture, SRGBColorSpace, AdditiveBlending, BackSide,
-  DoubleSide, Color, Vector3, InstancedMesh, Object3D,
+  DoubleSide, Color, Vector3, InstancedMesh, Object3D, TorusGeometry,
 } from 'three';
 import { buildTileArena } from '../tilemap.mjs';
 import { buildVillage } from './village.js';
-import { buildBackdrop } from './look.js';
 
 export const TRACK_Z = 14, SCENE_SECONDS = 7.2;
 const ease = t => t * t * (3 - 2 * t);
@@ -60,28 +59,101 @@ function neighbourhood({ landmark, seed = 1, sea = 0, plazaR = 5, trees = 'TvxyT
 
 // ---------- the cinematic layer: sky, sun, haze, a far skyline, gulls, falling snow ----------
 function sky(g, L) {
-  const geo = new SphereGeometry(190, 32, 16), pos = geo.attributes.position, col = [], top = new Color(L.top), hor = new Color(L.horizon), c = new Color();
-  for (let v = 0; v < pos.count; v++) { const y = pos.getY(v) / 190, k = Math.pow(Math.max(0, y), 0.55); c.copy(hor).lerp(top, k); col.push(c.r, c.g, c.b); }
+  const geo = new SphereGeometry(320, 32, 16), pos = geo.attributes.position, col = [], top = new Color(L.top), hor = new Color(L.horizon), c = new Color();
+  for (let v = 0; v < pos.count; v++) { const y = pos.getY(v) / 320, k = Math.pow(Math.max(0, y), 0.55); c.copy(hor).lerp(top, k); col.push(c.r, c.g, c.b); }
   geo.setAttribute('color', new Float32BufferAttribute(col, 3));
   const dome = new Mesh(geo, new MeshBasicMaterial({ vertexColors: true, side: BackSide, fog: false, depthWrite: false })); dome.position.set(PLACE.x, -10, PLACE.z); dome.renderOrder = -10; g.add(dome);
   const glowT = tex(128, 128, (x, S) => { const gr = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.18, 'rgba(255,244,214,0.85)'); gr.addColorStop(0.5, 'rgba(255,214,150,0.22)'); gr.addColorStop(1, 'rgba(255,200,140,0)'); x.fillStyle = gr; x.fillRect(0, 0, S, S); });
   const d = new Vector3(...L.dir).normalize(), sun = new Sprite(new SpriteMaterial({ map: glowT, color: L.sunDisc || L.sun, transparent: true, depthWrite: false, fog: false, blending: AdditiveBlending }));
-  sun.position.set(PLACE.x + d.x * 160, Math.max(6, d.y * 160) - 6, PLACE.z + d.z * 160); sun.scale.setScalar(L.sunSize || 70); g.add(sun);
+  sun.position.set(PLACE.x + d.x * 290, Math.max(10, d.y * 290) - 6, PLACE.z + d.z * 290); sun.scale.setScalar((L.sunSize || 70) * 1.8); g.add(sun);
   // a soft band of haze along the horizon
   const hazeT = tex(4, 64, (x) => { const gr = x.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.6, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 4, 64); });
-  const haze = new Mesh(new CylinderGeometry(150, 150, 26, 40, 1, true), new MeshBasicMaterial({ map: hazeT, color: L.horizon, transparent: true, side: BackSide, depthWrite: false, fog: false })); haze.position.set(PLACE.x, 6, PLACE.z); g.add(haze);
+  const haze = new Mesh(new CylinderGeometry(270, 270, 50, 48, 1, true), new MeshBasicMaterial({ map: hazeT, color: L.horizon, transparent: true, side: BackSide, depthWrite: false, fog: false })); haze.position.set(PLACE.x, 10, PLACE.z); g.add(haze);
+  // soft clouds low over the hills, lit by the hour
+  const cloudT = tex(256, 128, (x) => { for (let k = 0; k < 9; k++) { const cx = 40 + k * 22 + (k % 3) * 6, cy = 78 - Math.sin(k / 8 * Math.PI) * 30, r = 22 + Math.sin(k * 1.7) * 8 + Math.sin(k / 8 * Math.PI) * 16, gr = x.createRadialGradient(cx, cy, 0, cx, cy, r); gr.addColorStop(0, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.7, 'rgba(255,255,255,0.6)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 256, 128); } });
+  const R = rng(L.seed || 7), tint = new Color(L.horizon).lerp(new Color('#ffffff'), 0.55).lerp(new Color(L.sun), 0.25);
+  for (let k = 0; k < 11; k++) { const a = -1.9 + k * 0.38 + (R() - 0.5) * 0.2, r = 250, cl = new Sprite(new SpriteMaterial({ map: cloudT, color: tint, transparent: true, opacity: 0.55 + R() * 0.3, depthWrite: false, fog: false })); cl.position.set(PLACE.x + Math.sin(a) * r, 34 + R() * 34, PLACE.z - Math.cos(a) * r); cl.scale.set(80 + R() * 70, 30 + R() * 20, 1); g.add(cl); }
 }
-// the town beyond: the game's painted backdrop of rooftops, trees and towers on a ring round the
-// neighbourhood (never on it, never by the track), then long snowy hills and an old stone tower
-function beyond(g, { seed = 3, color = '#a6b4d8' }) {
-  const vx = W / 2 + 2, vz0 = PLACE.z - CZ - 2, vz1 = PLACE.z + (H - CZ) + 1;
-  g.add(buildBackdrop(PLACE.x, PLACE.z, { rIn: 30, rOut: 78, seed, avoid: (x, z) => (Math.abs(x - PLACE.x) < vx && z > vz0 && z < vz1) || z > TRACK_Z - 7 }));
-  const R = rng(seed), far = new MeshLambertMaterial({ color: new Color(color).lerp(new Color('#ffffff'), 0.2) }), stone = new MeshLambertMaterial({ color }), snowM = new MeshLambertMaterial({ color: '#f4f6ff' });
-  for (let k = 0; k < 6; k++) { const a = -1.7 + k * 0.68, r = 150 + R() * 20, hill = new Mesh(new SphereGeometry(45 + R() * 25, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2), far); hill.scale.y = 0.28 + R() * 0.1; hill.position.set(PLACE.x + Math.sin(a) * r, -3, PLACE.z - Math.cos(a) * r); g.add(hill); }
-  const a = 0.55, r = 128, x = PLACE.x + Math.sin(a) * r, z = PLACE.z - Math.cos(a) * r; // an old round tower on the far hill
-  const t = new Mesh(new CylinderGeometry(3.0, 3.6, 26, 16), stone); t.position.set(x, 13, z); g.add(t);
-  const c = new Mesh(new ConeGeometry(4.1, 8.5, 16), new MeshLambertMaterial({ color: new Color(color).multiplyScalar(0.8) })); c.position.set(x, 30.2, z); g.add(c);
-  const sc = new Mesh(new ConeGeometry(3.8, 3, 16), snowM); sc.position.set(x, 28.3, z); g.add(sc);
+// ---------- the town beyond: snowy hills with hillside neighbourhoods, groves and an old tower ----------
+// The ground round the place is flat (the neighbourhood and the track sit on it); beyond it the
+// land rises into rolling hills covered in pastel houses with snowy roofs, the way Istanbul's
+// neighbourhoods climb their slopes, with groves of pines, tall cypresses and round trees, an old
+// stone tower on the highest hill. At the Pier the frozen Golden Horn stretches north to a far
+// shore. Far things take on the colour of the haze, so the hills step back into the distance.
+const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+function terrainFn(seed, sea) {
+  const R = rng(seed), p = [R() * 6.28, R() * 6.28, R() * 6.28, R() * 6.28];
+  return (x, z) => {
+    const dx = x - PLACE.x, dz = z - PLACE.z, r = Math.hypot(dx, dz), a = Math.atan2(dx, -dz);
+    if (sea && dz < -17 && r < 128 && Math.abs(dx) < 120) return -0.35; // the frozen Golden Horn
+    const rise = sea && dz < -17 ? smooth(126, 165, r) : smooth(36, 96, r);
+    const hills = 9 + 6 * Math.sin(a * 3 + p[0]) + 4 * Math.sin(a * 7 + p[1]) + 5 * Math.sin(r / 21 + p[2]) + 3 * Math.sin(dx / 13 + dz / 17 + p[3]);
+    const byTrack = 1 - smooth(6, 18, dz) * (1 - smooth(42, 64, dz)); // flat by the track, rising again far behind it
+    return Math.max(0, rise * hills * (0.55 + 0.45 * smooth(60, 160, r)) * byTrack) - 0.06;
+  };
+}
+function townscape(g, L, { seed = 3, sea = false }) {
+  const hH = terrainFn(seed, sea), R = rng(seed + 101), hor = new Color(L.fog || L.horizon), far = k => Math.min(0.6, Math.max(0, (k - 45) / 260)); // how much haze at a distance
+  // the land: a heightfield, snow white, a little bluer in the hollows and on the ice
+  const N = 140, S = 460, geo = new PlaneGeometry(S, S, N, N); geo.rotateX(-Math.PI / 2);
+  const pos = geo.attributes.position, col = [], snowC = new Color(L.snow || '#f2f5fd'), hollow = new Color('#d9e0f2'), iceC = new Color('#9dc1e2'), c = new Color();
+  for (let v = 0; v < pos.count; v++) {
+    const x = pos.getX(v) + PLACE.x, z = pos.getZ(v) + PLACE.z, h = hH(x, z); pos.setY(v, h);
+    if (h < -0.2) c.copy(iceC).lerp(new Color('#c9def2'), 0.4 + 0.3 * Math.sin(x * 0.11 + z * 0.07)); else c.copy(snowC).lerp(hollow, 0.35 * smooth(2, -6, h - hH(x + 6, z + 6) * 0.5) + 0.12 * Math.sin(x * 0.05) * Math.cos(z * 0.06));
+    c.lerp(hor, far(Math.hypot(x - PLACE.x, z - PLACE.z)) * 0.6); col.push(c.r, c.g, c.b);
+  }
+  geo.setAttribute('color', new Float32BufferAttribute(col, 3)); geo.computeVertexNormals();
+  const land = new Mesh(geo, new MeshLambertMaterial({ vertexColors: true })); land.position.set(PLACE.x, 0, PLACE.z); land.receiveShadow = true; g.add(land);
+  // where things may stand: not on the neighbourhood, not by the track, not on the ice
+  const vx = W / 2 + 3, vz0 = PLACE.z - CZ - 3, vz1 = PLACE.z + (H - CZ) + 2;
+  const free = (x, z) => !(Math.abs(x - PLACE.x) < vx && z > vz0 && z < vz1) && z < TRACK_Z - 10 + (z < 0 ? 0 : 0) && hH(x, z) > -0.1 && !(z > TRACK_Z - 10 && z < TRACK_Z + 30);
+  // houses: three sizes of pastel house with a pitched roof under snow, facing the place
+  const body = new BoxGeometry(1, 1, 1); body.translate(0, 0.5, 0);
+  const roof = new ConeGeometry(0.76, 0.42, 4, 1); roof.rotateY(Math.PI / 4); roof.translate(0, 1.21, 0);
+  { const rp = roof.attributes.position, rc = []; for (let v = 0; v < rp.count; v++) { const top = rp.getY(v) > 1.25; const k = top ? new Color('#fbfcff') : new Color(R() < 0.5 ? '#b9614e' : '#7a6f9e'); rc.push(k.r, k.g, k.b); } roof.setAttribute('color', new Float32BufferAttribute(rc, 3)); }
+  const win = new PlaneGeometry(0.16, 0.2); win.translate(0, 0, 0.505);
+  const PAST = ['#ecd2b4', '#e2c0cc', '#c9d8ea', '#ece2c4', '#d3e4d2', '#f2d6bd', '#d8cfe8', '#f4e7d6'];
+  const homes = [];
+  for (let gi = -230; gi < 230; gi += 5.2) for (let gj = -230; gj < 230; gj += 5.2) {
+    const x = PLACE.x + gi + (R() - 0.5) * 3.2, z = PLACE.z + gj + (R() - 0.5) * 3.2, r = Math.hypot(x - PLACE.x, z - PLACE.z);
+    if (r < 42 || r > 205 || !free(x, z)) continue;
+    const dens = 0.55 + 0.45 * Math.sin((x - PLACE.x) / 37 + seed) * Math.cos((z - PLACE.z) / 29 - seed); // neighbourhoods and gaps between them
+    if (R() > dens * (r < 70 ? 0.55 : 0.9)) continue;
+    homes.push({ x, z, y: hH(x, z), w: 3.4 + R() * 2.8, h: 3 + R() * (r > 120 ? 5 : 3.5), d: 3.6 + R() * 1.6, ry: Math.atan2(PLACE.x - x, PLACE.z - z) + (R() - 0.5) * 0.5, c: PAST[Math.floor(R() * PAST.length)], r });
+  }
+  const bodies = new InstancedMesh(body, new MeshLambertMaterial({ color: '#ffffff' }), homes.length), roofs = new InstancedMesh(roof, new MeshLambertMaterial({ vertexColors: true }), homes.length), o = new Object3D(), bc = new Color();
+  const wins = [], lit = 0.18 + (L.dusk || 0) * 0.7;
+  homes.forEach((q, k) => {
+    o.position.set(q.x, q.y - 0.3, q.z); o.rotation.set(0, q.ry, 0); o.scale.set(q.w, q.h, q.d); o.updateMatrix(); bodies.setMatrixAt(k, o.matrix); bc.set(q.c).lerp(hor, far(q.r)); bodies.setColorAt(k, bc);
+    o.scale.set(q.w, Math.max(q.h, 3) * 0.9, q.d); o.position.y = q.y - 0.3 + q.h - Math.max(q.h, 3) * 0.9 * 1.0; o.updateMatrix(); roofs.setMatrixAt(k, o.matrix);
+    for (let fl = 0; fl < Math.floor(q.h / 2.2); fl++) for (const u of [-0.25, 0.25]) if (R() < 0.85) { o.position.set(q.x, q.y - 0.3 + 1.1 + fl * 2.1, q.z); o.rotation.set(0, q.ry, 0); o.scale.set(q.w, q.h / q.h * 1, q.d); o.updateMatrix(); const m = o.matrix.clone().multiply(new Object3D().matrix.makeTranslation(u, 0, 0)).multiply(new Object3D().matrix.makeScale(1 / q.w * 2.4, 1 / 1 * 3, 1)); wins.push({ m, lit: R() < lit, r: q.r }); }
+  });
+  bodies.instanceColor.needsUpdate = true; bodies.receiveShadow = true; g.add(bodies, roofs);
+  if (wins.length) { const wm = new InstancedMesh(win, new MeshBasicMaterial({ color: '#ffffff' }), wins.length), warm = new Color('#ffd27a'), dark = new Color('#55617f'); wins.forEach((w, k) => { wm.setMatrixAt(k, w.m); wm.setColorAt(k, (w.lit ? warm.clone() : dark.clone()).lerp(hor, far(w.r) * (w.lit ? 0.3 : 0.8))); }); wm.instanceColor.needsUpdate = true; g.add(wm); }
+  // trees: groves of snowy pines, tall dark cypresses, round trees with snow on their crowns
+  const pine = new ConeGeometry(1, 2.2, 7); pine.translate(0, 1.6, 0); const cyp = new CylinderGeometry(0.05, 0.55, 4.4, 7); cyp.translate(0, 2.4, 0); const ball = new SphereGeometry(1, 8, 6); ball.scale(1, 0.8, 1); ball.translate(0, 2.1, 0);
+  const kinds = [[pine, '#2f6b5a', 1.0], [cyp, '#26473c', 1.0], [ball, '#f1f2f8', 1.1]], lists = [[], [], []];
+  for (let k = 0; k < 900; k++) {
+    const grove = Math.floor(R() * 40), ga = (grove / 40) * 6.28 * 1.7 + seed, gr = 40 + (grove % 9) * 19, cx = PLACE.x + Math.sin(ga) * gr, cz = PLACE.z - Math.abs(Math.cos(ga)) * gr - 6;
+    const x = cx + (R() - 0.5) * 16, z = cz + (R() - 0.5) * 12, r = Math.hypot(x - PLACE.x, z - PLACE.z); if (r < 38 || !free(x, z)) continue;
+    lists[grove % 5 === 0 ? 1 : grove % 3 === 0 ? 2 : 0].push({ x, z, y: hH(x, z), s: 0.9 + R() * 0.9, r });
+  }
+  kinds.forEach(([gm, cc], k) => { const L2 = lists[k]; if (!L2.length) return; const im = new InstancedMesh(gm, new MeshLambertMaterial({ color: '#ffffff' }), L2.length); L2.forEach((q, n) => { o.position.set(q.x, q.y - 0.2, q.z); o.rotation.set(0, R() * 6, 0); o.scale.set(q.s, q.s * (k === 1 ? 1.4 : 1), q.s); o.updateMatrix(); im.setMatrixAt(n, o.matrix); im.setColorAt(n, new Color(cc).lerp(hor, far(q.r))); }); im.instanceColor.needsUpdate = true; g.add(im); });
+  { const trunk = new CylinderGeometry(0.13, 0.18, 1.5, 6); trunk.translate(0, 0.75, 0); const L2 = lists[2], im = new InstancedMesh(trunk, new MeshLambertMaterial({ color: '#7a5a46' }), Math.max(1, L2.length)); L2.forEach((q, n) => { o.position.set(q.x, q.y - 0.2, q.z); o.rotation.set(0, 0, 0); o.scale.setScalar(q.s); o.updateMatrix(); im.setMatrixAt(n, o.matrix); }); im.count = L2.length; g.add(im); } // the round trees' trunks
+  { const capG = new ConeGeometry(0.62, 0.9, 7); capG.translate(0, 2.55, 0); const L2 = lists[0], im = new InstancedMesh(capG, new MeshLambertMaterial({ color: '#f6f8ff' }), Math.max(1, L2.length)); L2.forEach((q, n) => { o.position.set(q.x, q.y - 0.2, q.z); o.rotation.set(0, 0, 0); o.scale.setScalar(q.s); o.updateMatrix(); im.setMatrixAt(n, o.matrix); }); im.count = L2.length; g.add(im); } // snow on the pines
+  // the old stone tower on the highest hill
+  let best = null; for (let k = 0; k < 60; k++) { const side = k % 2 ? 1 : -1, a = side * (0.55 + (k >> 1) * 0.02), r = 150 + (k % 5) * 6, /* off to one side and far, never right behind the place */ x = PLACE.x + Math.sin(a) * r, z = PLACE.z - Math.cos(a) * r, h = hH(x, z); if (h > 0 && (!best || h > best.h)) best = { x, z, h }; }
+  if (best) {
+    const stone = new MeshLambertMaterial({ color: new Color('#d9cfc3').lerp(hor, 0.35) }), slate = new MeshLambertMaterial({ color: new Color('#5d5f86').lerp(hor, 0.3) }), dark = new MeshBasicMaterial({ color: new Color('#3d4363').lerp(hor, 0.3) }), glowW = new MeshBasicMaterial({ color: '#ffd27a' });
+    const T = new Group(); T.position.set(best.x, best.h - 0.5, best.z); T.scale.setScalar(0.85); T.rotation.y = Math.atan2(PLACE.x - best.x, PLACE.z - best.z); g.add(T);
+    const part = (gm, m, y) => { const ms = new Mesh(gm, m); ms.position.y = y; T.add(ms); return ms; };
+    part(new CylinderGeometry(5.4, 6, 4, 20), stone, 2); part(new CylinderGeometry(4.2, 4.6, 30, 20), stone, 19);
+    part(new CylinderGeometry(4.9, 4.9, 0.8, 20), stone, 34.4); part(new TorusGeometry(4.9, 0.18, 6, 28), slate, 35).rotation.x = Math.PI / 2;
+    part(new CylinderGeometry(4.3, 4.3, 4.6, 20), stone, 37.2);
+    for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2, wm = new Mesh(new PlaneGeometry(0.9, 2.2), L.dusk ? glowW : dark); wm.position.set(Math.sin(a) * 4.32, 37.2, Math.cos(a) * 4.32); wm.rotation.y = a; T.add(wm); }
+    for (const y of [12, 20, 28]) for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + y, wm = new Mesh(new PlaneGeometry(0.7, 1.4), dark); wm.position.set(Math.sin(a) * 4.42, y, Math.cos(a) * 4.42); wm.rotation.y = a; T.add(wm); }
+    part(new ConeGeometry(4.7, 10, 20), slate, 44.5); part(new ConeGeometry(4.0, 3.2, 20), new MeshLambertMaterial({ color: '#f6f8ff' }), 41.9); part(new CylinderGeometry(0.08, 0.08, 3, 6), slate, 51);
+  }
 }
 function gulls(g, n = 7, seed = 5) {
   const R = rng(seed), m = new MeshLambertMaterial({ color: '#f7f8fc', side: DoubleSide }), list = [];
@@ -104,9 +176,8 @@ function snowfall(g, n = 900) {
 function vista({ hood, light, shots, wide, extra = null }) {
   return ({ camera = null } = {}) => {
     const g = new Group(), world = neighbourhood(hood); g.add(world.group);
-    const ground = new Mesh(new CircleGeometry(170, 48), new MeshLambertMaterial({ color: light.snow || '#eef1fb' })); ground.rotation.x = -Math.PI / 2; ground.position.set(PLACE.x, -0.08, PLACE.z); ground.receiveShadow = true; g.add(ground);
     world.group.traverse(o => { if (o.isMesh && !o.material?.transparent) o.castShadow = o.receiveShadow = true; });
-    sky(g, light); beyond(g, { color: light.far, seed: hood.seed });
+    sky(g, { ...light, seed: hood.seed }); townscape(g, light, { seed: hood.seed, sea: !!hood.sea });
     const flyGulls = gulls(g), snowing = snowfall(g), more = extra?.(g) || null;
     world.setDusk?.(light.dusk || 0);
     const focus = new Vector3();

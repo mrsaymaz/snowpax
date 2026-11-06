@@ -131,7 +131,7 @@ export class SledRun {
 
     this.plan();
     this.scenery();
-    for (const q of this.slots) this.prepare(q); // the places' scenes are built now, before the ride starts (no stutter while steering)
+    for (const q of this.slots) { try { this.prepare(q); } catch (err) { console.warn('scene', q.id, err); q.played = true; } } // the places' scenes are built now, before the ride starts (no stutter while steering); one that fails is skipped
   }
 
   // ---------- the winding path: centre, heading, height and bank for every metre ----------
@@ -330,7 +330,7 @@ export class SledRun {
     if (!sc) { const L0 = this.light0; sun.color.copy(L0.col); sun.intensity = L0.int; sun.position.copy(L0.pos); sun.target.position.set(0, 0, 0); hemi.color.copy(L0.sky); hemi.groundColor.copy(L0.gr); sceneT.background.copy(L0.bg); sceneT.fog.color.copy(L0.fog); sceneT.fog.near = L0.near; sceneT.fog.far = L0.far; cam.far = L0.cfar; cam.updateProjectionMatrix(); sun.castShadow = false; return; }
     const c = sc.group.position.clone().add(new Vector3(0, 0, -9).applyAxisAngle(new Vector3(0, 1, 0), sc.group.rotation.y)), d = new Vector3(...sc.light.dir).applyAxisAngle(new Vector3(0, 1, 0), sc.group.rotation.y).normalize();
     sun.color.set(sc.light.sun); sun.intensity = sc.light.intensity; hemi.color.set(sc.light.sky); if (sc.light.ground) hemi.groundColor.set(sc.light.ground);
-    sceneT.background.set(sc.light.horizon); sceneT.fog.color.set(sc.light.fog || sc.light.horizon); sceneT.fog.near = 45; sceneT.fog.far = 190; cam.far = 420; cam.updateProjectionMatrix(); // a long view, hazing into the scene's sky
+    sceneT.background.set(sc.light.horizon); sceneT.fog.color.set(sc.light.fog || sc.light.horizon); sceneT.fog.near = 80; sceneT.fog.far = 360; cam.far = 700; cam.updateProjectionMatrix(); // a long view, hazing into the scene's sky
     sun.target.position.copy(c); sun.position.copy(c).addScaledVector(d, 30);
     sun.castShadow = true; Object.assign(sun.shadow.camera, { left: -20, right: 20, top: 20, bottom: -20, near: 1, far: 80 }); sun.shadow.camera.updateProjectionMatrix(); sun.shadow.mapSize.set(1024, 1024); sun.shadow.bias = -0.0006;
   }

@@ -44,9 +44,16 @@ neighbourhood under its own sky and light. They are views, not tasks: no people,
   houses with lit windows closing the back and the sides, trees, stalls, buried roofs; the side
   towards the track stays open so the camera can look in. The landmark's flag flies in the
   place's colour.
-- **The layer over it:** a gradient sky with a glowing sun, a haze along the horizon, the game's
-  painted backdrop of rooftops and trees beyond, long snowy hills and an old stone tower far off,
-  gulls circling, falling snow, the scene's own low sun with long shadows.
+- **The town beyond** (`townscape` in `render/cinema.js`): the ground round the place is flat;
+  beyond it the land rises into rolling snowy hills, and Istanbul-style neighbourhoods climb the
+  slopes: hundreds of pastel houses with snowy roofs facing the place, their windows lit more and
+  more as the ride goes from afternoon to dusk, with gaps between the neighbourhoods. Groves of
+  snowy pines, tall dark cypresses and round trees; an old stone tower with a balcony and a
+  conical cap on a far hill, off to one side. At the Pier the frozen Golden Horn stretches north
+  to a far shore covered in houses. Far things take on the colour of the haze, so the hills step
+  back into the distance; nothing stands by the track.
+- **The sky:** a gradient with a glowing sun, a haze along the horizon, soft clouds lit by the
+  hour, gulls circling, falling snow, the scene's own low sun with long shadows.
 - **Three shots:** a reveal (in along an avenue, past the record stones, across the square), a
   slow orbit round the landmark, then a rising pull-back over the neighbourhood and the town.
 - **The light warms along the ride:** Boulevard Park a clear blue afternoon, Archery Ground bright
