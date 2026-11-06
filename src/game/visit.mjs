@@ -64,6 +64,18 @@ export function cocoaQuestion(unit, rng = Math.random) {
   return { kind: 'choice', prompt: `What is "${w.en}" in Turkish?`, options, answer: options.indexOf(w.tr), answerText: w.tr, sourceIds: [w.id] };
 }
 
+// A question a neighbourhood child asks you face to face (the camp): one of the unit's questions with
+// its answer and two others as replies ("Who leads the school?" – "The headteacher leads it."); a
+// cocoa-style question when a unit has none. `used` keeps the camp from asking one twice.
+export function talkQuestion(unit, rng = Math.random, used = new Set()) {
+  const qs = (unit.questions || []).filter(q => q.q && q.a && (q.options || []).length >= 2 && q.options.includes(q.a) && !used.has(q.id));
+  if (!qs.length) return cocoaQuestion(unit, rng);
+  const q = qs[Math.floor(rng() * qs.length)]; used.add(q.id);
+  const options = q.options.slice(0, 3); if (!options.includes(q.a)) options[0] = q.a;
+  for (let i = options.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [options[i], options[j]] = [options[j], options[i]]; }
+  return { kind: 'choice', prompt: q.q, options, answer: options.indexOf(q.a), answerText: q.a, sourceIds: [q.id], talk: true };
+}
+
 // Words for the glowing snowflakes: missed words first, then the rest of the unit, shuffled.
 export function flakeWords(unit, n, missed = {}, rng = Math.random) {
   const words = unit.words.filter(w => w.en && w.tr && w.en.length <= 16);

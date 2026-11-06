@@ -79,10 +79,13 @@ and `halves` in `stages.mjs`; the plan, the roles and the shop in `fights.mjs`);
 once it is approved.
 
 1. **Camp:** three neighbourhood children wait at the home end in plain beige coats, each with a
-   "Can I join?" bubble and their name. Walk up to one and answer their question: right first
-   time and they join (a puff of snow, and out they come in your team's colour and puffer jacket),
-   plus a ⭐; wrong and they say "Nearly! Ask me again in a moment" (4 s). No rivals on the field
-   yet. Counted toward the 80% (answered calmly).
+   "Can I join?" bubble and their name. Walk up to one and the camera cuts to a **close-up, face
+   to face** (`cards/talk.js`, like Languini's customer conversations): the child asks one of the
+   unit's questions in a speech bubble, read aloud ("What colour is your school uniform?"), and
+   your three replies are chat bubbles ("It is green."). Right first time: a big smile, "Yes! I'm
+   on your team!", a puff of snow, and out they come in your team's colour and puffer jacket, plus
+   a ⭐. A miss: a surprised face, "Hmm… not quite! Try the glowing one.", and they ask again in a
+   moment (4 s). No rivals on the field yet. Counted toward the 80% (answered calmly).
 2. **Build** (35 s at most, or tap Fight!): stars invite another friend (a role you have not got
    yet, ⭐2) or buy a boost.
 3. **The opening round:** the rival team keeps coming back from its camp; freeze **12 rivals**

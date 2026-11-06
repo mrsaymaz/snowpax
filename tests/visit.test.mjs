@@ -63,3 +63,16 @@ test('seizing by answers: a planted student is never frozen, rivals cannot take 
   sim.capture(z, 'home'); assert.equal(z.owner, 'home'); assert.ok(sim.drainEvents().some(e => e.type === 'zoneCaptured' && e.side === 'home'));
   rival.x = z.x + 2; rival.z = z.z + 6; const n = sim.volley(P, z, 3); assert.equal(n, 3); assert.ok(sim.balls.length >= 3);
 });
+
+test('a camp child asks one of the unit\'s questions face to face: the model answer and two others as replies, never the same question twice in a camp', async () => {
+  const { talkQuestion } = await import('../src/game/visit.mjs');
+  const used = new Set(), rng = makeRng(8), seen = new Set();
+  for (let k = 0; k < 6; k++) {
+    const st = talkQuestion(unit, rng, used);
+    assert.equal(st.kind, 'choice'); assert.ok(st.talk, 'a question from a person');
+    assert.ok(st.options.length >= 2 && st.options.length <= 3); assert.equal(st.options[st.answer], st.answerText);
+    assert.ok(!seen.has(st.prompt), 'not asked twice'); seen.add(st.prompt);
+  }
+  const none = talkQuestion({ ...unit, questions: [] }, rng);
+  assert.equal(none.kind, 'choice', 'a unit without questions still gets a quick question');
+});

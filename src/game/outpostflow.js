@@ -11,8 +11,8 @@ import { BANNERS } from './waves.mjs';
 import { CONFIG } from '../config.js';
 import { FAMILIES } from '../tasks/subtasks.mjs';
 import { recordItem, holdOutpost, accuracyOf } from '../rules/progress.mjs';
-import { Visit, stepSeconds, cocoaQuestion, flakeWords } from './visit.mjs';
-import { FAMILY_STATION } from './fights.mjs';
+import { Visit, stepSeconds, cocoaQuestion, flakeWords, talkQuestion } from './visit.mjs';
+import { FAMILY_STATION, ROLES } from './fights.mjs';
 import { TaskCard } from './taskcard.js';
 import { speech } from './speech.js';
 
@@ -150,8 +150,10 @@ export class OutpostFlow {
     const p = this.sim.pickups.find(q => q.id === pickupId); if (!p) return;
     if (this.mode) { p.asking = false; return; }
     this.mode = 'recruit'; this.cocoaId = pickupId; this.cocoaRight = false; this.plant(true);
-    this.card.open({ theme: 'cocoa', title: `${p.name} wants to join!`, coach: '', leave: false }); this.card.setProgress(0);
-    this.card.show(cocoaQuestion(this.unit, this.rng)); this.card.setCoach(`"I'll join your team if you get this right!" Right first time: ${p.name} joins, and a ⭐ for you.`);
+    // face to face: a close-up of the child asking (the recruit scene in cards/talk.js)
+    const step = { ...talkQuestion(this.unit, this.rng, this.talked = this.talked || new Set()), speaker: { name: p.name, look: p.look, kit: ROLES[p.role]?.kit } };
+    this.card.open({ theme: 'recruit', title: `${p.name} wants to join!`, coach: '', leave: false }); this.card.setProgress(0);
+    this.card.setCoach(`Answer ${p.name}! Right first time and ${p.name} joins your team (and a ⭐ for you).`); this.card.show(step, { theme: 'recruit' });
   }
   finishRecruit() {
     const right = this.cocoaRight, id = this.cocoaId;

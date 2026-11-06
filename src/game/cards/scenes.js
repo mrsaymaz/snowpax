@@ -5,6 +5,7 @@ import { choiceScene, listenScene, matchScene, sortScene, orderScene, spellScene
 import { castleOrderScene, castleSpellScene } from './castle.js';
 import { castleWorldOrder, castleWorldSpell } from './castle3d.js';
 import { treehouseChoice, archerySort, fountainMatch, bellListen } from './stations.js';
+import { recruitTalk } from './talk.js';
 
 export const DEFAULT_SCENES = { choice: choiceScene, listen: listenScene, match: matchScene, sort: sortScene, order: orderScene, spell: spellScene };
 
@@ -21,6 +22,7 @@ export const WORLD_SCENES = {
   archery: { sort: archerySort },
   kizilay: { match: fountainMatch },
   waterfront: { listen: bellListen },
+  recruit: { choice: recruitTalk }, // a neighbourhood child asks you face to face (the camp)
 };
 
 let basicOnly = false;

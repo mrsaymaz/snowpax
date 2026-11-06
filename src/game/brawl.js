@@ -30,6 +30,7 @@ import { useBasicScenes } from './cards/scenes.js';
 import { WorldTasks } from './render/worldtask.js';
 import { castleStation } from './cards/castle3d.js';
 import { treehouseStation, archeryStation, fountainStation, bellStation } from './cards/stations.js';
+import { talkStation } from './cards/talk.js';
 import { InstancedMesh, MeshLambertMaterial, SphereGeometry, Object3D, Group, Mesh, BoxGeometry, Sprite, SpriteMaterial, CanvasTexture, SRGBColorSpace, CylinderGeometry, PlaneGeometry, MeshBasicMaterial, AdditiveBlending, DoubleSide, CircleGeometry, RingGeometry, TorusGeometry } from 'three';
 import { SHOP, ROLES } from './fights.mjs';
 import { buildKid, bakeKid } from './render/kids2.js';
@@ -215,7 +216,7 @@ async function startGame(myTeam, kit, pace) {
   $('#flakes b').textContent = save.snowflakes || 0; $('#flakes').hidden = !arena.world;
   const banner = (text, cls = '', sec = 1.6) => { const b = $('#banner'); b.textContent = text; b.className = 'show ' + cls; clearTimeout(banner.t); banner.t = setTimeout(() => { b.className = ''; }, sec * 1000); };
   // English tasks as task stations (?scenes=basic for the plain cards): a staged 3D set opens for the task, like Languini's stations
-  const worldTasks = arena.world ? new WorldTasks({ layer: $('#wt-layer'), player, reduceMotion, sound: (n, o) => play(n, o), stations: { sururi: s => castleStation(s, { color: myCol }), boulevard: s => treehouseStation(s, { color: myCol }), archery: s => archeryStation(s, { color: myCol }), kizilay: s => fountainStation(s, { color: myCol }), waterfront: s => bellStation(s, { color: myCol }) } }) : null;
+  const worldTasks = arena.world ? new WorldTasks({ layer: $('#wt-layer'), player, reduceMotion, sound: (n, o) => play(n, o), stations: { sururi: s => castleStation(s, { color: myCol }), boulevard: s => treehouseStation(s, { color: myCol }), archery: s => archeryStation(s, { color: myCol }), kizilay: s => fountainStation(s, { color: myCol }), waterfront: s => bellStation(s, { color: myCol }), recruit: s => talkStation(s, { color: myCol }) } }) : null;
   const flow = unit ? new OutpostFlow({
     sim, player, unit, unitProgress, save, writeSave, pace, rng, root: $('#taskcard'), familyOverride: params.get('family'), world: worldTasks, worldColor: myCol,
     ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play, fx, fireworks: z => { if (reduceMotion) return; for (const col of [myCol, '#ffffff', '#ffd166', '#7cc4f0']) fx.emit(z.x, 3.5, z.z, 40, col, 6, 1.4, 1.2); } },
@@ -635,7 +636,7 @@ async function startGame(myTeam, kit, pace) {
     }
   }
   const screenOf = c => { const v = new Vector3(c.x, groundH(c.x, c.z) + (c.role === 'minion' ? 0.7 : 0.75), c.z).project(camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight }; };
-  globalThis.__snowpax = { match, sim, player, quality, renderer, world, life, flow, stages, scene, snowmen, screenOf };
+  globalThis.__snowpax = { match, sim, player, quality, renderer, world, life, flow, stages, scene, snowmen, screenOf, worldTasks };
   if (stages) stages.showMap();
 }
 
