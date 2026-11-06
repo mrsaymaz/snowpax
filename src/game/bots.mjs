@@ -139,6 +139,7 @@ export class MinionBot {
   }
   think(dt) {
     const c = this.c, sim = this.sim; if (c.frozen || c.thaw) return {};
+    if (c.march) { const s = this.inner.steerTo(c.march.x, c.march.z, dt, 0.3); return { ...s, speedMul: 0.42 / (sim.pace.rivalSpeed || 1) }; } // a word snowman: walks in its row, never throws
     this.throwT -= dt;
     const inp = { mx: 0, mz: 0, speedMul: this.M.speed / (sim.pace.rivalSpeed || 1) };
     let t = null, bd = Infinity;

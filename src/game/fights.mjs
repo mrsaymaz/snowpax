@@ -1,33 +1,68 @@
-// Longer snowball fights with English inside them (the Archery Ground sample, from the third
-// play-test talk). No DOM here, so it is tested in node.
+// Prepare, then fight (the Archery Ground sample, from the third play-test talk). English and
+// fighting are kept apart, so nobody reads while being hit, but the English decides the fight: right
+// answers earn snow stars, and stars build towers on glowing pads and buy boosts. No DOM here, so
+// it is tested in node.
 //
-// An outpost is taken in two halves, with fights round them:
-//   1. the opening round: the rival team holds its line and keeps coming back from its camp;
-//      snowmen keep walking out. Freeze `goal` rivals to break the line (after `max` seconds the
-//      rivals give up anyway, so a class is never stuck);
-//   2. the first half of the English (one task family);
-//   3. "They strike back!": hold the circle for `seconds` (the clock stops while rivals stand in
-//      the circle with nobody of ours);
-//   4. the second half of the English (the other family);
-//   5. the final wave, `final` seconds at most.
+// An outpost:
+//   1. camp: supply crates at the home end, one quick question each (a star when right first time);
+//      no rivals on the field yet;
+//   2. build: tap a glowing pad to build a tower (snowball cannon, snow fort, cocoa stand, ice
+//      patch) or pick a boost (big gloves, quick hands, super start, warm coat); then Fight!;
+//   3. the opening round: the rival team keeps coming back from its camp; freeze `goal` rivals to
+//      break the line (after `max` seconds they give up anyway, so a class is never stuck);
+//   4. part 1 of the outpost's English (each right first try is also a star), build;
+//   5. "They strike back!": hold the circle for `seconds` (the clock stops while rivals stand in it
+//      with nobody of ours);
+//   6. part 2 (stars again), build, then the final wave, `final` seconds at most.
 // Being frozen in a fight never costs a life: the kid goes back to the spawn, as in brawler games.
-//
-// English inside the fights:
-//   - word snowmen: three snowmen walk out carrying English words, and the student is told one
-//     word's Turkish meaning: freeze the snowman with the right English word (practice only, never
-//     counted toward the 80%, because a snowball can always hit the wrong snowman by accident);
-//   - supply crates: a crate drops on the field; walk onto it for one quick question, and a right
-//     answer refills the whole team's snowballs and charges the super.
+// Word snowmen (practice only, never counted toward the 80%) walk out in a tidy row, side by side,
+// slowly and without throwing: freeze the one with the English word for the Turkish word shown.
 
 export const FIGHT_PLANS = {
   long: {
+    // camp: supply crates at the home end before the first fight, one question each (v, d: across
+    // and rows south of the outpost centre)
+    camp: { crates: [[-5.5, 22.2], [-2, 21.3], [2, 21.3], [5.5, 22.2]], max: 75 },
+    // build moments before each fight; the glowing pads (v, d) towers stand on
+    build: 35,
+    pads: [[-3.5, 19.5], [3.5, 19.5], [-7.5, 11.5], [7.5, 11.5], [-6.5, 3.5], [6.5, 3.5]],
     open: { goal: 12, max: 90, trickle: 8, snowmen: 4 },
     strike: { seconds: 50, max: 85 },
     final: 30,
-    hunt: { every: 16, first: 9, seconds: 22, size: 3, bonus: 2 },
-    crate: { every: 20, first: 14 },
+    // word snowmen: a tidy row walking slowly, side by side, never throwing
+    hunt: { every: 18, first: 8, seconds: 24, size: 3, bonus: 2, gap: 4 },
   },
 };
+
+// What snow stars buy. Towers stand on a glowing pad for the rest of the stage; boosts are for the
+// student's kid: gloves and quick hands last the stage, a super start and a warm coat are for the
+// next fight.
+export const SHOP = {
+  towers: {
+    cannon: { name: 'Snowball cannon', cost: 3, icon: '🎯', tip: 'Throws at rivals nearby' },
+    fort: { name: 'Snow fort', cost: 1, icon: '🧱', tip: 'A wall to hide behind' },
+    cocoa: { name: 'Cocoa stand', cost: 2, icon: '☕', tip: 'Warms your team nearby' },
+    ice: { name: 'Ice patch', cost: 1, icon: '🧊', tip: 'Slows rivals crossing it' },
+  },
+  boosts: {
+    gloves: { name: 'Big gloves', cost: 2, icon: '🧤', tip: '4 snowballs instead of 3', keep: true },
+    quick: { name: 'Quick hands', cost: 2, icon: '⚡', tip: 'Snowballs come back faster', keep: true },
+    super: { name: 'Super start', cost: 1, icon: '⭐', tip: 'Start the fight with half a super' },
+    coat: { name: 'Warm coat', cost: 1, icon: '🧥', tip: 'The first hit does not count' },
+  },
+};
+
+// The stars and what has been built at one outpost (no DOM, tested in node).
+export class Armoury {
+  constructor(pads = []) { this.stars = 0; this.earned = 0; this.pads = pads.map(([v, d], i) => ({ i, v, d, tower: null })); this.boosts = new Set(); this.next = new Set(); }
+  earn(n = 1) { this.stars += n; this.earned += n; }
+  canTower(kind, pad) { const p = this.pads[pad], t = SHOP.towers[kind]; return !!(p && t && !p.tower && this.stars >= t.cost); }
+  buildTower(kind, pad) { if (!this.canTower(kind, pad)) return false; this.stars -= SHOP.towers[kind].cost; this.pads[pad].tower = kind; return true; }
+  canBoost(id) { const b = SHOP.boosts[id]; return !!(b && !(b.keep ? this.boosts : this.next).has(id) && this.stars >= b.cost); }
+  buyBoost(id) { if (!this.canBoost(id)) return false; const b = SHOP.boosts[id]; this.stars -= b.cost; (b.keep ? this.boosts : this.next).add(id); return true; }
+  // the boosts for the fight that is starting (the one-fight ones are used up)
+  takeFight() { const all = new Set([...this.boosts, ...this.next]); this.next = new Set(); return all; }
+}
 
 // Words that read well on a snowman's sign: short English, with a Turkish meaning.
 export function huntWords(unit) {

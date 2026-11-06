@@ -82,12 +82,17 @@ export class OutpostFlow {
   }
 
   onItem({ itemId, correctFirstTry }) {
-    if (this.mode === 'cocoa' || this.mode === 'supply') { this.cocoaRight = correctFirstTry; return; }
+    if (this.mode === 'cocoa') { this.cocoaRight = correctFirstTry; return; }
+    if (this.mode === 'supply') { // a camp crate: counts toward the 80% (answered calmly), a star when right first time
+      this.cocoaRight = correctFirstTry; recordItem(this.up, 0, { correctFirstTry, itemId }); this.writeSave(this.save);
+      if (correctFirstTry) this.ui.onStar?.(); return;
+    }
     const v = this.mode === 'defend' ? this.defendVisit : this.visits.get(this.zone.id);
     v.answer(correctFirstTry);
     recordItem(this.up, 0, { correctFirstTry, itemId }); this.writeSave(this.save);
     this.card.setProgress(v.progress);
     if (correctFirstTry) {
+      if (this.mode === 'seize' && this.zone?.halves) this.ui.onStar?.(); // the halves earn stars for the next fight
       this.ui.play('sparkle'); this.streak = (this.streak || 0) + 1;
       if (this.stageZone) this.sim.blast(this.player, this.zone, this.mode === 'seize' ? 3 : 4); // the landmark's (or the banners') attack
       else if (this.mode === 'seize') this.sim.volley(this.player, this.zone, 2);
@@ -145,14 +150,14 @@ export class OutpostFlow {
     if (this.mode) { p.asking = false; return; }
     this.mode = 'supply'; this.cocoaId = pickupId; this.cocoaRight = false; this.plant(true);
     this.card.open({ theme: 'cocoa', title: 'Supply crate!', coach: '', leave: false }); this.card.setProgress(0);
-    this.card.show(cocoaQuestion(this.unit, this.rng)); this.card.setCoach('Answer right: snowballs for the whole team and a big boost for your super!');
+    this.card.show(cocoaQuestion(this.unit, this.rng)); this.card.setCoach('Answer right first time for a ⭐ to build with before the fight!');
   }
   finishSupply() {
     const right = this.cocoaRight;
     this.card.close(); this.plant(false); this.mode = null;
     this.sim.supplyResult(this.cocoaId, this.player, right);
-    if (right) { this.ui.banner('SUPPLIES!', 'win', 1.3); this.ui.play('superReady'); }
-    else this.ui.coach('Not quite, but here is a snowball anyway. The next crate is coming!', 3);
+    if (right) { this.ui.banner('+1 ⭐', 'win', 1.2); this.ui.play('superReady'); }
+    else this.ui.coach('Not quite this time, so no star from this crate. Try the next one!', 3);
   }
 
   // ---------- hot cocoa ----------

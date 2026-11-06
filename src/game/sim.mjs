@@ -36,6 +36,9 @@ export const WORLD = {
   sled: { start: 2.5, push: 2.2, gravity: 9, max: 9.5, board: 0.75, cooldown: 1.5, cost: 2.6 },
   cocoa: { respawn: 40, reach: 0.85, superBonus: 0.35 }, // a question first; right answer = full warmth, full snowballs, some super
   supply: { reach: 0.9, superBonus: 0.45 }, // supply crates in the fights
+  // towers built with snow stars before a fight (fights.mjs): a snowball cannon, a snow fort (a
+  // wall), a cocoa stand (warms teammates nearby), an ice patch (slows rivals crossing it)
+  tower: { cannon: { range: 6.5, reload: 1.3, dmg: 22, speed: 11 }, cocoa: { r: 3, heal: 12 }, ice: { r: 1.9 } },
   flake: { reach: 0.85 },
   dump: { reach: 1.4, damage: 6, slow: 1.1, cooldown: 4, tiles: 'HRtlTvyx' },
   gust: { every: [25, 45], seconds: 6, strength: 2.4, dir: [-Math.SQRT1_2, Math.SQRT1_2] }, // poyraz: from the north-east
@@ -61,7 +64,7 @@ export class Sim {
   constructor({ arena, grid, nav, seats, rng = Math.random, pace = 'relaxed' }) {
     this.arena = arena; this.grid = grid; this.nav = nav; this.rng = rng;
     this.pace = CONFIG.pace[pace] || CONFIG.pace.relaxed;
-    this.t = 0; this.events = []; this.balls = []; this.walls = [];
+    this.t = 0; this.events = []; this.balls = []; this.walls = []; this.towers = [];
     this.seats = new Map(seats.map(s => [s.id, s]));
     this.chars = [];
     this.drifts = arena.drifts.map(([x, z], i) => ({ id: i, x, z, cd: 0 }));
@@ -166,6 +169,7 @@ export class Sim {
 
   hit(c, ball, mul = 1) {
     if (c.frozen || c.thaw || c.shield > 0 || c.dodge > 0 || c.benched) return false;
+    if (c.coat > 0) { c.coat--; c.flash = 0.12; this.emit('coat', { id: c.id, x: c.x, z: c.z }); return true; } // a warm coat: this hit does not count
     let dmgMul = mul;
     if (c.shieldFront && ball.kind === 'straight') { const bl = Math.hypot(ball.vx, ball.vz) || 1; if ((ball.vx * Math.sin(c.face) + ball.vz * Math.cos(c.face)) / bl < -0.3) dmgMul *= c.shieldFront; } // the lid takes it
     const dmg = Math.round(ball.dmg * dmgMul);
@@ -198,6 +202,41 @@ export class Sim {
     for (const w of [...this.walls]) if ((w.life -= dt) <= 0) { this.removeWall(w); this.emit('wallMelt', { id: w.id }); }
     for (const d of this.drifts) d.cd = Math.max(0, d.cd - dt);
     for (const z of this.zones) this.stepZone(z, dt);
+    if (this.towers.length) this.stepTowers(dt);
+  }
+
+  // ---------- towers (built with snow stars before a fight) ----------
+  addTower(kind, x, z, side = 'home') {
+    const t = { id: 't' + (this.towerN = (this.towerN || 0) + 1), kind, x, z, side, cd: 0.5, cells: [] };
+    if (kind === 'cannon' || kind === 'cocoa') t.cells = [[x, z]];
+    if (kind === 'fort') t.cells = [[x - 1, z], [x, z], [x + 1, z]];
+    for (const [px, pz] of t.cells) this.grid.set(px, pz, GRID.BLOCK, true);
+    this.towers.push(t); this.emit('towerBuilt', { id: t.id, kind, x, z }); return t;
+  }
+  clearTowers() { for (const t of this.towers) for (const [px, pz] of t.cells) this.grid.set(px, pz, GRID.BLOCK, false); this.towers = []; this.emit('towersCleared', {}); }
+  stepTowers(dt) {
+    const T = WORLD.tower;
+    for (const t of this.towers) {
+      if (t.kind === 'cannon') {
+        if ((t.cd -= dt) > 0) continue;
+        let best = null, bd = Infinity;
+        for (const o of this.chars) {
+          if (o.side === t.side || o.frozen || o.thaw || o.benched || o.gone || o.word) continue; // word snowmen are the student's to find
+          const d = Math.hypot(o.x - t.x, o.z - t.z); if (d > T.cannon.range || d >= bd) continue;
+          const ux = (o.x - t.x) / (d || 1), uz = (o.z - t.z) / (d || 1);
+          if (!this.grid.clearLine(t.x + ux * 0.7, t.z + uz * 0.7, o.x, o.z)) continue;
+          best = o; bd = d;
+        }
+        if (!best) { t.cd = 0.3; continue; }
+        const ux = (best.x - t.x) / bd, uz = (best.z - t.z) / bd, team = this.chars.find(c => c.side === t.side)?.team;
+        this.balls.push({ owner: -1, side: t.side, team, kit: 'thrower', kind: 'straight', x: t.x + ux * 0.7, z: t.z + uz * 0.7, y: 1.05 + this.ground(t.x, t.z), vx: ux * T.cannon.speed, vz: uz * T.cannon.speed, dmg: T.cannon.dmg, r: SIM.ballRadius, left: T.cannon.range + 0.5, d0: T.cannon.range + 0.5 });
+        t.cd = T.cannon.reload; this.emit('towerShot', { id: t.id, x: t.x, z: t.z, a: Math.atan2(ux, uz) });
+      } else if (t.kind === 'cocoa') {
+        for (const c of this.chars) if (c.side === t.side && !c.frozen && !c.benched && Math.hypot(c.x - t.x, c.z - t.z) < T.cocoa.r) c.warmth = Math.min(c.maxWarmth, c.warmth + T.cocoa.heal * dt);
+      } else if (t.kind === 'ice') {
+        for (const c of this.chars) if (c.side !== t.side && Math.hypot(c.x - t.x, c.z - t.z) < T.ice.r) c.slow = Math.max(c.slow, 0.3);
+      }
+    }
   }
 
   // ---------- sled runs ----------
@@ -333,7 +372,7 @@ export class Sim {
     this.emit('blast', { zone: z.id, x: z.x, z: z.z, n: targets.length });
     return targets.length;
   }
-  refillTeam(side) { for (const c of this.chars) if (c.side === side && !c.frozen) c.ammo = F.ammoMax; }
+  refillTeam(side) { for (const c of this.chars) if (c.side === side && !c.frozen) c.ammo = c.ammoMax || F.ammoMax; }
   // the cocoa question was answered
   cocoaResult(pickupId, c, right) {
     const p = this.pickups.find(q => q.id === pickupId); if (!p) return;
@@ -372,13 +411,13 @@ export class Sim {
         c.thaw = 0; const h = this.nearestHeld(c.side, c.x, c.z) || this.spawns[c.side][0]; // back at the nearest point your team holds
         c.x = h.x + (this.rng() - 0.5) * 1.5; c.z = h.z + (this.rng() - 0.5) * 1.5;
         if (!this.grid.freeCircle(c.x, c.z, SIM.radius)) { c.x = h.x; c.z = h.z; }
-        c.warmth = c.maxWarmth; c.ammo = F.ammoMax; c.shield = F.spawnShield; c.vx = c.vz = 0;
+        c.warmth = c.maxWarmth; c.ammo = c.ammoMax || F.ammoMax; c.shield = F.spawnShield; c.vx = c.vz = 0;
         this.emit('respawn', { id: c.id, x: c.x, z: c.z });
       }
       return;
     }
     const kit = this.kitOf(c);
-    if (c.ammo < F.ammoMax) c.ammo = Math.min(F.ammoMax, c.ammo + dt / kit.reload);
+    const amax = c.ammoMax || F.ammoMax; if (c.ammo < amax) c.ammo = Math.min(amax, c.ammo + dt / kit.reload * (c.reloadMul || 1));
     if (this.t - c.lastHit > F.regenDelay && this.t - c.lastAttack > F.regenDelay) c.warmth = Math.min(c.maxWarmth, c.warmth + F.regenRate * (this.weather.kind === 'sun' ? WORLD.weather.sunRegen : 1) * dt);
     const aim = this.pace.autoAim * (c.side === 'home' ? 1 : 0.5);
     if (c.planted) { c.vx = c.vz = 0; c.moving = 0; c.travel = null; return; } // reading a task card: stays put while the team guards

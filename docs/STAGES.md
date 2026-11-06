@@ -69,37 +69,44 @@ its own layout.
 - During a stand there are no blizzards or sun bursts, so the light stays steady; each stage
   keeps its own time of day.
 
-## Longer fights with English inside them (Archery Ground, the sample)
+## Prepare, then fight (Archery Ground, the sample)
 
 From the third play-test talk: fewer, bigger outposts, each taken in two halves of English with
-real fights round them, and English inside the fights too. Archery Ground is the sample
-(`fights` and `halves` in `stages.mjs`, the plan in `fights.mjs`); the others follow once it is
-approved.
+real fights round them. English and fighting are kept apart, so nobody has to read while being
+hit, but the English decides the fights: right answers earn **⭐ snow stars**, and stars build
+towers and buy boosts. Archery Ground is the sample (`fights` and `halves` in `stages.mjs`, the
+plan and the shop in `fights.mjs`); the others follow once it is approved.
 
-1. **The opening round** (about 60–90 s): the rival team holds its line in front of the lodge
-   and keeps coming back from its camp; snowmen keep walking out. Freeze **12 rivals** to break
-   the line (the bar under the outpost name fills). After 90 s the rivals give up anyway.
-2. **Part 1 of 2: Matching**, in the fountain activity. Half the bar fills, then "Half the
-   outpost is yours!".
-3. **"They strike back!"**: hold the circle for **50 s**. The clock stops while rivals stand in
-   the circle with nobody of ours (85 s at most).
-4. **Part 2 of 2: Sorting**, in the archery activity.
-5. **The final wave**: 30 s at most, then the outpost is yours.
+1. **Camp:** four supply crates at the home end, no rivals yet. Run onto each for one quick
+   question: a ⭐ when right first time (counted toward the 80%, answered calmly).
+2. **Build** (35 s at most, or tap Fight!): the camera pulls back over the field; tap a glowing
+   pad to build a tower, or pick a boost in the panel.
+3. **The opening round:** the rival team keeps coming back from its camp; freeze **12 rivals**
+   to break the line (90 s at most).
+4. **Part 1 of 2: Matching** (the fountain activity): every right first try is also a ⭐. Build.
+5. **"They strike back!":** hold the circle for **50 s** (the clock stops while rivals stand in
+   it alone).
+6. **Part 2 of 2: Sorting** (the archery activity), ⭐ again. Build, then the **final wave** (30 s
+   at most), and the outpost is yours.
+
+| Towers (on six fixed glowing pads) | ⭐ | Boosts (for your kid) | ⭐ |
+|---|---|---|---|
+| Snowball cannon: throws at rivals nearby | 3 | Big gloves: 4 snowballs instead of 3 (the whole stage) | 2 |
+| Snow fort: a wall to hide behind | 1 | Quick hands: snowballs come back faster (the whole stage) | 2 |
+| Cocoa stand: warms your team nearby | 2 | Super start: half a super for the next fight | 1 |
+| Ice patch: slows rivals crossing it | 1 | Warm coat: the first hit in the next fight does not count | 1 |
+
+Two pads are near the home end, two on the flanks of the middle, two by the circle (for the
+strike-back and the final). Towers stay for the stage. The fights stay winnable without any.
 
 **Being frozen in a fight never costs a life:** the kid goes back to the spawn for a moment.
-Lives are still lost on the sled.
 
-**English inside the fights:**
-- **Word snowmen:** three snowmen walk out holding signs with English words; the top of the
-  screen shows a Turkish word (with its picture). Freeze the snowman with the right English word:
-  "RIGHT WORD!", +2 toward the 12 and a boost for the super. A wrong one shows what its word
-  means. Missed words come back sooner. Teammates leave word snowmen to the student. Practice
-  only: never counted toward the 80%, because a snowball can always hit the wrong snowman.
-- **Supply crates:** a crate lands on the field every 20 s or so, under a big golden "?" badge that bobs, pulses and wiggles, with a soft beam of light, ripples on the snow and sparkles; when it is out of view a golden "?" at the screen edge points to it. Run onto it
-  for one quick question: right, and the whole team's snowballs are refilled and the super gets a
-  big boost; wrong, and there is still a snowball (a question never punishes).
+**Word snowmen** stay in the fights, but tidy: three snowmen walk out together in a row, side by
+side, slowly, in their own lanes, and never throw. The top of the screen shows a Turkish word with
+its picture; freeze the snowman with the right English word ("RIGHT WORD!", +2 toward the 12, a
+boost for the super). Teammates and cannons leave them to the student. Practice only.
 
-Still to come in the fights: banner points and spell-your-super.
+**Supply crates** are only in the camp now, not in the fights.
 
 ## A stage
 

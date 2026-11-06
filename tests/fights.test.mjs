@@ -69,3 +69,35 @@ test('supply crates land on open ground in the field; walking onto one asks a qu
   assert.ok(!m.sim.pickups.some(q => q.id === p.id), 'the crate is used up');
   const q = m.sim.dropSupply(s.x, s.z); P.ammo = 0; m.sim.supplyResult(q.id, P, false); assert.equal(P.ammo, 1, 'a wrong answer still gives a snowball');
 });
+
+test('prepare then fight: stars buy towers on pads and boosts; one-fight boosts are used up', async () => {
+  const { Armoury, SHOP } = await import('../src/game/fights.mjs');
+  const P = FIGHT_PLANS.long;
+  assert.ok(P.camp.crates.length >= 3 && P.pads.length >= 4 && P.build >= 20);
+  const a = new Armoury(P.pads); assert.equal(a.stars, 0);
+  assert.equal(a.buildTower('fort', 0), false, 'no stars, no tower');
+  a.earn(6);
+  assert.ok(a.buildTower('cannon', 0)); assert.equal(a.stars, 6 - SHOP.towers.cannon.cost);
+  assert.equal(a.buildTower('fort', 0), false, 'one tower per pad');
+  assert.ok(a.buyBoost('gloves')); assert.equal(a.buyBoost('gloves'), false, 'gloves last the stage');
+  assert.ok(a.buyBoost('coat'));
+  const fight1 = a.takeFight(); assert.ok(fight1.has('gloves') && fight1.has('coat'));
+  const fight2 = a.takeFight(); assert.ok(fight2.has('gloves') && !fight2.has('coat'), 'the coat was for one fight');
+  assert.equal(a.earned, 6);
+});
+
+test('every Archery pad and camp crate spot is on open ground; towers block their cells and the cannon throws at rivals in range', () => {
+  const m = createMatch({ arena: buildTileArena(def), myTeam: 'hufflepuff', rivalTeam: 'gryffindor', rng: makeRng(5) });
+  const z = m.sim.zones.find(q => q.id === 'archery'), P = FIGHT_PLANS.long;
+  for (const [v, d] of P.pads) for (const dv of [-1, 0, 1]) assert.ok(!m.grid.blocked(z.x + v + dv, z.z + d), `pad ${v},${d} (fort cells) is open`);
+  for (const [v, d] of P.camp.crates) assert.ok(m.grid.freeCircle(z.x + v, z.z + d, 0.5), `crate ${v},${d}`);
+  for (const c of m.sim.chars) if (c.side === 'rival') { c.benched = true; c.x = c.z = -999; }
+  const [v, d] = P.pads[0], t = m.sim.addTower('cannon', z.x + v, z.z + d);
+  assert.ok(m.grid.blocked(t.x, t.z), 'the cannon stands on its pad');
+  const s = m.addMinion('waddler', t.x, t.z - 4, z); s.march = { x: s.x, z: s.z }; // stands still in range
+  let ev = []; for (let k = 0; k < 60; k++) { m.sim.step(0.05, new Map()); ev.push(...m.sim.drainEvents()); }
+  assert.ok(ev.some(e => e.type === 'towerShot'), 'it throws'); assert.ok(s.frozen > 0 || s.warmth < 24, 'and hits');
+  m.sim.clearTowers(); assert.ok(!m.grid.blocked(t.x, t.z), 'cleared at the end of the stage');
+  const kid = m.player; kid.coat = 1; const w = kid.warmth; m.sim.hit(kid, { dmg: 30, owner: -1, kind: 'straight', vx: 1, vz: 0, x: kid.x, z: kid.z });
+  assert.equal(kid.warmth, w, 'a warm coat takes the first hit'); assert.equal(kid.coat, 0);
+});

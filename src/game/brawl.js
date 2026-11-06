@@ -30,7 +30,8 @@ import { useBasicScenes } from './cards/scenes.js';
 import { WorldTasks } from './render/worldtask.js';
 import { castleStation } from './cards/castle3d.js';
 import { treehouseStation, archeryStation, fountainStation, bellStation } from './cards/stations.js';
-import { InstancedMesh, MeshLambertMaterial, SphereGeometry, Object3D, Group, Mesh, BoxGeometry, Sprite, SpriteMaterial, CanvasTexture, SRGBColorSpace, CylinderGeometry, PlaneGeometry, MeshBasicMaterial, AdditiveBlending, DoubleSide } from 'three';
+import { InstancedMesh, MeshLambertMaterial, SphereGeometry, Object3D, Group, Mesh, BoxGeometry, Sprite, SpriteMaterial, CanvasTexture, SRGBColorSpace, CylinderGeometry, PlaneGeometry, MeshBasicMaterial, AdditiveBlending, DoubleSide, CircleGeometry, RingGeometry, TorusGeometry } from 'three';
+import { SHOP } from './fights.mjs';
 
 const $ = s => document.querySelector(s);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -226,6 +227,8 @@ async function startGame(myTeam, kit, pace) {
       snapCamera: () => { focus.set(player.x, 0, player.z - 1.2); camShift = 0; },
       showWall: cells => showWall(cells), onGone: list => dropSnowmen(list), rebuildWorld: z => rebuildWorld(z), markRival: z => world.setOwner(z.id, rivCol), fireworks,
       seizeButton: on => { $('#seizebtn').hidden = !on; },
+      stars: (n, pop) => { const el = $('#stars'); el.hidden = n == null; if (n != null) { el.querySelector('b').textContent = n; if (pop) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); } } },
+      build: { open: i => buildUI.open(i), refresh: i => buildUI.refresh(i), close: () => buildUI.close() },
       fx, hunt: w => { const el = $('#hunt'), clean = s => String(s ?? '').replace(/[&<>"']/g, ''); el.hidden = !w; if (w) el.innerHTML = `<small>Freeze the snowman that means</small><span class="hunt-word">${w.pic ? `<img src="${clean(w.pic)}" alt="">` : ''}<b>${clean(w.tr)}</b></span>`; },
       showdown: {
         start: (z, b) => showdownView.start(z, b), raise: k => showdownView.raise(k), giantBall: (f, t, s) => showdownView.giantBall(f, t, s), ring: () => showdownView.ring(), stop: () => showdownView.stop(),
@@ -276,6 +279,79 @@ async function startGame(myTeam, kit, pace) {
     Object.assign(g.userData, { q, halo, beam, rings, t: 0, spark: 0 });
     scene.add(g); crates.set(id, g); fx.emit(x, 1, z, 36, '#ffd166', 5, 0.9); play('sparkle');
   };
+  // ---------- towers built with snow stars, and the glowing pads they stand on ----------
+  const towers = new Map(), team = CONFIG.teams[myTeam];
+  const lam = col => new MeshLambertMaterial({ color: col });
+  const towerMesh = kind => {
+    const g = new Group(), add = (geo, mat, x, y, z) => { const m = new Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
+    if (kind === 'cannon') { // a snowball cannon on a snow mound, in the team's colour
+      add(new SphereGeometry(0.55, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), lam('#f4f7ff'), 0, 0, 0);
+      add(new CylinderGeometry(0.34, 0.42, 0.5, 14), lam('#7a5a46'), 0, 0.5, 0);
+      const head = new Group(); head.position.y = 0.85; g.add(head); g.userData.head = head;
+      const barrel = new Mesh(new CylinderGeometry(0.16, 0.2, 0.9, 12), lam(team.color)); barrel.rotation.x = Math.PI / 2 - 0.25; barrel.position.set(0, 0.08, 0.32); barrel.castShadow = true; head.add(barrel);
+      const ball = new Mesh(new SphereGeometry(0.26, 12, 8), lam('#f4f7ff')); head.add(ball);
+      const rim = new Mesh(new TorusGeometry(0.2, 0.05, 6, 14), lam('#ffffff')); rim.position.set(0, 0.2, 0.74); rim.rotation.x = -0.25; head.add(rim);
+    } else if (kind === 'fort') { // three packed snow blocks with a cap
+      for (const x of [-1, 0, 1]) { add(new BoxGeometry(0.98, 0.85, 0.9), lam('#d4ddf4'), x, 0.42, 0); add(new BoxGeometry(1.0, 0.16, 0.95), lam('#ffffff'), x, 0.9, 0); }
+    } else if (kind === 'cocoa') { // a little cocoa stand with a striped top and a steaming cup
+      add(new BoxGeometry(0.8, 0.6, 0.6), lam('#c8443c'), 0, 0.3, 0); add(new BoxGeometry(0.9, 0.08, 0.7), lam('#f4f1ea'), 0, 0.64, 0);
+      add(new CylinderGeometry(0.13, 0.11, 0.2, 10), lam('#ffffff'), 0, 0.78, 0); add(new CylinderGeometry(0.11, 0.11, 0.02, 10), lam('#6b3b22'), 0, 0.88, 0);
+      for (const x of [-0.38, 0.38]) add(new CylinderGeometry(0.03, 0.03, 0.9, 6), lam('#5d6b8f'), x, 1.05, -0.25);
+      const top = add(new BoxGeometry(1.0, 0.08, 0.8), lam('#e0463c'), 0, 1.5, -0.1); top.rotation.x = 0.15;
+    } else if (kind === 'ice') { // a glassy patch on the snow
+      const m = new Mesh(new CircleGeometry(1.9, 28), new MeshBasicMaterial({ color: '#bfe6ff', transparent: true, opacity: 0.55, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.position.y = 0.03; g.add(m);
+      const r = new Mesh(new RingGeometry(1.75, 1.9, 32), new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.8, depthWrite: false })); r.rotation.x = -Math.PI / 2; r.position.y = 0.035; g.add(r);
+    }
+    return g;
+  };
+  const addTower = (id, kind, x, z) => { const g = towerMesh(kind); g.position.set(x, groundH(x, z), z); g.scale.setScalar(0.01); g.userData.t = 0; scene.add(g); towers.set(id, g); fx.emit(x, 0.8, z, 30, '#ffffff', 4, 0.8); };
+  const clearTowers = () => { for (const g of towers.values()) { scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); } towers.clear(); };
+  let padGroup = null;
+  const padTex = canvasTex(128, (g, S) => { const gr = g.createRadialGradient(S / 2, S / 2, S * 0.2, S / 2, S / 2, S / 2); gr.addColorStop(0, 'rgba(255,230,140,0.0)'); gr.addColorStop(0.7, 'rgba(255,214,90,0.9)'); gr.addColorStop(1, 'rgba(255,200,60,0)'); g.fillStyle = gr; g.fillRect(0, 0, S, S); });
+  const padMeshes = (pads, on) => {
+    if (padGroup) { scene.remove(padGroup); padGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); }); padGroup = null; }
+    if (!on || !pads) return;
+    padGroup = new Group();
+    for (const p of pads) {
+      if (p.tower) continue;
+      const m = new Mesh(new PlaneGeometry(1.8, 1.8), new MeshBasicMaterial({ map: padTex, transparent: true, depthWrite: false, blending: AdditiveBlending })); m.rotation.x = -Math.PI / 2; m.position.set(p.x, groundH(p.x, p.z) + 0.05, p.z); padGroup.add(m);
+      const beam = new Mesh(new CylinderGeometry(0.5, 0.7, 2.6, 16, 1, true), new MeshBasicMaterial({ map: beamTex, transparent: true, depthWrite: false, blending: AdditiveBlending, side: DoubleSide })); beam.position.set(p.x, groundH(p.x, p.z) + 1.3, p.z); padGroup.add(beam);
+    }
+    scene.add(padGroup);
+  };
+  const tickTowers = dt => {
+    for (const g of towers.values()) { const u = g.userData; if (u.t < 1) { u.t = Math.min(1, u.t + dt * 3); const k = u.t < 1 ? 1 + Math.sin(u.t * Math.PI) * 0.25 : 1; g.scale.setScalar(Math.max(0.01, u.t * k)); } if (u.kick > 0) { u.kick -= dt; if (u.head) u.head.position.z = -Math.max(0, u.kick) * 0.6; } }
+    if (padGroup && !reduceMotion) { const s = 1 + Math.sin(performance.now() / 250) * 0.08; padGroup.children.forEach((m, k) => { if (k % 2 === 0) m.scale.setScalar(s); }); }
+  };
+  // the build panel: stars, boosts, Fight!; a button over each glowing pad opens the tower menu
+  const buildUI = (() => {
+    let info = null, open = false, menuPad = null;
+    const el = $('#build'), padsEl = $('#pads'), menu = $('#padmenu'), pv = new Vector3();
+    const showMenu = i => {
+      const p = info.pads[i]; if (!p || p.tower) { menu.hidden = true; menuPad = null; return; }
+      menuPad = i; menu.innerHTML = '<b class="pm-title">Build here</b>' + Object.entries(SHOP.towers).map(([k, t]) => `<button type="button" data-tower="${k}" ${info.stars >= t.cost ? '' : 'disabled'}><span class="i">${t.icon}</span><span class="n"><b>${t.name}</b><small>${t.tip}</small></span><span class="c">⭐${t.cost}</span></button>`).join('') + '<button type="button" class="pm-close" data-close>Not now</button>';
+      menu.hidden = false;
+    };
+    const render = () => {
+      el.querySelector('.bd-stars').textContent = `⭐ ${info.stars}`;
+      el.querySelector('.bd-boosts').innerHTML = Object.entries(SHOP.boosts).map(([id, b]) => { const owned = (b.keep ? info.boosts : info.next).has(id), can = !owned && info.stars >= b.cost; return `<button type="button" class="bd-boost${owned ? ' owned' : ''}" data-boost="${id}" ${can ? '' : 'disabled'}><span class="i">${b.icon}</span><b>${b.name}</b><small>${owned ? '✓ ready' : b.tip}</small><span class="c">⭐${b.cost}</span></button>`; }).join('');
+      padsEl.innerHTML = info.pads.map(p => `<button type="button" class="pad${p.tower ? ' built' : ''}" data-pad="${p.i}" aria-label="${p.tower ? SHOP.towers[p.tower].name : 'Build a tower here'}" ${p.tower ? 'disabled' : ''}>${p.tower ? SHOP.towers[p.tower].icon : '+'}</button>`).join('');
+      if (menuPad != null) showMenu(menuPad);
+    };
+    el.addEventListener('click', e => { const b = e.target.closest('[data-boost]'); if (b && !b.disabled) stages?.buyBoost(b.dataset.boost); if (e.target.closest('.bd-go')) stages?.endBuild(); });
+    padsEl.addEventListener('click', e => { const b = e.target.closest('[data-pad]'); if (b) showMenu(+b.dataset.pad); });
+    menu.addEventListener('click', e => { if (e.target.closest('[data-close]')) { menu.hidden = true; menuPad = null; return; } const b = e.target.closest('[data-tower]'); if (b && !b.disabled && menuPad != null) { const i = menuPad; menuPad = null; menu.hidden = true; stages?.buyTower(b.dataset.tower, i); } });
+    return {
+      open(i) { info = i; open = true; el.hidden = false; padsEl.hidden = false; menu.hidden = true; menuPad = null; render(); document.body.classList.add('building'); padMeshes(i.pads, true); },
+      refresh(i) { info = i; if (!open) return; render(); padMeshes(i.pads, true); },
+      close() { if (!open) return; open = false; el.hidden = true; padsEl.hidden = true; menu.hidden = true; menuPad = null; document.body.classList.remove('building'); padMeshes(null, false); },
+      tick() {
+        if (!open || !info) return;
+        el.querySelector('.bd-time').textContent = `${Math.max(0, Math.ceil(stages.plan.build - stages.tBuild))}s`;
+        [...padsEl.children].forEach((b, k) => { const p = info.pads[k]; pv.set(p.x, groundH(p.x, p.z) + 0.4, p.z).project(camera); const on = pv.z < 1 && Math.abs(pv.x) < 1.05 && Math.abs(pv.y) < 1.05; b.style.display = on ? '' : 'none'; b.style.transform = `translate(${(pv.x + 1) / 2 * innerWidth}px, ${(1 - pv.y) / 2 * innerHeight}px) translate(-50%, -50%)`; });
+      },
+    };
+  })();
   const tickCrates = dt => {
     for (const g of crates.values()) {
       const u = g.userData; u.t += dt; const t = u.t, pop = Math.min(1, t / 0.45), over = pop < 1 ? 1 + Math.sin(pop * Math.PI) * 0.35 : 1; // pops in with a little overshoot
@@ -417,6 +493,10 @@ async function startGame(myTeam, kit, pace) {
     if (flow && live) flow.update(rdt); // card timers run in real time
     for (const e of sim.drainEvents()) {
       fx.onEvent(e, sim); flow?.onEvent(e); stages?.onEvent(e);
+      if (e.type === 'towerBuilt') addTower(e.id, e.kind, e.x, e.z);
+      if (e.type === 'towersCleared') clearTowers();
+      if (e.type === 'towerShot') { const g = towers.get(e.id); if (g) { if (g.userData.head) g.userData.head.rotation.y = e.a; g.userData.kick = 0.15; } fx.emit(e.x + Math.sin(e.a) * 0.8, 1.05, e.z + Math.cos(e.a) * 0.8, 6, '#ffffff', 2, 0.4); play('throw', { near: 0.5 }); }
+      if (e.type === 'coat') { fx.emit(e.x, 1, e.z, 16, '#ffcf9a', 2.5, 0.6); fx.number(e.x, e.z, 'WARM COAT!', 'warm'); }
       if (e.type === 'supplyDrop') addCrate(e.pickup, e.x, e.z);
       if (e.type === 'supplyGone') dropCrate(e.pickup);
       if (e.type === 'collect' && e.kind === 'supply') { fx.emit(e.x, 0.8, e.z, 30, '#ffd166', 4, 0.8); fx.number(e.x, e.z, e.right ? 'SUPPLIES!' : '+1 ❄', 'warm'); }
@@ -482,7 +562,7 @@ async function startGame(myTeam, kit, pace) {
       const c = k.c, visible = !c.benched && (c.side === 'home' || sim.canSee(player, c) || c.frozen);
       k.update(dt, { visible, reduceMotion, groundY: groundH(c.x, c.z) });
     }
-    tickCrates(dt);
+    tickCrates(dt); tickTowers(dt); buildUI.tick();
     for (const v of snowmen.values()) { v.update(dt, groundH(v.c.x, v.c.z)); v.root.visible = sim.canSee(player, v.c) || v.c.frozen > 0; }
     sim.drifts.forEach((d, i) => { const t = 1 - d.cd / 6; if (d.lt !== t) { d.lt = t; world.updateDrift(i, Math.max(0.2, t)); } });
     fx.update(pose ? 0 : dt, sim);
@@ -490,11 +570,14 @@ async function startGame(myTeam, kit, pace) {
     const z = sim.nearestZone(player.x, player.z);
 
     // camera (a battlefield pulls back a little and looks a little ahead, up the field)
-    const onField = !!(stages?.mode === 'outpost' && stages.zone?.battlefield && !player.planted); fieldZoom += ((onField ? 1.1 : 1) - fieldZoom) * Math.min(1, dt * 2); const zf = zoom * fieldZoom;
+    // building: pull back to see the glowing pads (the field's width fits the screen)
+    const building = stages?.phase === 'build' && stages.buildFocus, tH1 = Math.tan(camera.fov * Math.PI / 360);
+    const fit = building ? Math.min(2.6, Math.max(1.2, (stages.zone.battlefield.hw + 1.5) / (tH1 * off.length() * zoom * Math.min(1.5, camera.aspect)))) : 1;
+    const onField = !!(stages?.mode === 'outpost' && stages.zone?.battlefield && !player.planted); fieldZoom += ((building ? fit : onField ? 1.1 : 1) - fieldZoom) * Math.min(1, dt * 2.5); const zf = zoom * fieldZoom;
     const tH = Math.tan(camera.fov * Math.PI / 360), upright = camera.aspect < 1, halfW0 = tH * off.length() * zf * camera.aspect;
     // reading a card: keep the student and the fight beside it (left half), or above it in portrait, where the card is at the bottom
     camShift += ((player.planted && !worldTasks?.active ? (upright ? tH * off.length() * zf * 0.55 : halfW0 * 0.5) : 0) - camShift) * Math.min(1, dt * 4);
-    const tx = player.x + (upright ? 0 : camShift), tz = player.z - 1.2 - (fieldZoom - 1) * 15 + (upright ? camShift : 0);
+    const tx = building ? stages.buildFocus.x : player.x + (upright ? 0 : camShift), tz = building ? stages.buildFocus.z + (upright ? 4 : 1) : player.z - 1.2 - (Math.min(fieldZoom, 1.1) - 1) * 15 + (upright ? camShift : 0);
     focus.x += (tx - focus.x) * Math.min(1, dt * 5); focus.z += (tz - focus.z) * Math.min(1, dt * 5);
     const halfW = tH * off.length() * zf * camera.aspect, lim = params.has('zoom') ? 0 : Math.max(0, arena.w / 2 - halfW + 0.5);
     focus.x = Math.max(-lim, Math.min(lim, focus.x));
@@ -537,7 +620,7 @@ async function startGame(myTeam, kit, pace) {
     $('#zone').classList.toggle('contested', !!z.contested);
     $('#score .h').textContent = score.home; $('#score .r').textContent = score.rival;
     $('#super').classList.toggle('ready', player.super >= 1); $('#super').style.setProperty('--p', Math.round(player.super * 100));
-    $('#attack .pips').innerHTML = Array.from({ length: CONFIG.fight.ammoMax }, (_, i) => `<i style="--f:${Math.max(0, Math.min(1, player.ammo - i))}"></i>`).join('');
+    $('#attack .pips').innerHTML = Array.from({ length: player.ammoMax || CONFIG.fight.ammoMax }, (_, i) => `<i style="--f:${Math.max(0, Math.min(1, player.ammo - i))}"></i>`).join('');
     $('#attack').classList.toggle('empty', player.ammo < 1);
     $('#attack').classList.toggle('quiet', sim.grid.has(player.x, player.z, GRID.ZONE));
     if (params.has('debug')) $('#debug').textContent = `${quality.fps.toFixed(0)} fps · ${LEVELS[quality.level].name}`;
