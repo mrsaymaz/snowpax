@@ -1,6 +1,6 @@
 # Arena 1: Kasımpaşa (M3)
 
-(Arena 2, the Golden Horn, is built the same way: see `docs/ARENA-2-GOLDEN-HORN.md`.)
+(Arena 2, the Golden Horn, and Arena 3, Downtown, are built the same way: see `docs/ARENA-2-GOLDEN-HORN.md` and `docs/ARENA-3-DOWNTOWN.md`.)
 
 From Mr. Saymaz's fifth talk: **one outpost per arena**. Arena 1 is Kasımpaşa; later arenas (for
 example İstiklal Street) are built the same way. The neighbourhood's places are no longer separate
