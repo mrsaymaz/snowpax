@@ -264,6 +264,22 @@ screen the pinned spots can be closer than the labels are wide, so every frame t
 pushed apart (along the shorter way, keeping their order), kept below the task card and above
 the caption at the bottom, and shrunk a little when the screen is crowded (`tick` in
 `render/worldtask.js`). The castle's ice letters are as wide as their labels.
+- **Words beside their things, not on them:** a scene marks the things the words must not cover
+  (`keepClear`: the Pier's gulls, Cihangir's cats, Tophane's clock faces) and the labels are pushed
+  off them, so each word sits next to its thing and the thing stays in view. Tophane's words sit to
+  the right of a column of clock faces (portrait) or under a row of them (landscape).
+- **The action shows:** when the answer's little scene plays (the gull catches the simit and flies to
+  the bell, two cats curl up together, the clock face lights up), the step's words fade out of its
+  way (`hush`).
+
+## The fight's HUD on a phone
+
+Nothing sits on top of anything else (portrait): the mini-map, the score with the objective on one
+line (no place name: in a stage there is only one place) and pause along the top; under the map the
+Map button and the hearts side by side; down the right the shop's ❄ and the flakes; Mr. Saymaz in
+a slim strip under the top row (three lines at most), hidden while you are frozen, because the screen
+already says "Frozen! Back in 3…". The arrival at the carousel has no black bars either, only a soft
+vignette.
 
 ## Calm fights
 

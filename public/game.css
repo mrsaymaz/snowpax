@@ -780,3 +780,5 @@ body.intro #banner, body.intro #seizebtn, body.intro #feed, body.intro #hunt, bo
 #hud:has(#frozen:not([hidden])) #coach { display: none; }
 #frozen { -webkit-text-stroke: 0; font-family: 'Fredoka', system-ui, sans-serif; font-weight: 700;
   text-shadow: 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 2px 0 var(--ink), 0 -2px 0 var(--ink), 1.5px 1.5px 0 var(--ink), -1.5px 1.5px 0 var(--ink), 1.5px -1.5px 0 var(--ink), -1.5px -1.5px 0 var(--ink), 0 4px 0 var(--ink); }
+/* a task scene's words fade out of the way while its action plays (worldtask.js hush) */
+.wt-label.gone { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.3s; }

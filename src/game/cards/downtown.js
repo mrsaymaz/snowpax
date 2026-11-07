@@ -257,7 +257,7 @@ export function taksimListen(ctx) {
   const flash = (g, col, times, then) => { let k = 0; const tick = () => { const on = k % 2 === 0; for (const l of g.userData.hazard) l.material.color.set(on ? col : '#7a4a1a'); if (++k < times * 2) ctx.later(tick, 140); else then?.(); }; tick(); };
   const pick = chooser(ctx, {
     answerText: st.options[st.answer], glow,
-    onRight: i => { els[i].classList.add('right'); A?.throw(); const g = buses[i]; ctx.sound('superReady'); for (const l of g.userData.lights) l.material.color.set('#ffffff');
+    onRight: i => { els[i].classList.add('right'); s.hush(els.filter((e, k) => k !== i)); ctx.later(() => s.hush([els[i]]), 650); A?.throw(); const g = buses[i]; ctx.sound('superReady'); for (const l of g.userData.lights) l.material.color.set('#ffffff');
       flash(g, '#ffb02a', 2, () => { K.burst(g.position.clone().setY(2.2), ['#ffd166', '#ffffff', '#c8302e'], 22, 1.8); A?.cheer(); s.fly(g, [g.position.x, 0, g.position.z + 0.9], { T: 0.5, lift: 0 }); }); },
     onWrong: i => { els[i].classList.remove('wrong'); void els[i].offsetWidth; els[i].classList.add('wrong'); A?.oops(); s.wobble(buses[i]); flash(buses[i], '#ff7a3a', 3); },
   });
@@ -310,7 +310,7 @@ export function cihangirMatch(ctx) {
     const g = new Group(), x = (side === 'L' ? -1 : 1) * (T ? 1.55 : 2.4); g.position.set(x, 0, zs[i]); s.step.add(g);
     const step2 = new Mesh(new RoundedBoxGeometry(1.0, 0.24, 0.8, 2, 0.05), L('#cfc6d8')); step2.position.y = 0.12; step2.receiveShadow = true; g.add(step2); // a doorstep for each cat
     const c = cat(FUR[(i * 2 + (side === 'L' ? 0 : 1)) % FUR.length]); c.position.y = 0.24; c.scale.setScalar(1.35); c.rotation.y = side === 'L' ? 0.5 : -0.5; g.add(c);
-    const el = s.label(html(t), { cls: 'wt-tile', obj: g, at: [0, 1.9, 0], onTap: () => pick(t.id, side) }); el.dataset.id = t.id; els.set(t.id, el); cats.set(t.id, { g, c });
+    const el = s.label(html(t), { cls: 'wt-tile', obj: g, at: [0, 1.9, 0], onTap: () => pick(t.id, side) }); el.dataset.id = t.id; els.set(t.id, el); cats.set(t.id, { g, c }); s.keepClear(c); // the word over its cat's head, never on a cat
     const ph = i * 1.3 + (side === 'L' ? 0 : 0.7); s.onTick(() => { if (s.reduceMotion) return; const tt = performance.now() / 1000; c.userData.tail.rotation.z = 0.6 + Math.sin(tt * 1.8 + ph) * 0.35; });
   };
   st.left.forEach((t, i) => mk(t, 'L', i)); right.forEach((t, i) => mk(t, 'R', i));
@@ -330,6 +330,7 @@ export function cihangirMatch(ctx) {
     if (st.pairs[lid] === rid) {
       done.add(lid); meet(lid, rid);
       for (const x of [lid, rid]) { els.get(x).classList.add('right'); els.get(x).classList.remove('show'); }
+      ctx.later(() => s.hush([els.get(lid), els.get(rid)]), 350); // the pair's words fade: watch the cats curl up together
       ctx.item(srcOf(lid), !missed.has(lid)); A?.cheer(); ctx.sound('note', { freq: 523 + done.size * 110 }); K.burst(cats.get(lid).g.position.clone().setY(1.0), ['#ffd166', '#ff6a8a', '#ffffff'], 12, 1.3);
       if (done.size === st.left.length) { ctx.sound('capture'); ctx.finish(1100); }
     } else {
@@ -385,20 +386,23 @@ export function tophaneChoice(ctx) {
   const T = tall(); frameFor(s, { eye: [0, 5.0, 14.6], look: [0, 3.9, -4.0] }, { eye: [0, 4.8, 15.4], look: [0, 3.5, -4.0] }, { eye: [0, 3.6, 12.0], look: [0, 2.4, -2.0], width: 48 }); // the lit clock tower above the dials
   s.say(caption(st));
   const els = st.options.map((o, i) => s.label(esc(o), { cls: 'wt-opt', onTap: () => pick(i) }));
-  const ws = els.map(el => sized(s, el, 1.4, 0.3)), xs = T ? st.options.map(() => 0) : row(ws.map(w => Math.max(w, 1.5)), 0.4);
+  // each word sits beside its clock face, never on it: portrait, a column of faces with the words to
+  // their right; landscape, a row of faces on posts with the words under them
+  const r = T ? 0.4 : 0.55, gap = 0.16, lw = els.map(el => s.measure(el).w / s.pxPerMeter() + 0.12);
+  const ws = els.map(el => sized(s, el, 1.4, 0.3)), colW = 2 * r + gap + Math.max(...lw), xs = T ? st.options.map(() => -colW / 2 + r) : row(ws.map(w => Math.max(w, 1.5)), 0.4);
   const dials = st.options.map((o, i) => { // a round clock face on an iron post by the railing
     const g = new Group(); g.position.set(xs[i], T ? 3.3 - i * 0.92 : 2.1, -2.0); s.step.add(g);
-    const r = T ? 0.4 : 0.55, face = new Mesh(new CircleGeometry(r, 28), new MeshStandardMaterial({ color: '#fff8e6', emissive: new Color('#ffe6b0'), emissiveIntensity: 0.45 })); g.add(face);
+    const face = new Mesh(new CircleGeometry(r, 28), new MeshStandardMaterial({ color: '#fff8e6', emissive: new Color('#ffe6b0'), emissiveIntensity: 0.45 })); g.add(face);
     const rim = new Mesh(new TorusGeometry(r, 0.06, 6, 28), new MeshStandardMaterial({ color: '#d9a640', roughness: 0.35, metalness: 0.6 })); g.add(rim);
     if (!T) { const post = new Mesh(new CylinderGeometry(0.04, 0.05, 2.1 - r, 6), L('#2b2f45')); post.position.y = -(2.1 - r) / 2 - r; g.add(post); }
-    els[i]._pin.obj = g; els[i]._pin.at.set(0, 0, 0.12); // the answer on the clock face
+    els[i]._pin.obj = g; els[i]._pin.at.set(T ? r + gap + lw[i] / 2 : 0, T ? 0 : -(r + 0.36), 0.12); s.keepClear(rim);
     return { g, face };
   });
   const glow = i => { els[i].classList.add('show'); dials[i].face.material.emissive.set('#ffcf3c'); dials[i].face.material.emissiveIntensity = 0.7; };
   const hit = i => dials[i].g.position.clone().add(new Vector3(0, 0, 0.1));
   const pick = chooser(ctx, {
     answerText: st.options[st.answer], glow,
-    onRight: i => { els[i].classList.add('right'); A?.throw(); K.snowball(hit(i), () => { const m = dials[i].face.material; m.emissive.set('#ffffff'); m.emissiveIntensity = 1.3; set.chime?.(); ctx.sound('chime'); K.burst(hit(i), ['#ffffff', '#fff3c4', '#ffd166'], 26, 2.0); A?.cheer(); }, A ? A.hand().toArray() : undefined); },
+    onRight: i => { els[i].classList.add('right'); s.hush(els.filter((e, k) => k !== i)); ctx.later(() => s.hush([els[i]]), 650); A?.throw(); K.snowball(hit(i), () => { const m = dials[i].face.material; m.emissive.set('#ffffff'); m.emissiveIntensity = 1.3; set.chime?.(); ctx.sound('chime'); K.burst(hit(i), ['#ffffff', '#fff3c4', '#ffd166'], 26, 2.0); A?.cheer(); }, A ? A.hand().toArray() : undefined); },
     onWrong: i => { els[i].classList.remove('wrong'); void els[i].offsetWidth; els[i].classList.add('wrong'); A?.throw(); K.snowball(hit(i), () => { const sp = new Mesh(new CircleGeometry(0.2, 10), new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.9 })); sp.position.z = 0.05; dials[i].g.add(sp); s.wobble(dials[i].g); A?.oops(); }, A ? A.hand().toArray() : undefined); },
   });
 }

@@ -315,7 +315,7 @@ export function bellListen(ctx) {
   const ws = els.map(el => sized(s, el, 1.7, 0.4)), xs = T ? st.options.map((o, i) => (i % 2 ? -0.95 : 0.95)) : row(ws, 0.7); // portrait: a zigzag from the right, clear of the kid
   const gulls = st.options.map((o, i) => {
     const g = gullGroup(1.9); g.position.set(xs[i], T ? 3.35 - i * 0.8 : 2.1 + (i % 2) * 0.25, 1.3); g.rotation.set(0.1, xs[i] > 0.1 ? -0.55 : xs[i] < -0.1 ? 0.55 : 0, 0); s.step.add(g);
-    els[i]._pin.obj = g; els[i]._pin.at.set(0, -0.55, 0);
+    els[i]._pin.obj = g; els[i]._pin.at.set(0, -0.62, 0); s.keepClear(g.userData.body || g); // the word under its gull, never over it
     const ph = i * 1.3; g.userData.y0 = g.position.y;
     s.onTick(() => { if (g.userData.flying) return; const t = performance.now() / 1000; if (!s.reduceMotion) g.position.y = g.userData.y0 + Math.sin(t * 2 + ph) * 0.1; g.userData.flap(t * 9 + ph, s.reduceMotion ? 0.2 : 1); });
     return g;
@@ -329,7 +329,7 @@ export function bellListen(ctx) {
   const pick = chooser(ctx, {
     answerText: st.options[st.answer], glow,
     onRight: i => {
-      els[i].classList.add('right');
+      els[i].classList.add('right'); s.hush(els.filter((e, k) => k !== i)); ctx.later(() => s.hush([els[i]]), 450); // the words fade: watch the gull catch it and fly off
       toss(i, sm => { // caught! it flies up with the simit in its beak and gobbles it, then rings the bell
         const g = gulls[i]; g.userData.flying = true; ctx.sound('gull');
         s.step.remove(sm); g.userData.body.add(sm); sm.position.set(0, 0.09, 0.42); sm.rotation.set(Math.PI / 2, 0, 0); sm.scale.setScalar(0.55);

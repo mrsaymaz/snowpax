@@ -7,7 +7,7 @@
 // The task card shell asks open(theme) for a session when a step has a station scene
 // (cards/scenes.js). A session lives while the card stays open on that landmark; each step clears
 // its own things, and things put in session.persist stay for the whole visit.
-import { Group, Vector3, Scene, PerspectiveCamera } from 'three';
+import { Group, Vector3, Scene, PerspectiveCamera, Box3 } from 'three';
 
 const EASE = t => t * t * (3 - 2 * t);
 // the lens for a screen shape: the same width of the set on every screen. Tall (portrait) screens
@@ -75,6 +75,11 @@ export class WorldTasks {
         const y0 = obj.position.y; s.tweens.push({ t: 0, T: 0.45, run: k => { obj.rotation.z = Math.sin(k * Math.PI * 4) * 0.25 * (1 - k); obj.position.y = y0 + Math.sin(k * Math.PI) * 0.25; }, done: () => { obj.rotation.z = 0; obj.position.y = y0; done?.(); } });
       },
       labels,
+      // things the labels must not cover (the gull, the cat, the clock face a word belongs to): each
+      // label is pushed to the side of them, so the word sits beside its thing and the action shows
+      clear: new Set(), keepClear(...objs) { for (const o of objs) s.clear.add(o); },
+      // the action is playing (a gull flies off, two cats curl up): the step's words fade out of its way
+      hush(els = null) { for (const L of labels) if (!L.persistent && (!els || els.includes(L.el))) L.el.classList.add('gone'); },
     };
     s.set = build(s); // the staged set (lights, sky, castle …) in s.persist
     document.body.classList.add('worldtask', 'station'); this.layer.hidden = false;
@@ -140,7 +145,7 @@ export class WorldTasks {
     for (const L of s.labels) {
       if (L.obj) { v.copy(L.at); L.obj.localToWorld(v); } else { v.copy(L.at); s.group.localToWorld(v); }
       v.project(camera);
-      const on = show && v.z < 1 && Math.abs(v.x) < 1.2 && Math.abs(v.y) < 1.2;
+      const on = show && v.z < 1 && Math.abs(v.x) < 1.2 && Math.abs(v.y) < 1.2 && !L.el.classList.contains('gone');
       L.el.style.opacity = on ? '' : '0'; L.el.style.pointerEvents = on ? '' : 'none';
       const x = (v.x + 1) / 2 * W, y = (1 - v.y) / 2 * H;
       if (on) items.push({ L, x, y, w: L.el.offsetWidth, h: L.el.offsetHeight }); else L.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%)`;
@@ -151,10 +156,19 @@ export class WorldTasks {
     const top = Math.max(6, hr && hr.height ? hr.bottom + 6 : 6), cap = this.caption.hidden ? null : this.caption.getBoundingClientRect(), bottom = (cap && cap.height ? cap.top : H) - 6;
     const area = items.reduce((a, it) => a + it.w * it.h, 0), sc = Math.max(0.72, Math.min(1, Math.sqrt(0.3 * W * Math.max(100, bottom - top) / Math.max(1, area))));
     for (const it of items) { it.w *= sc; it.h *= sc; it.s = sc; }
+    // the things to keep clear, as fixed boxes on screen (a little smaller than their outline)
+    const box = new Box3(), c = new Vector3();
+    for (const o of s.clear) {
+      if (!o.parent || !o.visible) { if (!o.parent) s.clear.delete(o); continue; }
+      box.setFromObject(o); if (box.isEmpty()) continue; let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, ok = true;
+      for (let k = 0; k < 8; k++) { c.set(k & 1 ? box.max.x : box.min.x, k & 2 ? box.max.y : box.min.y, k & 4 ? box.max.z : box.min.z).project(camera); if (c.z > 1) { ok = false; break; } const px = (c.x + 1) / 2 * W, py = (1 - c.y) / 2 * H; x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py); }
+      if (!ok || x1 < 0 || x0 > W || y1 < 0 || y0 > H) continue;
+      items.push({ ghost: true, fixed: true, x: (x0 + x1) / 2, y: (y0 + y1) / 2, w: (x1 - x0) * 0.86, h: (y1 - y0) * 0.86 });
+    }
     const M = 6, clampIt = it => { it.x = Math.max(it.w / 2 + M, Math.min(W - it.w / 2 - M, it.x)); it.y = Math.max(top + it.h / 2, Math.min(bottom - it.h / 2, it.y)); };
     // The pieces already laid in a course (a built word or sentence) keep their order: they are spread
     // along their row, in the order of the blocks under them, and the rest move round them.
-    const row = items.filter(it => it.L.el.matches('.wt-brick.landed, .wt-brick.given')).sort((p, q) => p.x - q.x);
+    const row = items.filter(it => it.L && it.L.el.matches('.wt-brick.landed, .wt-brick.given')).sort((p, q) => p.x - q.x);
     if (row.length) {
       const cx = row.reduce((a, it) => a + it.x, 0) / row.length, gap = 2;
       for (let i = 1; i < row.length; i++) row[i].x = Math.max(row[i].x, row[i - 1].x + (row[i - 1].w + row[i].w) / 2 + gap);
@@ -178,6 +192,7 @@ export class WorldTasks {
       items.forEach(it => { if (!it.fixed) clampIt(it); }); if (!moved) break;
     }
     for (const it of items) {
+      if (it.ghost) continue;
       const L = it.L, k = L.sx == null ? 1 : Math.min(1, dt * 14); L.sx = L.sx == null ? it.x : L.sx + (it.x - L.sx) * k; L.sy = L.sy == null ? it.y : L.sy + (it.y - L.sy) * k; // eased, so nothing jitters
       L.el.style.transform = `translate(${L.sx.toFixed(1)}px, ${L.sy.toFixed(1)}px) translate(-50%, -50%)${it.s < 0.999 ? ` scale(${it.s.toFixed(3)})` : ''}`;
     }
