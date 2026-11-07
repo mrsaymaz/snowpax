@@ -1,6 +1,7 @@
 // SnowPax: 3-vs-3 snowball brawl across snowed-in Kasımpaşa. Seize the five landmark outposts by
 // answering English tasks from the chosen unit while your teammates guard you (outpostflow.js).
 // ?arena=schoolyard runs the small feel-test arena instead.
+import './nozoom.js'; // first: no page zoom while playing
 import { WebGLRenderer, WebGLRenderTarget, Scene, PerspectiveCamera, HemisphereLight, DirectionalLight, Color, Vector3, Vector2, Raycaster, Plane, PCFSoftShadowMap, Fog } from 'three';
 import { CONFIG, TEAM_IDS } from '../config.js';
 import { emblemSVG } from '../emblems.js';

@@ -1057,3 +1057,10 @@ body.guiding #wt-layer { opacity: 0.35; } /* a task scene's words step back whil
 }
 #swipe { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; } /* a held finger (go faster) never opens the phone's selection menu */
 .rh-banner { white-space: pre-line; } /* a hint: what to do, then how, on its own line */
+
+/* ---- no page zoom (nozoom.js): scrolling lists still scroll, but neither a double tap nor a pinch zooms */
+html { touch-action: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+button, a, label, [role="button"], [data-wp] { touch-action: manipulation; }
+.card, .tc-body, .sm-card, .rs-card, .start2 .st-scroll, .lesson-sheet .ls-list, .league-sheet .lg-card,
+.who-sheet .wp-card-wrap, .who-sheet .wp-names { touch-action: pan-x pan-y; }
+input, textarea, select { font-size: max(16px, 1em); }
