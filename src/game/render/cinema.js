@@ -359,9 +359,9 @@ function lifeKit(g) {
     },
     // a flock of city pigeons pecking at the snow, now and then one flutters up and lands again
     pigeons([x, z], n = 9) {
-      const grey = Lm('#8d93a8'), dark = Lm('#5d6378'), birds = [];
+      const grey = Lm('#b4b9cc'), dark = Lm('#7a8098'), birds = [];
       for (let k = 0; k < n; k++) {
-        const q = grp(x + (R() - 0.5) * 2.6, z + (R() - 0.5) * 1.8, R() * 6.28), body = add(new SphereGeometry(0.11, 8, 6), grey, 0, 0.11, 0, 0, q); body.scale.set(0.8, 0.8, 1.3);
+        const q = grp(x + (R() - 0.5) * 2.6, z + (R() - 0.5) * 1.8, R() * 6.28); q.scale.setScalar(1.35); const body = add(new SphereGeometry(0.11, 8, 6), grey, 0, 0.11, 0, 0, q); body.scale.set(0.8, 0.8, 1.3);
         const head = new Group(); head.position.set(0, 0.17, 0.11); q.add(head); add(new SphereGeometry(0.055, 8, 6), dark, 0, 0, 0.02, 0, head); add(new ConeGeometry(0.015, 0.05, 4), Lm('#e8a10a'), 0, -0.01, 0.08, 0, head).rotation.x = Math.PI / 2;
         add(new BoxGeometry(0.1, 0.02, 0.12), dark, 0, 0.12, -0.14, 0, q);
         birds.push({ q, head, ph: R() * 6, hop: R() * 7, x0: q.position.x, z0: q.position.z });

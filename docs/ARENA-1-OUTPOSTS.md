@@ -37,3 +37,17 @@ The sled ride's views face Kasımpaşa's real surroundings, a little larger than
 | Kızılay Square | up the hill to Galata Tower; the tall towers of Şişli far off |
 | Sururi Park | the towers of Şişli in the low sun; a cypress hill; Galata Tower |
 | The Pier | across the Golden Horn: the old city's ridge of domes; the bridges to the left |
+
+## Street life in the views
+
+Each view has its own street life, placed clear of the camera's path. Every landmark has flower beds and a street cat beside it, so a phone sees them too.
+
+| Place | Around the landmark |
+|---|---|
+| Boulevard Park | lights strung down the avenue of plane trees, the chestnut and salep stalls steaming, café tables, benches, lamps, flower beds, snowmen, a sled, pigeons, flags |
+| Archery Ground | arrow racks by the straw targets, pennants and tall flags along the back, a tea garden by the salep stall, spectator benches, cypresses, pigeons |
+| Kızılay Square | flocks of pigeons, tea gardens round the square, lights strung across the back, steaming stalls, benches, lamps, flower beds, flags |
+| Sururi Park | a rocking see-saw, sleds left in the snow, snowmen, pennants over the castle, string lights, benches, lamps, pigeons |
+| The Pier | quay lamps and benches, the railing with fishing rods and buckets, bollards, café tables, rowing boats frozen in the ice, plane trees, pigeons, flags |
+
+The string lights twinkle, pennants and flags flutter, steam rises from the stalls and tea glasses, pigeons peck and hop, the see-saw rocks and the cats swish their tails.
