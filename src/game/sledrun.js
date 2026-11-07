@@ -404,7 +404,9 @@ export class SledRun {
       const kPos = this.reduceMotion ? kLook : Math.min(E((c.t - 0.2) / 0.85), E((T - c.t - 0.25) / 0.75));
       const P = sc.group.localToWorld(new Vector3(...sp)), Lk = sc.group.localToWorld(new Vector3(...sl));
       this.camera.position.lerp(P, kPos); look.lerp(Lk, kLook); this.camRoll *= 1 - kLook;
-    }
+      const lens = 58 + ((this.camera.aspect < 1 ? 50 : 40) - 58) * kPos; // a longer lens for the views: the landmark fills the frame, the skyline draws close behind it
+      if (Math.abs(this.camera.fov - lens) > 0.01) { this.camera.fov = lens; this.camera.updateProjectionMatrix(); }
+    } else if (this.camera.fov !== 58) { this.camera.fov = 58; this.camera.updateProjectionMatrix(); }
     this.camera.lookAt(look); this.camera.rotateZ(this.camRoll);
     // sparks
     let n = 0;
