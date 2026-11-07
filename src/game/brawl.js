@@ -235,7 +235,7 @@ async function startGame(myTeam, kit, pace) {
     document.body.classList.add('intro'); introCard.hidden = false;
     const card = introCard.querySelector('.rh-cine'); card.querySelector('small').textContent = kicker; card.querySelector('b').textContent = title; card.querySelector('.ic-line').textContent = ''; card.querySelector('.rh-skip').hidden = !intro.skippable;
     card.classList.remove('show'); card.hidden = false; void card.offsetWidth; setTimeout(() => { if (intro) card.classList.add('show'); }, 700); setTimeout(() => { if (intro) card.hidden = true; }, 4300); // then the carousel alone
-    setTimeout(() => { if (intro) { card.querySelector('.ic-line').textContent = `"${line}"`; speech.say(line); } }, 1600);
+    setTimeout(() => { if (intro) card.querySelector('.ic-line').textContent = `"${line}"`; }, 1600); // on the card only: the arrival is not announced aloud
     world.carousel?.setRate(reduceMotion ? 0.16 : 0.55); music(tune); play('whoosh');
     return dur * 1000;
   }

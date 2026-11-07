@@ -79,6 +79,9 @@ export class StageRunner {
         word: w => { this.toast(`+1 ❄  ${w.en} = ${w.tr}`, 'word'); speech.say(w.en); },
         spell: (sofar, right) => { this.drawRunHud(); if (sofar.length === spell.en.length) { const ok = !this.sled.missedLetters; this.toast(ok ? `You spelled ${spell.en.toUpperCase()}! +1 ❄` : `The word was ${spell.en.toUpperCase()} (${spell.tr})`, 'word'); if (ok) this.sled.flakes += 1; speech.say(spell.en); } },
         hint: text => this.ui.banner(text, 'super', 1.1),
+        look: () => this.ui.banner('LOOK TO THE LEFT! ←', 'super', 2.4),
+        fast: on => document.body.classList.toggle('sled-fast', on), // empty lanes ahead: a place's view is coming
+        bonus: text => { this.toast(text, 'bonus'); this.ui.play('chime', { freq: 1046.5 }); this.drawRunHud(); },
         progress: p => { const bar = $('#runhud .rh-prog i'); if (bar) bar.style.width = Math.round(p * 100) + '%'; },
         done: r => { this.runFlakes = r.flakes; this.runBalls = r.snowballs; this.ridesDone++; setTimeout(() => this.arrive(), 700); },
       } });
@@ -113,7 +116,7 @@ export class StageRunner {
     this.mode = 'sled'; document.body.classList.add('sledding'); $('#hud').hidden = true; $('#runhud').hidden = false;
     $('#runhud').innerHTML = `<div class="rh-top"><span class="rh-lives"></span><div class="rh-prog"><i></i><span class="rh-dest">${THEME_ICON[ICON[st.id]] || ''}</span></div><span class="rh-balls" aria-label="Snowballs">⚪ <b>0</b></span><span class="rh-flakes" aria-label="Snowflakes for the Snow Shop">❄ <b>0</b></span></div>
       <div class="rh-spell" ${spell ? '' : 'hidden'}><small>Spell: <span lang="tr">${esc(spell?.tr || '')}</span></small><div class="rh-slots"></div></div><div class="rh-toast"></div>
-      <div class="rh-cine" hidden><small></small><b></b><span class="rh-skip" hidden>Tap to skip</span></div>
+      <div class="rh-lines" aria-hidden="true"></div><div class="rh-cine" hidden><small></small><b></b><span class="rh-skip" hidden>Tap to skip</span></div>
       <div class="rh-btns"><button type="button" data-k="left" aria-label="Left">◀</button><button type="button" data-k="duck" aria-label="Duck">▼</button><button type="button" data-k="jump" aria-label="Jump">▲</button><button type="button" data-k="right" aria-label="Right">▶</button></div>`;
     this.spell = spell; this.drawRunHud();
     this.rideTune = hasMusic('sled-' + st.id) ? 'sled-' + st.id : 'sled'; music(this.rideTune); // the ride's tune (the arena's own, if it has one), all the way in
@@ -126,7 +129,7 @@ export class StageRunner {
       document.body.classList.add('cinema'); card.querySelector('b').textContent = e.title; card.querySelector('small').textContent = `${e.task} · Part ${e.part}`;
       card.querySelector('.rh-skip').hidden = !this.seenCinema?.has(e.id); card.hidden = true;
       clearTimeout(this.cineT); this.cineT = setTimeout(() => { card.hidden = false; card.classList.remove('show'); void card.offsetWidth; card.classList.add('show'); this.cineT = setTimeout(() => { card.hidden = true; }, 3400); }, 900); // the name card, then the scene alone
-      clearTimeout(this.sayT); this.sayT = setTimeout(() => { if (this.sled?.cine) speech.say(e.welcome); }, 1300);
+      // the name is on the card only: places are not announced aloud
       this.ui.play('whoosh');
       if (hasMusic(e.id)) { duckMusic(this.rideTune, 0.18, 0.6); music(e.id); } // the place's own theme over the ride's tune, turned down
       return;
@@ -150,7 +153,7 @@ export class StageRunner {
     this.save.snowflakes = (this.save.snowflakes || 0) + this.runFlakes; this.writeSave(this.save); stopMusic(null, 1.2);
     this.ui.rebuildWorld?.(z); // v2 look: build only this stage's area
     this.lit = []; this.seatT = 2; this.seatK = 0; this.ui.carousel?.reset();
-    this.mode = 'outpost'; document.body.classList.remove('sledding'); $('#runhud').hidden = true; $('#hud').hidden = false;
+    this.mode = 'outpost'; document.body.classList.remove('sledding', 'sled-fast'); $('#runhud').hidden = true; $('#hud').hidden = false;
     this.zone = z; this.tStand = 0; this.waveIdx = 0; this.waves = []; this.finalT = null; sim.activeZone = z;
     // longer fights with English inside them (fights.mjs): the stage's plan, two parts of English
     this.plan = st.fights ? FIGHT_PLANS[st.fights] : null; z.parts = st.parts || null; z.places = st.places || null; z.perFamily = this.plan?.perFamily || null;
@@ -553,7 +556,7 @@ export class StageRunner {
       if (this.mode !== 'sled' || !this.sled) return;
       const k = e.key.toLowerCase();
       if (k === 'arrowleft' || k === 'a') this.sled.move(-1); else if (k === 'arrowright' || k === 'd') this.sled.move(1);
-      else if (k === 'arrowup' || k === 'w' || k === ' ') this.sled.jump(); else if (k === 'arrowdown' || k === 's') this.sled.duck(); else return;
+      else if (k === 'arrowup' || k === 'w' || k === ' ') { if (!this.sled.trick()) this.sled.jump(); } else if (k === 'arrowdown' || k === 's') this.sled.duck(); else if (k === 't' || k === 'enter') this.sled.trick(); else return; // up in the air: a spin
       e.preventDefault();
     });
     let sx = 0, sy = 0, st = 0;
@@ -563,9 +566,9 @@ export class StageRunner {
       if (this.mode !== 'sled' || !this.sled) return;
       if (this.sled.cine) { if (this.seenCinema?.has(this.sled.cine.q.id)) this.sled.skipCine(); return; } // a scene you have seen: a tap skips it
       const dx = e.clientX - sx, dy = e.clientY - sy;
-      if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
-      if (Math.abs(dx) > Math.abs(dy)) this.sled.move(dx > 0 ? 1 : -1); else if (dy < 0) this.sled.jump(); else this.sled.duck();
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) { this.sled.trick(); return; } // a tap in the air: a spin
+      if (Math.abs(dx) > Math.abs(dy)) this.sled.move(dx > 0 ? 1 : -1); else if (dy < 0) { if (!this.sled.trick()) this.sled.jump(); } else this.sled.duck();
     });
-    $('#runhud').addEventListener('pointerdown', e => { const b = e.target.closest('[data-k]'); if (!b || !this.sled) return; e.preventDefault(); ({ left: () => this.sled.move(-1), right: () => this.sled.move(1), jump: () => this.sled.jump(), duck: () => this.sled.duck() })[b.dataset.k](); });
+    $('#runhud').addEventListener('pointerdown', e => { const b = e.target.closest('[data-k]'); if (!b || !this.sled) return; e.preventDefault(); ({ left: () => this.sled.move(-1), right: () => this.sled.move(1), jump: () => { if (!this.sled.trick()) this.sled.jump(); }, duck: () => this.sled.duck() })[b.dataset.k](); });
   }
 }
