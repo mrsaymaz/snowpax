@@ -968,3 +968,6 @@ body.guiding #wt-layer { opacity: 0.35; } /* a task scene's words step back whil
 @media (orientation: landscape) and (max-height: 520px) { .start2 .st-hero { padding: 54px 14px 10px; } .start2 .st-panel { margin-top: 8px; max-height: calc(100dvh - 16px); } }
 @media (prefers-reduced-motion: reduce) { .start2 .st-logo img { animation: none; } }
 @media (orientation: portrait) and (min-height: 700px) { .start2 .st-hero { padding: calc(58px + env(safe-area-inset-top)) 10px 14px; } } /* a tall phone: the logo the full width, under the sound button */
+/* the ride's messages stay on the screen: they wrap (a long word on its own line) and shrink on a narrow phone */
+.rh-toast { white-space: pre-line; text-align: center; width: max-content; max-width: calc(100vw - 28px); overflow-wrap: anywhere; line-height: 1.12; font-size: clamp(19px, 6.4vw, 28px); }
+.rh-banner { white-space: normal; text-align: center; width: max-content; max-width: calc(100vw - 28px); line-height: 1.1; }

@@ -78,7 +78,7 @@ export class StageRunner {
         crash: lost => { this.ui.play('hit'); const left = this.lives.lose(); this.drawRunHud(); this.toast(lost ? `Ouch! −${lost} snowballs` : 'Ouch!'); if (!left) this.outOfLives(); },
         count: () => this.drawRunHud(), sound: (k, o) => this.ui.play(k, o),
         word: w => { this.toast(`+1 ❄  ${w.en} = ${w.tr}`, 'word'); speech.say(w.en); },
-        spell: (sofar, right) => { this.drawRunHud(); if (sofar.length === spell.en.length) { const ok = !this.sled.missedLetters; this.toast(ok ? `You spelled ${spell.en.toUpperCase()}! +1 ❄` : `The word was ${spell.en.toUpperCase()} (${spell.tr})`, 'word'); if (ok) this.sled.flakes += 1; speech.say(spell.en); } },
+        spell: (sofar, right) => { this.drawRunHud(); if (sofar.length === spell.en.length) { const ok = !this.sled.missedLetters; this.toast(ok ? `You spelled\n${spell.en.toUpperCase()}! +1 ❄` : `The word was\n${spell.en.toUpperCase()}\n(${spell.tr})`, 'word'); if (ok) this.sled.flakes += 1; speech.say(spell.en); } },
         hint: text => this.rideBanner(text, '', 1.3),
         look: () => this.rideBanner('LOOK TO THE LEFT! ←', 'look', 2.6),
         fast: on => document.body.classList.toggle('sled-fast', on), // empty lanes ahead: a place's view is coming
