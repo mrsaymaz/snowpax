@@ -127,7 +127,7 @@ function townscape(g, L, { seed = 3, sea = false, urban = false }) {
   const wins = [], lit = 0.18 + (L.dusk || 0) * 0.7;
   homes.forEach((q, k) => {
     o.position.set(q.x, q.y - 0.3, q.z); o.rotation.set(0, q.ry, 0); o.scale.set(q.w, q.h, q.d); o.updateMatrix(); bodies.setMatrixAt(k, o.matrix); bc.set(q.c).lerp(hor, far(q.r)); bodies.setColorAt(k, bc);
-    const rh = urban ? 1.6 : Math.max(q.h, 3) * 0.9; o.scale.set(q.w, rh, q.d); o.position.y = q.y - 0.3 + q.h - rh; // the city's roofs are low and tiled o.updateMatrix(); roofs.setMatrixAt(k, o.matrix);
+    const rh = urban ? 1.6 : Math.max(q.h, 3) * 0.9; o.scale.set(q.w, rh, q.d); o.position.y = q.y - 0.3 + q.h - rh; o.updateMatrix(); roofs.setMatrixAt(k, o.matrix); // the city's roofs are low and tiled
     const floors = urban ? (q.r > 140 ? 0 : Math.min(3, Math.floor(q.h / 2.2))) : Math.floor(q.h / 2.2); // far in the city: the haze hides the windows
     for (let fl = 0; fl < floors; fl++) for (const u of [-0.25, 0.25]) if (R() < 0.85) { o.position.set(q.x, q.y - 0.3 + 1.1 + fl * 2.1, q.z); o.rotation.set(0, q.ry, 0); o.scale.set(q.w, q.h / q.h * 1, q.d); o.updateMatrix(); const m = o.matrix.clone().multiply(new Object3D().matrix.makeTranslation(u, 0, 0)).multiply(new Object3D().matrix.makeScale(1 / q.w * 2.4, 1 / 1 * 3, 1)); wins.push({ m, lit: R() < lit, r: q.r }); }
   });
