@@ -148,13 +148,13 @@ export function istiklalStation(s, { color = '#f5b616' } = {}) {
   // the rails, the overhead wire on its poles, the motor car waiting at the end
   for (const o of [-0.62, -0.22]) add(P, new BoxGeometry(20, 0.06, 0.08), iron, 0, 0.05, o);
   add(P, new BoxGeometry(20, 0.03, 0.03), iron, 0, 2.9, -0.42); for (const x of [-7, 7]) add(P, new CylinderGeometry(0.06, 0.08, 3.2, 8), iron, x, 1.6, -1.6);
-  const motor = new Group(); motor.position.set(-5.9, 0, -0.42); P.add(motor);
+  const motor = new Group(); motor.position.set(tall() ? -4.0 : -5.2, 0, -0.42); motor.scale.setScalar(tall() ? 0.8 : 1); P.add(motor); // just before the first car's place
   { const m = (geo, mat, x, y, z) => { const o = new Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = true; motor.add(o); return o; };
     m(new RoundedBoxGeometry(2.2, 1.3, 1.25, 3, 0.12), red, 0, 0.95, 0); m(new BoxGeometry(2.22, 0.24, 1.27), cream, 0, 0.82, 0); m(new BoxGeometry(2.3, 0.14, 1.35), L('#7a1f1f'), 0, 1.66, 0); m(new BoxGeometry(2.1, 0.1, 1.2), snowM, 0, 1.76, 0);
     for (let k = 0; k < 3; k++) m(new PlaneGeometry(0.42, 0.36), glass, -0.6 + k * 0.6, 1.25, 0.64);
     m(new CircleGeometry(0.1, 12), B('#fff2c4'), 1.11, 0.75, 0).rotation.y = Math.PI / 2; const pole = m(new CylinderGeometry(0.02, 0.02, 1.4, 5), iron, 0.3, 2.3, 0); pole.rotation.z = -0.5;
     for (const sx of [-0.65, 0.65]) m(new CylinderGeometry(0.16, 0.16, 0.08, 12), iron, sx, 0.2, 0.64).rotation.x = Math.PI / 2; }
-  const fl = new Group(); { const pole = new Mesh(new CylinderGeometry(0.025, 0.025, 1.0, 6), iron); pole.position.y = 0.5; fl.add(pole); const flag = new Mesh(new PlaneGeometry(0.5, 0.32), L(color)); flag.position.set(0.25, 0.84, 0); fl.add(flag); } fl.position.set(-6.6, 2.2, -0.42); P.add(fl);
+  const fl = new Group(); { const pole = new Mesh(new CylinderGeometry(0.025, 0.025, 1.0, 6), iron); pole.position.y = 0.5; fl.add(pole); const flag = new Mesh(new PlaneGeometry(0.5, 0.32), L(color)); flag.position.set(0.25, 0.84, 0); fl.add(flag); } fl.position.set(motor.position.x - 0.6, 2.2, -0.42); P.add(fl);
   for (const x of [-8.2, 8.2]) lamp(P, x, 1.4);
   const tw = [bulbs(P, { x0: -9, x1: 9, y: 5.0, z: -3.2, n: 26 }), bulbs(P, { x0: -9, x1: 9, y: 5.4, z: -1.0, n: 26 }), bulbs(P, { x0: -9, x1: 9, y: 5.6, z: 1.4, n: 26, sag: 0.35 })];
   mounds(P, [[-8.6, 3.4, 1.0], [8.7, 3.2, 1.1]], snowM);
@@ -213,15 +213,15 @@ function bus() {
 }
 export function taksimListen(ctx) {
   const s = ctx.world, st = ctx.step, K = s.set.K, A = s.set.A, voice = ctx.speech.available;
-  const T = tall(); frameFor(s, { eye: [0, 3.6, 11.2], look: [0, 1.4, -1.0] }, { eye: [0, 4.0, 12.2], look: [0, 1.3, -1.0] }, { eye: [0, 5.6, 11.0], look: [0, 1.2, -1.0], width: 44 });
+  const T = tall(); frameFor(s, { eye: [0, 3.6, 11.2], look: [0, 1.4, -1.0] }, { eye: [0, 4.0, 12.2], look: [0, 1.3, -1.0] }, { eye: [0, 4.4, 8.6], look: [0, 1.4, -1.4], width: 42 }); // portrait: closer, the buses in two staggered rows
   s.say(`${esc(st.prompt)} <span class="tr">Wave down the bus with that word!</span>${voice ? '' : ` <span class="tr">${esc(st.fallbackText || st.speak)}</span>`}`);
   const play = () => { ctx.sound('tap'); ctx.later(() => ctx.speech.say(st.speak), 150); };
   s.label('🔊 Hear it again', { cls: 'wt-bell', at: innerHeight < 430 ? [3.4, 3.0, -2] : T ? [0, 4.6, -3.0] : [0, 4.3, -3.0], onTap: play });
   if (voice) ctx.later(play, 450); else ctx.note('No English voice on this device: read the word instead.');
   const els = st.options.map((o, i) => s.label(st.pics?.[i] ? `<img src="${esc(st.pics[i])}" alt=""><span>${esc(o)}</span>` : esc(o), { cls: 'wt-opt', onTap: () => pick(i) }));
-  const n = st.options.length, gap = T ? 1.75 : 2.2, xs = st.options.map((o, i) => (i - (n - 1) / 2) * gap);
+  const n = st.options.length, gap = T ? 1.55 : 2.2, xs = st.options.map((o, i) => (i - (n - 1) / 2) * gap);
   const buses = st.options.map((o, i) => {
-    const g = bus(); g.position.set(xs[i], 0, T ? -1.4 - (i % 2) * 0.6 : -1.6); if (T) g.scale.setScalar(0.82); s.step.add(g);
+    const g = bus(); g.position.set(xs[i], 0, T ? -0.6 - (i % 2) * 2.0 : -1.6); if (T) g.scale.setScalar(0.85); s.step.add(g);
     els[i]._pin.obj = g; els[i]._pin.at.set(0, 1.86, 1.4); // the word on the bus's route sign
     return g;
   });
@@ -271,7 +271,7 @@ function cat(col) {
 }
 export function cihangirMatch(ctx) {
   const s = ctx.world, st = ctx.step, K = s.set.K, A = s.set.A;
-  const T = tall(); frameFor(s, { eye: [0, 5.4, 10.4], look: [0, 0.6, -0.6] }, { eye: [0, 5.8, 11.2], look: [0, 0.5, -0.6] }, { eye: [0, 9.6, 7.4], look: [0, 0.3, -0.8], width: 44 });
+  const T = tall(); frameFor(s, { eye: [0, 5.4, 10.4], look: [0, 0.6, -0.6] }, { eye: [0, 5.8, 11.2], look: [0, 0.5, -0.6] }, { eye: [0, 6.0, 9.4], look: [0, 0.6, -1.0], width: 44 }); // portrait: lower, so the cats are seen sitting up
   s.say(esc(st.prompt));
   const right = shuffle(st.right, ctx.rng), n = st.left.length, zs = Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * (T ? 1.7 : 1.3) - 0.3);
   const FUR = ['#e09a4a', '#3b3b44', '#f2ede4', '#9a9aa6', '#e8c9a0', '#6b5a4a'];
@@ -280,8 +280,8 @@ export function cihangirMatch(ctx) {
   const mk = (t, side, i) => {
     const g = new Group(), x = (side === 'L' ? -1 : 1) * (T ? 1.55 : 2.4); g.position.set(x, 0, zs[i]); s.step.add(g);
     const step2 = new Mesh(new RoundedBoxGeometry(1.0, 0.24, 0.8, 2, 0.05), L('#cfc6d8')); step2.position.y = 0.12; step2.receiveShadow = true; g.add(step2); // a doorstep for each cat
-    const c = cat(FUR[(i * 2 + (side === 'L' ? 0 : 1)) % FUR.length]); c.position.y = 0.24; c.rotation.y = side === 'L' ? 0.5 : -0.5; g.add(c);
-    const el = s.label(html(t), { cls: 'wt-tile', obj: g, at: [0, 1.45, 0], onTap: () => pick(t.id, side) }); el.dataset.id = t.id; els.set(t.id, el); cats.set(t.id, { g, c });
+    const c = cat(FUR[(i * 2 + (side === 'L' ? 0 : 1)) % FUR.length]); c.position.y = 0.24; c.scale.setScalar(1.35); c.rotation.y = side === 'L' ? 0.5 : -0.5; g.add(c);
+    const el = s.label(html(t), { cls: 'wt-tile', obj: g, at: [0, 1.9, 0], onTap: () => pick(t.id, side) }); el.dataset.id = t.id; els.set(t.id, el); cats.set(t.id, { g, c });
     const ph = i * 1.3 + (side === 'L' ? 0 : 0.7); s.onTick(() => { if (s.reduceMotion) return; const tt = performance.now() / 1000; c.userData.tail.rotation.z = 0.6 + Math.sin(tt * 1.8 + ph) * 0.35; });
   };
   st.left.forEach((t, i) => mk(t, 'L', i)); right.forEach((t, i) => mk(t, 'R', i));
