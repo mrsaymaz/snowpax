@@ -270,3 +270,11 @@ should confirm the per-item seconds.
 **Test links:**
 - `?family=` changes the task type everywhere.
 - `?pace=challenge` turns on the timer.
+
+
+## The cinematic layer (all three arenas)
+
+Every view on the sled ride shares one layer that makes it a picture:
+- **Framing:** a longer lens in landscape, so the landmark fills the frame and its skyline draws close behind it (portrait keeps the wider lens so tall landmarks fit). A soft vignette and a slight warm grade sit over the views and the arrival at an outpost, and the camera has a gentle handheld drift.
+- **Light:** warm pools of lamplight on the snow, halos round the strung bulbs, a soft floodlight on the landmark at dusk (Istanbul lights its monuments) or a warm bounce by day, stars over the evening and night views, and soft shafts of light from a low sun at golden hour.
+- **Life in the snow:** chimney smoke drifting up from the town, drifts banked round the square, sled tracks and footprints leading in to the place, and glitter in the foreground snow.
