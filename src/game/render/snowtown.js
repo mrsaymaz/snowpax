@@ -908,7 +908,6 @@ export function buildSnowtown(ctx) {
     KB.add(new CylinderGeometry(0.32, 0.4, 0.3, 16), mStone, 0, 0.5, 0); KB.add(new CylinderGeometry(0.06, 0.09, 1.7, 10), iron, 0, 1.5, 0);
     KB.add(new CylinderGeometry(0.3, 0.3, 0.14, 20), iron, 0, 2.5, 0, Math.PI / 2); for (const s2 of [-1, 1]) { KB.add(new CircleGeometry(0.25, 20), M('glow', '#fff8e6'), 0, 2.5, s2 * 0.075, 0, s2 > 0 ? 0 : Math.PI); KB.add(rbox(0.02, 0.02, 0.17, 0.005), iron, 0.03, 2.53, s2 * 0.085, 0, 0, -0.5); }
     KB.add(new SphereGeometry(0.08, 10, 8), gold, 0, 2.7, 0); KB.add(new ConeGeometry(0.06, 0.18, 8), gold, 0, 2.84, 0);
-    for (const s2 of [-1, 1]) { KB.add(new CylinderGeometry(0.02, 0.02, 0.5, 5), iron, s2 * 0.24, 1.72, 0, 0, 0, s2 * 0.6); lantern(s2 * 0.42, 1.88, 0, s2 < 0); } // two lamps off the post
     // a sign at the front of the ring
     for (const s2 of [-1, 1]) KB.add(new CylinderGeometry(0.05, 0.05, 0.7, 6), mWood, s2 * 0.95, 0.35, R + 0.35);
     const still = new Group(); KB.build(still, true); root.add(still);

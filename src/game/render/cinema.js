@@ -709,7 +709,7 @@ const istiklal = vista({
   wide: [at(5, 10, 16), at(0, 2, -1)],
   extra: life(k => {
     k.bed(rel(-3.4, 4.2), 1.6, 0.7); k.bed(rel(3.4, 4.2), 1.6, 0.7); k.cat(up(rel(3.0, 4.2), 0.3), -0.5, '#e09a4a');
-    for (const z of [-2, 2, 6, 10]) k.lights([rel(-9, z - 0.6), rel(-4.5, z + 0.3), rel(0, z - 0.2), rel(4.5, z + 0.3), rel(9, z - 0.6)], { y: 3.6, sag: 0.25 }); // the avenue's festive lights
+    for (const z of [-3, 0.5, 3.5]) k.lights([rel(-9, z - 0.6), rel(-4.5, z + 0.3), rel(0, z - 0.2), rel(4.5, z + 0.3), rel(9, z - 0.6)], { y: 4.0, sag: 0.25 }); // the avenue's festive lights
     k.cafe(rel(-11.5, 0.5), '#c8302e'); k.cafe(rel(11.5, 0.8), '#f2f2f2'); k.steam(up(rel(-9.5, 2.5), 1.3), 0.4); k.steam(up(rel(7.5, 2.5), 1.3), 0.4);
     k.flag(rel(-6.5, -2.6), '#c8302e', 3.6); k.flag(rel(6.5, -2.6), '#c8302e', 3.6); k.cat(up(tw(14, 24), 0.55), 0.3, '#3b3b44'); k.pigeons(rel(-7, 8), 6);
   }),
@@ -735,7 +735,7 @@ const taksim = vista({
     k.lights([rel(-16, 1.5), rel(-12, 0), rel(-8.5, 1.5)], { y: 3.2 }); k.flag(rel(6.8, -3.4), '#2d6fb5', 4.2); k.flag(rel(-6.8, -3.4), '#2d6fb5', 4.2);
     k.bed(rel(-9, 5.5), 2.4, 0.8, ['#ffffff', '#e2406a']); k.bed(rel(9, 6), 2.4, 0.8); k.cat(up(tw(12, 18), 0.55), 0.3, '#3b3b44');
   }),
-  far: [{ kind: 'towers', a: 0.12, r: 225, n: 11, span: 0.45 }], // the city's tall towers to the north
+  far: [{ kind: 'towers', a: 0.18, r: 270, n: 8, span: 0.4, s: 0.7 }], // the city's tall towers far off to the north
 });
 // Cihangir (evening, the café lamps lit): pastel houses on the steep slope, the café tables under the big
 // plane tree, an antique shop, cats everywhere; below, the Bosphorus, the Maiden's Tower, the great bridge lit.

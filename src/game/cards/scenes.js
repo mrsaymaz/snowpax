@@ -7,6 +7,7 @@ import { castleWorldOrder, castleWorldSpell } from './castle3d.js';
 import { treehouseChoice, archerySort, fountainMatch, bellListen } from './stations.js';
 import { recruitTalk } from './talk.js';
 import { karakoyListen, bankalarSort, tersaneOrder, tersaneSpell, aynalikavakChoice, miniaturkMatch } from './golden.js';
+import { galataSort, istiklalOrder, istiklalSpell, taksimListen, cihangirMatch, tophaneChoice } from './downtown.js';
 
 export const DEFAULT_SCENES = { choice: choiceScene, listen: listenScene, match: matchScene, sort: sortScene, order: orderScene, spell: spellScene };
 
@@ -30,6 +31,12 @@ export const WORLD_SCENES = {
   tersane: { order: tersaneOrder, spell: tersaneSpell },
   aynalikavak: { choice: aynalikavakChoice },
   miniaturk: { match: miniaturkMatch },
+  // Arena 3, Downtown (downtown.js)
+  'galata-tower': { sort: galataSort },
+  istiklal: { order: istiklalOrder, spell: istiklalSpell },
+  taksim: { listen: taksimListen },
+  cihangir: { match: cihangirMatch },
+  tophane: { choice: tophaneChoice },
 };
 
 let basicOnly = false;

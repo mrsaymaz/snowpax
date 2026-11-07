@@ -436,3 +436,6 @@ export function miniaturkStation(s, { color = '#f5b616' } = {}) {
   let t = 0; return { tick: dt => { t += dt; K.tick(dt); A?.tick(dt); if (!s.reduceMotion) { wave(t); wave2(t); } }, K, A, colors: [color, '#ffffff', '#ffd166', '#7cc4f0'] };
 }
 export const miniaturkMatch = ctx => fountainMatch(ctx, { tile: '#fff6e4', matched: ['#ffe6a8', '#f6c7dc', '#c9e8c2', '#cfe0ff'], frame: { desk: { eye: [0, 9.8, 12.2], look: [0, 0.4, -1.2] }, short: { eye: [0, 8.0, 9.6], look: [0, 0.2, -0.4] }, port: { eye: [0, 12.6, 7.4], look: [0, 0.2, -1.4], width: 46 } } });
+
+// shared with Downtown's scenes (downtown.js)
+export const sceneKit = { L, frameFor, caption, sized, add, sign, chooser };
