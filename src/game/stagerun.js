@@ -78,8 +78,8 @@ export class StageRunner {
         count: () => this.drawRunHud(), sound: (k, o) => this.ui.play(k, o),
         word: w => { this.toast(`+1 ❄  ${w.en} = ${w.tr}`, 'word'); speech.say(w.en); },
         spell: (sofar, right) => { this.drawRunHud(); if (sofar.length === spell.en.length) { const ok = !this.sled.missedLetters; this.toast(ok ? `You spelled ${spell.en.toUpperCase()}! +1 ❄` : `The word was ${spell.en.toUpperCase()} (${spell.tr})`, 'word'); if (ok) this.sled.flakes += 1; speech.say(spell.en); } },
-        hint: text => this.ui.banner(text, 'super', 1.1),
-        look: () => this.ui.banner('LOOK TO THE LEFT! ←', 'super', 2.4),
+        hint: text => this.rideBanner(text, '', 1.3),
+        look: () => this.rideBanner('LOOK TO THE LEFT! ←', 'look', 2.6),
         fast: on => document.body.classList.toggle('sled-fast', on), // empty lanes ahead: a place's view is coming
         bonus: text => { this.toast(text, 'bonus'); this.ui.play('chime', { freq: 1046.5 }); this.drawRunHud(); },
         progress: p => { const bar = $('#runhud .rh-prog i'); if (bar) bar.style.width = Math.round(p * 100) + '%'; },
@@ -116,7 +116,7 @@ export class StageRunner {
     this.mode = 'sled'; document.body.classList.add('sledding'); $('#hud').hidden = true; $('#runhud').hidden = false;
     $('#runhud').innerHTML = `<div class="rh-top"><span class="rh-lives"></span><div class="rh-prog"><i></i><span class="rh-dest">${THEME_ICON[ICON[st.id]] || ''}</span></div><span class="rh-balls" aria-label="Snowballs">⚪ <b>0</b></span><span class="rh-flakes" aria-label="Snowflakes for the Snow Shop">❄ <b>0</b></span></div>
       <div class="rh-spell" ${spell ? '' : 'hidden'}><small>Spell: <span lang="tr">${esc(spell?.tr || '')}</span></small><div class="rh-slots"></div></div><div class="rh-toast"></div>
-      <div class="rh-lines" aria-hidden="true"></div><div class="rh-cine" hidden><small></small><b></b><span class="rh-skip" hidden>Tap to skip</span></div>
+      <div class="rh-lines" aria-hidden="true"></div><div class="rh-banner"></div><div class="rh-cine" hidden><small></small><b></b><span class="rh-skip" hidden>Tap to skip</span></div>
       <div class="rh-btns"><button type="button" data-k="left" aria-label="Left">◀</button><button type="button" data-k="duck" aria-label="Duck">▼</button><button type="button" data-k="jump" aria-label="Jump">▲</button><button type="button" data-k="right" aria-label="Right">▶</button></div>`;
     this.spell = spell; this.drawRunHud();
     this.rideTune = hasMusic('sled-' + st.id) ? 'sled-' + st.id : 'sled'; music(this.rideTune); // the ride's tune (the arena's own, if it has one), all the way in
@@ -145,6 +145,8 @@ export class StageRunner {
     h.querySelector('.rh-flakes b').textContent = this.sled.flakes; h.querySelector('.rh-balls b').textContent = this.sled.snowballs;
     if (this.spell) h.querySelector('.rh-slots').innerHTML = [...this.spell.en].map((c, i) => `<span class="${i < this.sled.spelled.length ? 'on' : ''}">${i < this.sled.spelled.length ? esc(this.sled.spelled[i]) : ''}</span>`).join('');
   }
+  // the ride's own banner (the fight HUD, with its banner, is hidden on the ride)
+  rideBanner(text, cls = '', sec = 1.4) { const b = $('#runhud .rh-banner'); if (!b) return; b.textContent = text; b.className = 'rh-banner show ' + cls; clearTimeout(this.rbT); this.rbT = setTimeout(() => { b.className = 'rh-banner'; }, sec * 1000); }
   toast(text, cls = '') { const t = $('#runhud .rh-toast') || $('#stagetoast'); if (!t) return; t.className = (t.id === 'stagetoast' ? '' : 'rh-toast ') + 'show ' + cls; t.textContent = text; clearTimeout(this.toastT); this.toastT = setTimeout(() => { t.className = t.id === 'stagetoast' ? '' : 'rh-toast'; }, 1800); }
 
   // ---------- arriving at the outpost ----------

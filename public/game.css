@@ -248,7 +248,11 @@ body.sledding #coach { z-index: 45; }
 .rh-toast { position: absolute; top: 42%; left: 50%; transform: translate(-50%, -50%) scale(0.8); opacity: 0; transition: all 0.2s; font-size: 28px; text-shadow: 0 3px 0 #1c2340; white-space: nowrap; }
 .rh-toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 .rh-toast.word { color: #e3c8ff; }
-.rh-toast.bonus { color: #bfe8ff; }
+.rh-toast.bonus { color: #bfe8ff; top: 58%; } /* lower than the banner, so the two never overlap */
+.rh-banner { position: fixed; left: 50%; top: 30%; transform: translate(-50%, -50%) scale(0.6); opacity: 0; font: 700 34px 'Fredoka', system-ui, sans-serif; letter-spacing: 0.02em; color: var(--gold); -webkit-text-stroke: 2.5px var(--ink); text-shadow: 0 5px 0 var(--ink); white-space: nowrap; transition: transform 0.18s, opacity 0.18s; pointer-events: none; z-index: 3; }
+.rh-banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.rh-banner.look { color: #bfe8ff; font-size: 30px; }
+@media (max-width: 420px) { .rh-banner { font-size: 26px; } .rh-banner.look { font-size: 23px; } }
 /* speed lines round the edges while tucked down or flying off a ramp */
 .rh-lines { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.25s; background: repeating-conic-gradient(from 0deg at 50% 46%, rgba(255,255,255,0) 0deg 5deg, rgba(255,255,255,0.55) 5.6deg, rgba(255,255,255,0) 6.4deg 11deg); -webkit-mask: radial-gradient(ellipse 60% 55% at 50% 46%, transparent 62%, #000 100%); mask: radial-gradient(ellipse 60% 55% at 50% 46%, transparent 62%, #000 100%); }
 body.sled-fast .rh-lines { opacity: 0.7; }
@@ -743,3 +747,6 @@ body.intro #banner, body.intro #seizebtn, body.intro #feed, body.intro #hunt, bo
 /* what the game says on screen, in Fredoka */
 #banner, .fx-num, .rh-toast, #stagetoast, #coach, .rh-cine b, .rh-cine small, #hunt, #hunt b, .rh-spell, .ic-line, .wt-say { font-family: 'Fredoka', system-ui, sans-serif; font-weight: 700; letter-spacing: 0.01em; }
 #banner { letter-spacing: 0.02em; -webkit-text-stroke-width: 2.5px; } .rh-toast { font-weight: 700; -webkit-text-stroke: 1px #1c2340; }
+/* ride words: never the task card's green glow (.show is shared), and below the spell panel on short landscape screens */
+.rh-banner.show, .rh-toast.show { animation: none; box-shadow: none; }
+@media (max-height: 500px) { .rh-banner { top: 44%; font-size: 26px; } .rh-banner.look { font-size: 23px; } .rh-toast { top: 52%; } .rh-toast.bonus { top: 66%; } }
