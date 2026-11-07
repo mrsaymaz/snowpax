@@ -465,7 +465,7 @@ const pier = vista({
 // Karaköy Pier (a clear blue morning, mist on the water): the bridge with its row of
 // fishermen's rods, the pier hall, ferries in the ice, the far shore.
 const karakoy = vista({
-  hood: { landmark: 'karakoy', seed: 61, flag: '#2d6fb5', sea: 11, trees: 'xTx', plazaR: 5, tiles: [...[5, 8, 11, 14, 32, 35, 38, 41].map(i => ['l', i, 11]), ...[6, 9, 12, 33, 36, 39].map(i => ['b', i, 12]), ...[15, 19, 23].flatMap(j => [['T', 6, j], ['T', 39, j]]), ['n', 12, 17], ['l', 19, 20], ['l', 26, 20]], props: [
+  hood: { landmark: 'karakoy', seed: 61, flag: '#2d6fb5', sea: 11, trees: 'xTx', plazaR: 5, tiles: [...[5, 8, 11, 14, 32, 35, 38, 41].map(i => ['l', i, 11]), ...[6, 9, 12, 33, 36, 39].map(i => ['b', i, 12]), ...[15, 19, 23].flatMap(j => [['T', 6, j], ['T', 39, j]]), ['n', 12, 17], ['l', 17, 19], ['l', 28, 19]], props: [
     { type: 'ferry', i: CX - 12, j: 3, w: 5, h: 2, along: 'x' }, { type: 'ferry', i: CX + 7, j: 6, w: 5, h: 2, along: 'x' }, { type: 'pier', i: CX + 7, j: 9, w: 2, h: 3, along: 'z' },
     { type: 'stall', kind: 'fish', i: CX - 10, j: CZ + 2, w: 2, h: 1 }, { type: 'stall', kind: 'simit', i: CX + 7, j: CZ + 2, w: 2, h: 1 }] },
   light: { sun: '#fff1d6', intensity: 2.0, sky: '#e2ecff', ground: '#9a94c6', dir: [0.5, 0.5, -0.7], top: '#5a8ede', horizon: '#dbe8fb', far: '#a3b3d8', fog: '#d8e5f8' },
@@ -488,7 +488,7 @@ const karakoy = vista({
 // Bankers Street (bright noon): the street of grand old banks, the great stone bank building at
 // its heart with its columns and bronze door, lamps, a simit and a tea stall, plane trees.
 const bankalar = vista({
-  hood: { landmark: 'bankalar', seed: 71, flag: '#7a1f1f', trees: 'TvTT', plazaR: 5, tiles: [...[25, 29].flatMap(j => [['l', 16, j], ['l', 30, j]]), ...[19, 23, 27].flatMap(j => [['T', 12, j], ['T', 34, j]]), ...[21, 25].flatMap(j => [['b', 13, j], ['b', 33, j]]), ['l', 19, 20], ['l', 26, 20]], props: [
+  hood: { landmark: 'bankalar', seed: 71, flag: '#7a1f1f', trees: 'TvTT', plazaR: 5, tiles: [...[25, 29].flatMap(j => [['l', 16, j], ['l', 30, j]]), ...[19, 23, 27].flatMap(j => [['T', 12, j], ['T', 34, j]]), ...[21, 25].flatMap(j => [['b', 13, j], ['b', 33, j]]), ['l', 17, 19], ['l', 28, 19]], props: [
     { type: 'plane-tree', i: CX - 9, j: CZ + 5, w: 2, h: 2 }, { type: 'plane-tree', i: CX + 7, j: CZ + 5, w: 2, h: 2 },
     { type: 'stall', kind: 'simit', i: CX - 6, j: CZ + 4, w: 2, h: 1 }, { type: 'stall', kind: 'cay', i: CX + 4, j: CZ + 4, w: 2, h: 1 }] },
   light: { sun: '#fffaf0', intensity: 2.25, sky: '#eef0fb', ground: '#a49dc8', dir: [-0.3, 0.75, -0.55], top: '#6f9ae0', horizon: '#e7eefb', far: '#b0b8d8', fog: '#e6ecf8' },
@@ -512,7 +512,7 @@ const bankalar = vista({
 // Tersane İstanbul (golden afternoon): the old shipyard on the water: the brick workshop and its
 // chimney, the dry dock with a ship, the crane, the new promenade under its glass canopy.
 const tersane = vista({
-  hood: { landmark: 'tersane', seed: 81, flag: '#e8a10a', sea: 10, trees: 'xvx', plazaR: 5, tiles: [...[5, 8, 11, 14, 32, 35, 38, 41].map(i => ['l', i, 10]), ...[6, 9, 12, 33, 36, 39].map(i => ['b', i, 11]), ...[15, 19, 23].flatMap(j => [['T', 5, j], ['T', 40, j]]), ['z', 30, 12], ['z', 31, 12], ['z', 30, 13], ['f', 15, 19], ['f', 31, 19], ['l', 19, 20], ['l', 26, 20]], props: [
+  hood: { landmark: 'tersane', seed: 81, flag: '#e8a10a', sea: 10, trees: 'xvx', plazaR: 5, tiles: [...[5, 8, 11, 14, 32, 35, 38, 41].map(i => ['l', i, 10]), ...[6, 9, 12, 33, 36, 39].map(i => ['b', i, 11]), ...[15, 19, 23].flatMap(j => [['T', 5, j], ['T', 40, j]]), ['z', 30, 12], ['z', 31, 12], ['z', 30, 13], ['f', 15, 19], ['f', 31, 19], ['l', 17, 19], ['l', 28, 19]], props: [
     { type: 'ferry', i: CX - 11, j: 4, w: 5, h: 2, along: 'x' }, { type: 'stall', kind: 'cay', i: CX - 10, j: CZ + 2, w: 2, h: 1 }, { type: 'stall', kind: 'chestnut', i: CX + 7, j: CZ + 2, w: 2, h: 1 }] },
   light: { sun: '#ffdca8', intensity: 2.2, sky: '#f6e8d8', ground: '#a693bc', dir: [-0.75, 0.32, -0.55], top: '#7790d6', horizon: '#f8dcbc', far: '#b6a7c4', fog: '#f0dcc8', sunSize: 85, dusk: 0.2 },
   shots: [
@@ -535,7 +535,7 @@ const tersane = vista({
 // Aynalıkavak Pavilion (pink sunset): the pavilion on its stone base, wide eaves, mirror-bright
 // windows catching the sunset, cypresses and the pool, the Golden Horn behind.
 const aynalikavak = vista({
-  hood: { landmark: 'aynalikavak', seed: 91, flag: '#c8443c', sea: 9, trees: 'xyxT', plazaR: 5, tiles: [['l', 19, 20], ['l', 26, 20], ['b', 16, 21], ['b', 29, 21], ['l', 18, 24], ['l', 27, 24], ['l', 14, 12], ['l', 31, 12]], props: [
+  hood: { landmark: 'aynalikavak', seed: 91, flag: '#c8443c', sea: 9, trees: 'xyxT', plazaR: 5, tiles: [['l', 17, 19], ['l', 28, 19], ['b', 16, 21], ['b', 29, 21], ['l', 18, 24], ['l', 27, 24], ['l', 14, 12], ['l', 31, 12]], props: [
     { type: 'pier', i: CX - 7, j: 4, w: 2, h: 3, along: 'z' }, { type: 'stall', kind: 'salep', i: CX + 7, j: CZ + 2, w: 2, h: 1 }] },
   light: { sun: '#ffb79a', intensity: 1.9, sky: '#f6d8e0', ground: '#9285bd', dir: [-0.7, 0.2, -0.68], top: '#7273c8', horizon: '#ffc6ae', far: '#a28fb8', fog: '#f2cbc2', sunDisc: '#ffb878', sunSize: 95, dusk: 0.65 },
   shots: [

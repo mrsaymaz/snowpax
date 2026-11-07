@@ -72,3 +72,17 @@ Each view on the sled ride faces the real skyline from that place, a little larg
 | Tersane İstanbul | across the water: the red-brick school on the hill at Fener, domes on the ridge, the Haliç metro bridge to the left |
 | Aynalıkavak Pavilion | straight across: Fener and Balat with the red-brick school; domes upstream; cypresses |
 | Miniatürk | the Haliç highway bridge high over the water; the cypress hill above Eyüp |
+
+## Street life in the views
+
+Each view has its own street life, placed clear of the camera's path, with lamps, flower beds and a street cat beside every landmark so a phone sees them too:
+
+| Place | Around the landmark |
+|---|---|
+| Karaköy Pier | quay lamps and benches, an iron railing with fishing rods and buckets, bollards, café tables, string lights, flags, plane trees, cats |
+| Bankers Street | a row of grand old bank buildings, the curving stone stairs up the hill, plane trees, benches, lamps, flags, flower beds |
+| Tersane İstanbul | café terraces under parasols with steaming tea, string lights along the promenade and quay, benches, crates, fire barrels, flags |
+| Aynalıkavak Pavilion | rows of cypresses, flower beds along the way in, a garden fountain, rowing boats frozen in the ice, benches, lamps |
+| Miniatürk | more little models on the lawns (Galata Tower, the Maiden's Tower, a bridge, a clock tower, a fortress), flower beds, flags, string lights, benches |
+
+The string lights twinkle, flags wave, steam rises from tea glasses, the fountain plays and the cats swish their tails.
