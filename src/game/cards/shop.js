@@ -69,9 +69,9 @@ export function shopScene(s, { info, buy, color }) {
     for (const { el } of tags) el.classList.add('gone');
     for (const c of [...s.step.children]) s.step.remove(c); // the last show's snowman and wall
     const kx = 0, kz = 2.4, hand = () => A.hand();
-    if (T) s.frame([1.1, 1.9, 7.8], [1.1, 0.95, 2.4], 40); else s.frame([1.1, 1.8, 7.4], [1.1, 0.95, 2.4], 40); // pulled back: the kid and the snowman in view
+    if (T) s.frame([1.3, 1.9, 8.2], [1.3, 0.95, 2.4], 44); else s.frame([1.3, 1.8, 7.6], [1.3, 0.95, 2.4], 42); // pulled back: the kid and the snowman in view
     const sm = snowman(kx + 2.5, kz), hit = (p, big = false) => { K.burst(p, ['#ffffff', '#e8f4ff', color], big ? 30 : 16, big ? 1.5 : 1.0); s.wobble(sm); s.sound?.('hit'); };
-    aim = Math.PI / 2; // turn to the snowman
+    aim = Math.PI / 2 * 0.62; // turn to the snowman, three-quarters so the face shows
     const toss = (to, { T: tt = 0.3, lift = 0.15, at: ms = 0, big = false } = {}) => at(() => { A.throw(); const b = snowball(), h = hand(); b.position.copy(h); s.fly(b, to, { T: tt, lift, done: () => { s.step.remove(b); hit(new Vector3(...to), big); } }); }, ms, n);
     if (id === 'thrower') { for (let k = 0; k < 3; k++) toss([kx + 2.35, 1.05 + k * 0.08, kz], { T: 0.22, lift: 0.08, at: 350 + k * 330 }); }
     else if (id === 'lobber') { wall(kx + 1.35, kz); toss([kx + 2.4, 1.15, kz], { T: 0.85, lift: 2.0, at: 450, big: true }); toss([kx + 2.45, 0.9, kz + 0.1], { T: 0.85, lift: 2.2, at: 1350, big: true }); }

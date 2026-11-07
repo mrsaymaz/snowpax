@@ -51,7 +51,10 @@ is built from one seed by `plan()` in `sledrun.js`, so the same rules hold in ev
   fences (jump to get them), low ones under lines and branches (duck to get them), lines held high
   (jump), and big arcs after a ramp. Fifteen in a row without a crash: "Streak 15! +2".
 - **Word flakes** (the purple snowflake with the word on a tag): one per section from the second,
-  always at the top of an arc, so getting one is a little reward for a jump or a ramp.
+  always at the top of an arc, so getting one is a little reward for a jump or a ramp. Never two
+  within 45 m of each other. Every one can be caught: a ramp's arc is planned for the section's
+  speed and fitted again at take-off to where the sled will really fly (`fitArc`), and a snowflake
+  has a little more reach than a snowball. An autopilot test rides each arena and catches all five.
 - **Letters:** the first letter is given on the spell panel. A row of three letters every three
   seconds, the right one and two different wrong ones; the sled goes 15% slower in this section.
 - **Ramps:** a blue plank rising ahead with yellow rails, chevrons and a flag on a snow mound, so it
@@ -65,7 +68,9 @@ is built from one seed by `plan()` in `sledrun.js`, so the same rules hold in ev
 - **Bonuses:** "Close! +1" for changing out of a lane just before its obstacle, "Perfect section! +5"
   for a section without a crash. A crash ends the streak.
 - **First ride:** a short hint the first time each thing comes ("JUMP! Swipe up", "DUCK! Swipe
-  down", "RAMP! Ride up it", "TAP to spin!").
+  down", "RAMP! Ride up it", "TAP to spin!"); on a touch screen it starts with "SWIPE ← → TO STEER".
+- **No buttons on a touch screen:** swipes and taps only, so nothing covers the track (the arrow
+  buttons stay for a mouse).
 - **On screen:** remarks, hints and bonuses use Fredoka (self-hosted, `public/fonts/`), in their own
   spot in the ride's display, below the spell panel on short landscape screens.
 
@@ -339,3 +344,20 @@ The sled ride and its places' scenes used to stutter on phones as a place came n
 - **Warmed up:** once built, every shader is compiled and every shape and picture is handed to the GPU in one hidden draw (with nothing culled and the ride's hidden things shown for that draw). So nothing compiles or uploads during the ride. Measured on Downtown: 91 shaders and about 250 pictures used to load mid-ride; now none do.
 - **Fixed lights:** the ride's lights never change. The sun always casts shadows, but on the track its shadow camera looks at nothing and is not redrawn. Two lamps wait at zero for each place's floodlights. The neighbourhood's own lamps are left out of the scenes. A light or shadow switched on or off would make every shader recompile.
 - **Fewer draws:** each scene's still pieces are merged into one mesh per look, and the moving ones (cats' tails, pigeons, flags, pennants, gulls) stay separate. The string lights twinkle by their colours rather than their sizes, and their glow is one cloud of points. One of each obstacle, each word's tag and each spelling letter are made before the ride, not as they come into view.
+
+## The snowball style, in the Snow Shop
+
+The style (Quick Thrower, Lobber, Sprayer) is chosen in the Snow Shop, before and after each fight,
+not on the start screen: three slim buttons under the shop's bar. Picking one changes your kid's
+hat at once (beanie, earmuffs, cap) and plays a short show while the price tags step aside and
+the camera pulls back: the Quick Thrower throws three fast straight snowballs at a snowman, the
+Lobber lobs two high over a snow wall, the Sprayer throws three at once in a fan, twice. The choice
+is saved and used for the rest of the game.
+
+## The start screen on a phone
+
+Nothing scrolls, on small phones or with large text: the arena cards are one picture each with the
+name on the sky (the carousel with its ship's mast and anchor for Kasımpaşa; the great chain across
+the Golden Horn at sunset with an old sailing ship; Galata Tower and the red nostalgic tram for
+Downtown, drawn for the game), Girl / Boy, the lesson and the pace are slimmer, and on a narrow
+screen the pace is one button that switches between Relaxed and Challenge.
