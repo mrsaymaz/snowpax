@@ -2,7 +2,7 @@
 
 SnowPax is a free English-practice snowball game by Mr. Saymaz for Grades 5–8 (CEFR A1–A2+). Static web game, deployed on Vercel. No ads, no accounts, no data collection.
 
-**Status: M0 (setup and content).** The deployed page is a task preview for checking the content. The isometric game starts in M1.
+**Version 0.2.0.** Three arenas (Kasımpaşa, The Golden Horn, Downtown), each a stage: a sled ride in, an outpost taken with English and snowball fights, a Final Showdown. Stages won with good English add **Ulti points** to the student's team in Mr. Saymaz's English League (see `docs/ENGLISH-LEAGUE.md`).
 
 ## Commands
 
@@ -21,7 +21,9 @@ SnowPax is a free English-practice snowball game by Mr. Saymaz for Grades 5–8 
 ## Layout
 
 ```
-src/config.js            every setting: teams, colours, emblems, timings, difficulty, League endpoint, access code
+src/config.js            every setting: teams, colours, emblems, timings, difficulty, access code
+public/config.js         settings changed without a build: the English League address (ultiApi; '' = off)
+src/league.mjs           the English League client (Ulti points: start tickets, claims, outbox, pools) and the win rule
 src/tasks/subtasks.mjs   the 5 task families and 23 sub-tasks (used by the game, the coverage report and the checker)
 src/tasks/validate.mjs   checks each generated task step
 src/tasks/layout.mjs     text budget for the 640 × 360 task card
@@ -36,6 +38,15 @@ content/                 imported lesson content, coverage report, import log
 public/pictures/         licensed pictures copied from solMaxima and Tower Swarm, with licence
 docs/                    proposals waiting for Mr. Saymaz's decisions
 ```
+
+## English League (Ulti points)
+
+Ulti points are not spent in the game: they live only in the English League. A stage won with 60% of its tasks right first time (Relaxed) or 2+ stars (Challenge) is claimed; the League decides the points. `public/config.js` holds the League address; set `ultiApi: ''` for a practice-only copy with no requests. The line to add to the League's Apps Script and everything the game sends are in `docs/ENGLISH-LEAGUE.md`.
+
+## Release notes
+
+- **0.2.0**: Ulti points and the English League (team buttons show each team's live Ulti, a League panel, the win line on the results card); Mr. Saymaz's first-time guide; the new logo and icons; the snowball style chosen in the Snow Shop; your own kid stands out (a little bigger, violet, a gold ring); hits that land (hit-stop, splats, freezes that shatter).
+- **0.1.0**: the three arenas, the sled rides and the task scenes.
 
 ## Deploying on Vercel
 
