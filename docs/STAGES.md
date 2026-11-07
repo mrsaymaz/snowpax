@@ -35,6 +35,40 @@ aside and moved onto the deck).
   or kid (never the captain, never a word snowman), so Part 1 helps in "They strike back!" and
   all five help in the Final Showdown.
 
+## The sled ride: the rules
+
+Each ride is about two minutes (`seconds: 72` of riding plus the views, measured about 125 s) and
+is built from one seed by `plan()` in `sledrun.js`, so the same rules hold in every arena.
+- **Sections:** the track is cut into sections, one more than there are views: section, view,
+  section, view … section. Each section opens with the thing it introduces and keeps everything
+  met before it: 1) snowball trails and lane changes, 2) jumps over fences and high snowballs,
+  3) ducks under lines and branches, 4) ramps, 5) pairs (two lanes blocked at once). One section
+  in the middle is the letter section and is longer.
+- **Beats:** things that need a move come one beat apart, and a beat is always enough time to react
+  at full speed: 1.5 s (relaxed) or 1.15 s (Challenge), a little random, plus a bit more when the
+  move changes (a jump after a duck). Every fourth beat is a breather with only snowballs.
+- **Snowballs are where the moves are,** not only in the safe lane: trails to steer along, arcs over
+  fences (jump to get them), low ones under lines and branches (duck to get them), lines held high
+  (jump), and big arcs after a ramp. Fifteen in a row without a crash: "Streak 15! +2".
+- **Word flakes** (the purple snowflake with the word on a tag): one per section from the second,
+  always at the top of an arc, so getting one is a little reward for a jump or a ramp.
+- **Letters:** the first letter is given on the spell panel. A row of three letters every three
+  seconds, the right one and two different wrong ones; the sled goes 15% slower in this section.
+- **Ramps:** a blue plank rising ahead with yellow rails, chevrons and a flag on a snow mound, so it
+  never looks like an obstacle. Riding up it throws the sled high (a short slow motion at the top)
+  and the first time "RAMP! Ride up it" shows. In the air, a tap (or swipe up, the up button, T or
+  Enter) spins the sled: "Spin! +3" if it lands round.
+- **Roller-coaster:** every section without letters has a dip and a rise (about 3.4 m); the ground
+  before a view is flat and straight.
+- **Pace:** 3.5% faster each section (up to four), faster downhill, 6% faster tucked (ducking);
+  speed lines when tucked or flying.
+- **Bonuses:** "Close! +1" for changing out of a lane just before its obstacle, "Perfect section! +5"
+  for a section without a crash. A crash ends the streak.
+- **First ride:** a short hint the first time each thing comes ("JUMP! Swipe up", "DUCK! Swipe
+  down", "RAMP! Ride up it", "TAP to spin!").
+- **On screen:** remarks, hints and bonuses use Fredoka (self-hosted, `public/fonts/`), in their own
+  spot in the ride's display, below the spell panel on short landscape screens.
+
 ## The places on the way: cinematic views on the sled ride
 
 The ride into Kasımpaşa passes each place in task order, and at each one the camera turns, for
@@ -65,11 +99,14 @@ neighbourhood under its own sky and light. They are views, not tasks: no people,
   (`audio.js`): Boulevard Park a music box, Archery Ground a saz-like tune in Hicaz with a frame
   drum, Kızılay Square a café tune in Nihavend with a tambourine, Sururi Park a bouncy xylophone
   with claps, the Pier a ferry's horn then warm chords and a slow bell tune.
-- **On the ride:** a clear, straight, flat stretch with no obstacles, words or letters; the sled
-  slows to 60% and rides itself. The camera first turns its head from the track to the place,
-  glides into the shots, and for the last second glides back and turns forward. Letterbox bars,
-  the name card ("SORTING · PART 1 / Archery Ground") for 3.4 s, the welcome read aloud, "GET
-  READY!". A tap skips a view already seen this session; with reduce motion, one held wide shot.
+- **On the ride:** the views are joined to the ride, not cut in. The ground never changes: about
+  2.6 s ahead the lanes empty, a roadside sign ("← Look left!") stands by the track and "LOOK TO
+  THE LEFT! ←" shows on screen; the sled slows to 60% and rides itself; the camera turns its head
+  to the left over about 1.2 s, glides through the shots, and glides back for the last 1.4 s
+  ("GET READY!"). No black bars (a soft vignette instead), the name card on screen for 3.4 s, and
+  no names read aloud: the place is seen on its sign, not heard. After a view there are always
+  three seconds of empty lanes before the next thing to dodge. A tap skips a view already seen
+  this session (straight to its turn back); with reduce motion, one held wide shot.
 - The five views are built when the ride starts (under a second on a laptop), shown only near
   their stretch, and their geometry is freed after.
 
@@ -84,9 +121,9 @@ neighbourhood under its own sky and light. They are views, not tasks: no people,
 ### The finale: arriving at the carousel
 
 When the ride ends, the camera arrives over the real Kasımpaşa field before the student takes
-over (`startIntro` in `brawl.js`, about 8 s): letterbox bars, the name card ("ARENA 1 · THE
-OUTPOST / Kasımpaşa") for about 4 s, and Mr. Saymaz's line read aloud with its subtitle: "Welcome
-to Kasımpaşa! Let's take it back!".
+over (`startIntro` in `brawl.js`, about 8 s): a soft vignette (no black bars), the name card ("ARENA 1 · THE
+OUTPOST / Kasımpaşa") for about 4 s, and Mr. Saymaz's line as a subtitle only, not read aloud:
+"Welcome to Kasımpaşa! Let's take it back!".
 - **0–3 s:** high over the field and the rooftops, coming in from the south: the snowbank fence,
   the cover, the camp's children waiting, and at the far end the carousel ringed in the rivals'
   colour, the rival team lined up in front of it.
