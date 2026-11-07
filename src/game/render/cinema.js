@@ -115,10 +115,10 @@ function townscape(g, L, { seed = 3, sea = false, urban = false }) {
   const win = new PlaneGeometry(0.16, 0.2); win.translate(0, 0, 0.505);
   const PAST = urban ? ['#e9dcc4', '#e3c9a8', '#d9cfc2', '#efd9c2', '#d6c7b8', '#e8cfc4', '#cfc9c4', '#f1e4cc'] : ['#ecd2b4', '#e2c0cc', '#c9d8ea', '#ece2c4', '#d3e4d2', '#f2d6bd', '#d8cfe8', '#f4e7d6']; // the city's stone, ochre and cream
   const homes = [];
-  const step = urban ? 4.4 : 5.2;
+  const step = urban ? 4.8 : 5.2;
   for (let gi = -230; gi < 230; gi += step) for (let gj = -230; gj < 230; gj += step) {
     const x = PLACE.x + gi + (R() - 0.5) * 3.2, z = PLACE.z + gj + (R() - 0.5) * 3.2, r = Math.hypot(x - PLACE.x, z - PLACE.z);
-    if (r < (urban ? 30 : 42) || r > 205 || !free(x, z)) continue;
+    if (r < (urban ? 30 : 42) || r > (urban ? 185 : 205) || !free(x, z)) continue;
     const dens = 0.55 + 0.45 * Math.sin((x - PLACE.x) / 37 + seed) * Math.cos((z - PLACE.z) / 29 - seed); // neighbourhoods and gaps between them
     if (!urban && R() > dens * (r < 70 ? 0.55 : 0.9)) continue; if (urban && R() > 0.85) continue;
     homes.push({ x, z, y: hH(x, z), w: urban ? 3.8 + R() * 2 : 3.4 + R() * 2.8, h: urban ? 6 + R() * (r > 120 ? 9 : 6) : 3 + R() * (r > 120 ? 5 : 3.5), d: 3.6 + R() * 1.6, ry: Math.atan2(PLACE.x - x, PLACE.z - z) + (R() - 0.5) * 0.5, c: PAST[Math.floor(R() * PAST.length)], r });
@@ -127,8 +127,9 @@ function townscape(g, L, { seed = 3, sea = false, urban = false }) {
   const wins = [], lit = 0.18 + (L.dusk || 0) * 0.7;
   homes.forEach((q, k) => {
     o.position.set(q.x, q.y - 0.3, q.z); o.rotation.set(0, q.ry, 0); o.scale.set(q.w, q.h, q.d); o.updateMatrix(); bodies.setMatrixAt(k, o.matrix); bc.set(q.c).lerp(hor, far(q.r)); bodies.setColorAt(k, bc);
-    o.scale.set(q.w, Math.max(q.h, 3) * 0.9, q.d); o.position.y = q.y - 0.3 + q.h - Math.max(q.h, 3) * 0.9 * 1.0; o.updateMatrix(); roofs.setMatrixAt(k, o.matrix);
-    for (let fl = 0; fl < Math.floor(q.h / 2.2); fl++) for (const u of [-0.25, 0.25]) if (R() < 0.85) { o.position.set(q.x, q.y - 0.3 + 1.1 + fl * 2.1, q.z); o.rotation.set(0, q.ry, 0); o.scale.set(q.w, q.h / q.h * 1, q.d); o.updateMatrix(); const m = o.matrix.clone().multiply(new Object3D().matrix.makeTranslation(u, 0, 0)).multiply(new Object3D().matrix.makeScale(1 / q.w * 2.4, 1 / 1 * 3, 1)); wins.push({ m, lit: R() < lit, r: q.r }); }
+    const rh = urban ? 1.6 : Math.max(q.h, 3) * 0.9; o.scale.set(q.w, rh, q.d); o.position.y = q.y - 0.3 + q.h - rh; // the city's roofs are low and tiled o.updateMatrix(); roofs.setMatrixAt(k, o.matrix);
+    const floors = urban ? (q.r > 140 ? 0 : Math.min(3, Math.floor(q.h / 2.2))) : Math.floor(q.h / 2.2); // far in the city: the haze hides the windows
+    for (let fl = 0; fl < floors; fl++) for (const u of [-0.25, 0.25]) if (R() < 0.85) { o.position.set(q.x, q.y - 0.3 + 1.1 + fl * 2.1, q.z); o.rotation.set(0, q.ry, 0); o.scale.set(q.w, q.h / q.h * 1, q.d); o.updateMatrix(); const m = o.matrix.clone().multiply(new Object3D().matrix.makeTranslation(u, 0, 0)).multiply(new Object3D().matrix.makeScale(1 / q.w * 2.4, 1 / 1 * 3, 1)); wins.push({ m, lit: R() < lit, r: q.r }); }
   });
   bodies.instanceColor.needsUpdate = true; bodies.receiveShadow = true; g.add(bodies, roofs);
   if (wins.length) { const wm = new InstancedMesh(win, new MeshBasicMaterial({ color: '#ffffff' }), wins.length), warm = new Color('#ffd27a'), dark = new Color('#55617f'); wins.forEach((w, k) => { wm.setMatrixAt(k, w.m); wm.setColorAt(k, (w.lit ? warm.clone() : dark.clone()).lerp(hor, far(w.r) * (w.lit ? 0.3 : 0.8))); }); wm.instanceColor.needsUpdate = true; g.add(wm); }

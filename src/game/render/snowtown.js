@@ -763,7 +763,7 @@ export function buildSnowtown(ctx) {
         K.add(new CylinderGeometry(0.012, 0.016, 0.16, 4), M('plaster', col), cx2 + 0.03, cy + 0.12, cz2 - 0.1, 0.7);
       }
       const sg = sign('Cihangir', 1.3); sg.position.set(x + 0.6, 0.55, z + 2.02); group.add(sg); for (const s2 of [-1, 1]) K.add(new CylinderGeometry(0.03, 0.03, 0.55, 6), mWood, x + 0.6 + s2 * 0.52, 0.28, z + 1.99);
-      flagAt(lm.outpost, x - 0.3, 4.6, z - 1.45); lights.push([x, 1.0, z + 0.9]); life.perches.push([x - 1.45, 2.9, z - 1.25], [x + 0.85, 3.1, z - 1.3], [x + 1.8, 2.7, z - 1.0]);
+      flagAt(lm.outpost, x - 0.3, 4.6, z - 1.45); lights.push([x + 1.3, 1.0, z + 1.5]); life.perches.push([x - 1.45, 2.9, z - 1.25], [x + 0.85, 3.1, z - 1.3], [x + 1.8, 2.7, z - 1.0]);
     } else if (lm.type === 'tophane') { // TOPHANE: the old clock tower and the marble fountain on the waterfront promenade, the modern art museum and a cruise ship at the quay behind
       const [x, z] = centre(lm), stone = M('stone', '#e6ddcf'), stoneD = M('stone', '#c2b6a2'), marble = M('plaster', '#f4f1ea'), lead = M('shingle', '#7d8296'), iron = M('metal', '#2b2f45');
       K.add(rbox(4.6, 4.4, 0.08, 0.03), mStone, x, 0, z);
