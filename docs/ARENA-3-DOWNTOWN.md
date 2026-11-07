@@ -6,6 +6,18 @@ Downtown is an evening loop through Beyoğlu: from Galata Tower up İstiklal Ave
 
 The red nostalgic tram of İstiklal runs round a ring of track under its overhead wire. An old street clock and the DOWNTOWN sign stand in the middle. The five places sit round the edge as the tram's stops, in task order. The tram pulls up at the place being played. Places light up when their task is done, and lit places lob snowballs in the fights.
 
+## The city around the places
+
+Downtown is drawn as a city, not a village. Tall old Beyoğlu apartment buildings stand shoulder to shoulder along the streets and round the squares. They have shopfronts with awnings on the street, floors of tall windows lit in the evening, bay windows and cornices under snow. Beyond them a dense town climbs the hills under low tiled roofs, with almost no trees. The task scenes have a painted city skyline behind them in place of snowy hills and pines, with real façades round each set.
+
+| View | The surroundings |
+|---|---|
+| Galata Tower | a small cobbled square closed in by tall old buildings, café tables and lights strung across it, streets running off either side; Galata Bridge and the old city's domes across the Golden Horn |
+| İstiklal Avenue | the avenue lined on both sides with grand old fronts, one after another, festive lights strung from side to side; Galata Tower beyond the rooftops |
+| Taksim Square | the wide paved square, the park's trees on one side, city blocks round it, the old octagonal water-house (Taksim Maksemi) where the avenue begins |
+| Cihangir | the little square among tall pastel buildings on the slope, rooftops stepping down to the water; the Bosphorus, the Maiden's Tower, the bridge and the old city's domes |
+| Tophane | the cruise port's long low terminals with their planted roofs, a cruise ship at the quay, the new art museum on the water, the old town rising behind the promenade; the mosque beside the square on the land side as scenery |
+
 ## The places, their tasks and their views
 
 | Part | Place | Task | The landmark and its view on the sled ride |
