@@ -78,7 +78,7 @@ error, the timeout, a 5xx or `retry: true` means "try again later".
 For the `games` section of the ULTI block in the Apps Script:
 
 ```
-snowpax: { points: { relaxed: [6, 8, 10], challenge: [9, 11, 13] }, deviceDailyWins: 4, minSeconds: MINSECONDS },
+snowpax: { points: { relaxed: [6, 8, 10], challenge: [9, 11, 13] }, deviceDailyWins: 4, minSeconds: 240 },
 ```
 
 - **points**: one value per arena, in order Kasımpaşa, The Golden Horn, Downtown. A SnowPax stage is
@@ -88,14 +88,38 @@ snowpax: { points: { relaxed: [6, 8, 10], challenge: [9, 11, 13] }, deviceDailyW
   later arenas ask for more English (the 80% unlock rule) and are worth more; Challenge (a timer and
   2 stars needed) is worth 3 more on each arena.
 - **deviceDailyWins: 4**: four stage wins a day count on one device, about 40 minutes of play.
-- **minSeconds: MINSECONDS**: see "The shortest honest win" below.
+- **minSeconds: 240**: see "The shortest honest win" below.
 - **How long Ulti last** is the League's `hours` setting (the panel reads it from the League).
 
 Every value is read from the League, so changes in the spreadsheet take effect without a new build.
 
 ## The shortest honest win
 
-MEASUREMENT
+All three arenas are built the same way (a 72-second sled ride with five places' scenes, 24 tasks,
+an opening fight to 12 freezes, a 50-second strike-back hold, the Final Showdown), so the shortest
+arena is any of them; Kasımpaşa was measured.
+
+A scripted player went through Kasımpaşa on Relaxed in the real game, with a clock counting the
+game's own time: the sled ride played out in full, every task answered the moment it appeared, the
+three Snow Shops left at once, the strike-back hold on its own clock. Only the opening fight and the
+captain were skipped (they need real throwing), and the kids at the camp were reached instantly.
+
+| Part | Game time |
+|---|---|
+| Sled ride in (with the five scenes) and the arrival | 127.6 s |
+| Camp (three children's questions, no walking) | 14.7 s |
+| First shop, Part 1 of the English | 30.4 s |
+| Second shop, strike-back hold | 55.4 s |
+| Part 2 of the English, the last shop | 29.4 s |
+| **Start ticket to the results card** | **258 s** |
+
+A real perfect player also has to freeze 12 rivals in the opening fight (at least about 30 s, with
+the team's help), freeze the captain (at least about 10 s) and walk to the three children (about
+6 s): about **300 s**. On a replay in the same session the five scenes can be skipped (about 28 s
+less): about **275 s** at the very fastest. `minSeconds: 240` leaves a margin of about 35 seconds
+under that, and refuses anything faster than the ride, the hold and the English alone allow. The
+start ticket is asked for when the stage begins (before the ride), so the League's clock covers
+the whole stage.
 
 ## Anything else on the League side
 
