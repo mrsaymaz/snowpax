@@ -5,6 +5,7 @@
 // never does); with none left the stage starts again (English answers already given still count).
 // See stages.mjs for the stage, fights.mjs for the plan and waves.mjs for the waves.
 import { CONFIG } from '../config.js';
+import { newRunId, gradeOfUnit, ultiWinStatus, ultiMessage } from '../league.mjs';
 import { STAGES, stageById, Lives, stageState, isUnlocked, nextStage, finishStage, totalStars, UNLOCK, PLACE_OF, PLACE_ID } from './stages.mjs';
 import { FAMILIES } from '../tasks/subtasks.mjs';
 import { WAVES, RIVAL_INFO, minionList, stageWall, setWall, entryPoints } from './waves.mjs';
@@ -26,8 +27,8 @@ const STAR = n => '★'.repeat(n) + '☆'.repeat(3 - n);
 const ICON = { kasimpasa: 'kizilay', 'golden-horn': 'waterfront', downtown: 'tram' };
 
 export class StageRunner {
-  constructor({ match, flow, unit, unitProgress, save, writeSave, pace, rng, team, kit, reduceMotion, ui }) {
-    Object.assign(this, { match, sim: match.sim, flow, unit, up: unitProgress, save, writeSave, pace, rng, team, kit, reduceMotion, ui });
+  constructor({ match, flow, unit, unitProgress, save, writeSave, pace, rng, team, kit, reduceMotion, ui, league = null }) {
+    Object.assign(this, { match, sim: match.sim, flow, unit, up: unitProgress, save, writeSave, pace, rng, team, kit, reduceMotion, ui, league });
     this.mode = 'map'; this.lives = new Lives(); this.wall = []; this.waves = []; this.runFlakes = 0; this.runBalls = 0; this.ridesDone = 0;
     flow.ui.onCaptured = z => this.captured(z); flow.ui.onHeld = z => this.held(z); flow.ui.onHalf = z => this.startBuild('strike', () => this.startStrike(z)); flow.ui.onStar = () => this.addFlake(); flow.ui.onRecruit = (id, right) => this.recruitAnswer(id, right);
     flow.ui.onExtraDone = () => this.startBuild('final', () => this.startShowdown());
@@ -53,8 +54,11 @@ export class StageRunner {
         <span class="sm-icon">${THEME_ICON[ICON[s.id]] || ''}</span><b>Arena ${s.arena || i + 1} · ${esc(s.title)}</b><span class="sm-stars">${done ? STAR(st[s.id].stars) : open ? 'Play!' : '🔒'}</span></button>`;
     }).join('');
     const tipOf = s => Object.values(s.places || {}).map(p => p.title), go = next || STAGES[0], places = tipOf(go);
+    // what a good win is worth in the English League (only from the League's own settings)
+    const lg = this.league?.enabled ? this.league.snapshot(gradeOfUnit(this.unit?.id)) : null, pts = lg?.game?.points?.[this.pace === 'challenge' ? 'challenge' : 'relaxed']?.[STAGES.indexOf(go)];
+    const ultiTip = Number.isFinite(pts) && CONFIG.teams[this.team] ? `<p class="sm-ulti">Win it with good English: <b>+${pts} Ulti</b> for Grade ${gradeOfUnit(this.unit?.id)} ${esc(CONFIG.teams[this.team].name)}</p>` : '';
     $('#stagemap').innerHTML = `<div class="sm-card"><h2>Your arenas</h2><p class="sm-sub">${esc(this.unit.title)} · ★ ${totalStars(this.up)} of ${STAGES.length * 3}${acc !== null ? ` · Right first time ${acc}% (need ${Math.round(UNLOCK * 100)}%)` : ''}</p>
-      <div class="sm-path">${nodes}</div><p class="sm-tip">Sled into ${esc(go.title)} and take its outpost from the rival team: English at ${esc(places.slice(0, -1).join(', '))} and ${esc(places.at(-1) || '')} earns ❄ for boosts. You will need them for the Final Showdown!</p></div>`;
+      <div class="sm-path">${nodes}</div><p class="sm-tip">Sled into ${esc(go.title)} and take its outpost from the rival team: English at ${esc(places.slice(0, -1).join(', '))} and ${esc(places.at(-1) || '')} earns ❄ for boosts. You will need them for the Final Showdown!</p>${ultiTip}</div>`;
     $('#stagemap').hidden = false;
     setTimeout(() => { if (this.mode === 'map') this.ui.guide?.('welcome'); }, 500); // the very first time: Mr. Saymaz says hello
     $('#stagemap').onclick = e => { const b = e.target.closest('.sm-node'); if (b && !b.disabled) this.start(stageById(b.dataset.id)); };
@@ -63,8 +67,19 @@ export class StageRunner {
   // ---------- one stage ----------
   start(stage) {
     $('#stagemap').hidden = true; $('#results').hidden = true; $('#outoflives').hidden = true;
+    if (this.runId && this.runId !== this.claimedRun) this.league?.forget(this.runId); // the last run was not won: its ticket goes
     this.cur = stage; this.lives.reset(); this.t0 = performance.now(); this.runFlakes = 0; this.runBalls = 0;
+    this.runId = newRunId(); this.leagueTicket = null; this.leagueStart(); // the English League: a ticket for this run (Ulti if it is won well)
     this.ride();
+  }
+  // a League ticket for this run; offline at the start, it asks again at the next checkpoint (the camp,
+  // each shop, the fight, the strike-back)
+  leagueStart() {
+    const L = this.league, st = this.cur, runId = this.runId;
+    if (!L?.enabled || !st || !runId || this.leagueTicket || this.leagueAsking || !CONFIG.teams[this.team]) return;
+    this.leagueAsking = true;
+    L.start({ runId, grade: gradeOfUnit(this.unit?.id), team: this.team, arena: Math.max(0, STAGES.indexOf(st)), pace: this.pace === 'challenge' ? 'challenge' : 'relaxed', unit: this.unit?.id || '' })
+      .then(t => { if (t && this.runId === runId) this.leagueTicket = t; }).catch(() => {}).finally(() => { this.leagueAsking = false; });
   }
   // the ride for a stage: its track, its things and its places' scenes (not started)
   makeRide(st, views = null) {
@@ -256,6 +271,7 @@ export class StageRunner {
   // Camp: neighbourhood children wait at the home end in plain coats; answer one's question and they
   // join the team. No rivals on the field yet.
   startCamp(z) {
+    this.leagueStart();
     this.phase = 'camp'; this.tCamp = 0; this.ui.wallet?.(this.arm.flakes);
     const taken = new Set();
     this.plan.camp.kids.forEach(([v, d, role], k) => { // on the planned spot, or the nearest open one
@@ -286,6 +302,7 @@ export class StageRunner {
   addFlake() { if (!this.arm) return; this.arm.earn(1); this.ui.wallet?.(this.arm.flakes, true); }
   // Build: the Snow Shop, where ❄ buy boosts; then the fight starts (Fight! or 35 s).
   startBuild(kind, next) {
+    this.leagueStart();
     if (this.mode !== 'outpost' || !this.plan) { next(); return; }
     this.phase = 'build'; this.buildKind = kind; this.buildNext = next; this.tBuild = 0; this.flow.stageHold = true; this.ui.seizeButton?.(false);
     this.ui.build?.open(this.buildInfo());
@@ -309,6 +326,7 @@ export class StageRunner {
     next?.();
   }
   beginFight() {
+    this.leagueStart();
     this.phase = 'fight'; this.tFight = 0; this.flow.stageHold = true; this.spawnWave(0);
     const z = this.zone; this.ui.coach(`The rival team holds ${z.label}! Freeze ${this.plan.open.goal} rivals to break their line. They keep coming back, so keep throwing!`, 5);
     setTimeout(() => { if (this.phase === 'fight') this.ui.guide?.('fight'); }, 400); // the first fight: move, throw, super
@@ -364,6 +382,7 @@ export class StageRunner {
   // "They strike back!" between the two halves: hold the circle until the clock runs out (it
   // stops while rivals stand in the circle with nobody of ours)
   startStrike(z) {
+    this.leagueStart();
     if (this.mode !== 'outpost' || z !== this.zone) return;
     this.ui.carousel?.face(-1); // turning again
     this.phase = 'strike'; this.flow.stageHold = true; this.tStrike = 0; this.strikeLeft = this.plan ? this.plan.strike.seconds : 20; this.trickleT = 0;
@@ -446,14 +465,36 @@ export class StageRunner {
     const r = finishStage(this.up, st.id, { ...stats, flakes: this.runFlakes, seconds }); this.writeSave(this.save);
     this.cleanup(false);
     const run = this.up.arenas[0].run, acc = run?.total ? run.firstTry / run.total : 0, pass = acc >= UNLOCK, next = nextStage(this.up);
+    const ulti = this.ultiResult(stats, r.stars);
     $('#results').innerHTML = `<div class="rs-card"><div class="rs-icon">${THEME_ICON[ICON[st.id]] || ''}</div><h2>${esc(st.title)} is yours!</h2>
       <div class="rs-stars">${[0, 1, 2].map(i => `<span class="${i < r.stars ? 'on' : ''}" style="--d:${i * 0.25}s">★</span>`).join('')}</div>
       <p>Right first time: <b>${stats.firstTry} of ${stats.total}</b> · In ${esc(this.unit.title)}: <b>${Math.round(acc * 100)}%</b>${pass ? ' 🎉' : ` (the goal is ${Math.round(UNLOCK * 100)}%)`}</p>
       <p>Snowballs: <b>⚪ ${this.runBalls}</b> · Snowflakes earned: <b>❄ ${earned}</b> · Time: <b>${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}</b></p>
+      ${ulti.html}
       <div class="rs-btns">${next ? `<button type="button" class="play-btn" data-go="next">Next: ${esc(next.title)} ▶</button>` : `<button type="button" class="play-btn" data-go="again">Play again ▶</button>`}<button type="button" class="menu-btn" data-go="map">Arena</button></div></div>`;
     $('#results').hidden = false; this.mode = 'results'; $('#hud').hidden = true; this.drawLives();
-    this.ui.play('capture');
+    this.ui.play('capture'); ulti.send?.();
     $('#results').onclick = e => { const b = e.target.closest('[data-go]'); if (!b) return; $('#results').hidden = true; if (b.dataset.go === 'next' && next) this.start(next); else if (b.dataset.go === 'again') this.start(st); else this.showMap(); };
+  }
+  // the Ulti line on the results card: a win that counts is sent to the English League (and the
+  // League's answer shown); a win below the rule says why in one line; nothing with the League off
+  ultiResult(stats, stars) {
+    const L = this.league; if (!L?.enabled) return { html: '' };
+    const grade = gradeOfUnit(this.unit?.id), team = CONFIG.teams[this.team], runId = this.runId;
+    const status = ultiWinStatus({ won: true, pace: this.pace, firstTry: stats.firstTry, total: stats.total, stars, team: this.team });
+    if (status === 'none') return { html: '' };
+    if (status === 'accuracy') {
+      const why = this.pace === 'challenge' ? 'Ulti points need 2 stars on Challenge pace.' : `Ulti points need ${Math.round(0.6 * 100)}% right first time (you got ${Math.round((stats.total ? stats.firstTry / stats.total : 0) * 100)}%).`;
+      L.forget(runId); return { html: `<p class="rs-ulti">${why} Try again for your team!</p>` };
+    }
+    this.claimedRun = runId;
+    return { html: '<p class="rs-ulti pending">Sending your win to the English League…</p>', send: () => {
+      L.claim(runId).then(res => {
+        const m = ultiMessage(res, res.grade ?? grade, CONFIG.teams[res.team]?.name || team?.name), el = $('#results .rs-ulti');
+        if (el && m) { el.textContent = m.text; el.classList.remove('pending'); el.classList.toggle('good', !!m.good); if (m.good) this.ui.play('chime'); }
+        return L.flush();
+      }).catch(() => {});
+    } };
   }
   outOfLives() {
     const was = this.mode; this.mode = 'out'; stopMusic(null, 0.6);

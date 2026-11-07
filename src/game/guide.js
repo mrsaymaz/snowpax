@@ -89,12 +89,13 @@ export function makeGuide({ save, writeSave, sound = () => {} }) {
 }
 
 // what Mr. Saymaz says, part by part (simple English for Grades 5–8; touch or keyboard wording)
-export function guideSteps(id, { touch = true, spell = false } = {}) {
+export function guideSteps(id, { touch = true, spell = false, ulti = false } = {}) {
   const T = touch;
   switch (id) {
     case 'welcome': return [
       { pose: 'full', title: "Hello! I'm Mr. Saymaz.", text: 'It is a snow day in Kasımpaşa, and the rival team took our outposts. Let’s take them back together!' },
       { pose: 'point', title: 'English is your power', text: 'Every right answer gives you *❄ snowflakes*. Right the first time? Even more!' },
+      ...(ulti ? [{ pose: 'cheer', title: 'Ulti points for your team', text: "Win a stage with good English and your team gets *Ulti points* in my English League. Tap *League* on the first screen to see your grade's teams." }] : []),
       { pose: 'smile', title: 'How a stage goes', text: 'Sled in, make friends, shop for boosts, then win the snowball fight. Ready?', go: "Let's go!" },
     ];
     case 'sled': return [

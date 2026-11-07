@@ -971,3 +971,33 @@ body.guiding #wt-layer { opacity: 0.35; } /* a task scene's words step back whil
 /* the ride's messages stay on the screen: they wrap (a long word on its own line) and shrink on a narrow phone */
 .rh-toast { white-space: pre-line; text-align: center; width: max-content; max-width: calc(100vw - 28px); overflow-wrap: anywhere; line-height: 1.12; font-size: clamp(19px, 6.4vw, 28px); }
 .rh-banner { white-space: normal; text-align: center; width: max-content; max-width: calc(100vw - 28px); line-height: 1.1; }
+/* ---------- the English League: Ulti on the team buttons, the LEAGUE button and panel, the results line ---------- */
+.start2 .st-lbl { align-items: center; gap: 6px; }
+.start2 .st-lbl em { margin-left: auto; }
+.start2 .st-league { flex: none; padding: 2px 9px; border-radius: 999px; border: 2px solid var(--ink); background: linear-gradient(#efe4ff, #c9b3ff); color: #2a1a5e; font: 800 10.5px system-ui, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; box-shadow: 0 2px 0 var(--ink); cursor: pointer; }
+.start2 .st-league[hidden] { display: none; }
+.start2 .team-btn { position: relative; }
+.start2 .tb-ulti { display: block; margin-top: 1px; padding: 0 6px; border-radius: 999px; background: #2a1a5e; color: #fff; font: 800 10px system-ui, sans-serif; line-height: 15px; }
+.start2 .tb-ulti i { font-style: normal; font-size: 8px; opacity: 0.8; letter-spacing: 0.05em; }
+.start2 .tb-ulti[hidden] { display: none; }
+.league-sheet { position: fixed; inset: 0; z-index: 65; display: grid; place-items: center; padding: 14px; background: rgba(20, 16, 60, 0.55); }
+.league-sheet .lg-card { position: relative; width: min(440px, 100%); max-height: 92dvh; overflow-y: auto; padding: 16px 16px 14px; border: 3px solid var(--ink); border-radius: 24px; background: #f7f4ff; box-shadow: 0 7px 0 var(--ink); color: var(--ink); }
+.league-sheet .lg-man { position: absolute; right: 6px; top: 4px; height: 118px; width: auto; pointer-events: none; filter: drop-shadow(0 4px 6px rgba(20, 16, 60, 0.25)); }
+.league-sheet .lg-kicker { display: block; font: 800 10.5px system-ui, sans-serif; letter-spacing: 0.14em; text-transform: uppercase; color: #7b4fd6; }
+.league-sheet h2 { margin: 2px 0 4px; font: 700 26px 'Fredoka', system-ui, sans-serif; }
+.league-sheet .lg-intro { margin: 0 92px 10px 0; font-size: 13.5px; line-height: 1.35; color: #3e4c78; }
+.league-sheet .lg-teams { display: grid; gap: 7px; }
+.league-sheet .lg-team { display: grid; grid-template-columns: 30px 1fr auto; grid-template-rows: auto auto; column-gap: 9px; align-items: center; padding: 7px 10px; border-radius: 14px; border: 2.5px solid #d6d0ee; background: #fff; }
+.league-sheet .lg-team svg { grid-row: span 2; width: 30px; height: 30px; }
+.league-sheet .lg-team.me { border-color: var(--c); background: color-mix(in srgb, var(--c) 12%, white); box-shadow: 0 0 0 2px var(--c) inset; }
+.league-sheet .lg-name { font-weight: 800; font-size: 14.5px; } .league-sheet .lg-str { font: 700 15px 'Fredoka', system-ui, sans-serif; color: #2a1a5e; }
+.league-sheet .lg-bar { height: 8px; border-radius: 4px; background: #e7e2f7; overflow: hidden; } .league-sheet .lg-bar i { display: block; height: 100%; border-radius: 4px; background: var(--c); }
+.league-sheet .lg-pts { font-size: 12px; font-weight: 700; color: #6b7aa0; text-align: right; }
+.league-sheet .lg-rules { margin-top: 10px; font-size: 13px; line-height: 1.4; color: #2b3556; } .league-sheet .lg-rules p { margin: 0 0 6px; }
+.league-sheet .lg-small { font-size: 12px; color: #6b7aa0; } .league-sheet .lg-note { padding: 8px 10px; border-radius: 12px; background: #fff3c4; color: #6b4a00; font-weight: 700; }
+.league-sheet .lg-live { margin: 4px 0 10px; font-size: 11.5px; color: #8a93b4; }
+.league-sheet .lg-close { width: 100%; min-height: 48px; font-size: 19px; }
+#results .rs-ulti { margin: 8px auto 4px; padding: 8px 12px; max-width: 360px; border-radius: 14px; background: #efe9ff; color: #3a2a7a; font-weight: 800; font-size: 14.5px; }
+#results .rs-ulti.good { background: linear-gradient(#efe4ff, #d9c6ff); color: #2a1a5e; border: 2px solid #7b4fd6; }
+#results .rs-ulti.pending { opacity: 0.75; font-weight: 700; }
+#stagemap .sm-ulti { margin: 6px auto 0; padding: 6px 10px; max-width: 420px; border-radius: 12px; background: #efe9ff; color: #3a2a7a; font-size: 13px; font-weight: 700; text-align: center; }

@@ -11,12 +11,8 @@ export const CONFIG = {
   // Optional class access code. '' = off (anyone can play). If set, the game asks once per device.
   accessCode: '',
 
-  // English League (Ulti points). '' = off. Set to the League's Ulti endpoint to switch on.
-  league: {
-    endpoint: '',
-    minAccuracy: 0.8,
-    pointsPerArena: [1, 2, 3],
-  },
+  // English League (Ulti points): set in public/config.js (ultiApi), so it can change without a build.
+  // The League decides every point value (src/league.mjs, docs/ENGLISH-LEAGUE.md).
 
   // Four teams. Emblems are our own simple element symbols (never the film crests).
   teams: {

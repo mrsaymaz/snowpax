@@ -42,6 +42,8 @@ import { buildKid, bakeKid } from './render/kids2.js';
 import { KID_SCALE } from './render/kids.js';
 import { makeGuide, guideSteps } from './guide.js';
 import { ImpactFx } from './render/impact.js';
+import { createLeague, leagueApi, gradeOfUnit } from '../league.mjs';
+import { leaguePanel, showTeamUlti } from './leagueui.js';
 
 const $ = s => document.querySelector(s);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -49,6 +51,10 @@ const params = new URLSearchParams(location.search);
 const save = loadSave();
 const touchUI = matchMedia('(pointer: coarse)').matches;
 const guide = makeGuide({ save, writeSave, sound: n => play(n) }); // Mr. Saymaz's first-time guides
+// Mr. Saymaz's English League: stages won with good English add Ulti points to the student's team there
+// (public/config.js ultiApi '' switches it off: no requests at all)
+const league = createLeague({ api: leagueApi(globalThis.SNOWPAX_CONFIG) });
+if (league.enabled) league.flush().catch(() => {}); // wins queued while offline go now
 const KITS = CONFIG.kits;
 const KIT_ICON = { thrower: '⚡', lobber: '🌙', sprayer: '💥' };
 const KIT_TEXT = { thrower: 'Fast, straight throws', lobber: 'Throws over walls', sprayer: 'Three at once, close up' };
@@ -69,7 +75,16 @@ function startScreen() {
   // the logo, your kid turning in the snow (dressed as you choose), the lesson, the stars, sound
   let hero = null; // the logo (Mr. Saymaz with SnowPax) has the top of the screen now, not a 3D kid
   let unitId = params.get('unit') || save.unitId || 'g5u1';
+  // the League: each team's live Ulti for this lesson's grade on the team buttons, and the LEAGUE button
+  const leagueGrade = () => gradeOfUnit(unitId);
+  const showLeague = () => {
+    const b = $('#st-league'); b.hidden = !league.enabled; if (!league.enabled) return;
+    const g = leagueGrade(); b.textContent = `League · G${g} ›`; b.setAttribute('aria-label', `English League, Grade ${g}`);
+    showTeamUlti(league.snapshot(g)); league.refresh(g).then(s => { if (leagueGrade() === g) showTeamUlti(s); }).catch(() => {});
+  };
+  $('#st-league').onclick = () => { play('tap'); leaguePanel({ league, grade: leagueGrade(), team, onClose: () => showTeamUlti(league.snapshot(leagueGrade())) }); };
   const showLesson = async () => {
+    showLeague();
     const grade = +(/^g(\d)/.exec(unitId)?.[1] || 5), n = +(/u(\d+)$/.exec(unitId)?.[1] || 1), card = $('#st-lesson');
     card.querySelector('i').textContent = grade; card.querySelector('small').textContent = `Grade ${grade} · Unit ${n}`;
     const sts = save.units?.[unitId]?.arenas?.[0]?.stages || {}, stars = ['kasimpasa', 'golden-horn', 'downtown'].reduce((n, id) => n + (sts[id]?.stars || 0), 0), open2 = !!sts.kasimpasa?.done, open3 = open2 && !!sts['golden-horn']?.done;
@@ -309,9 +324,9 @@ async function startGame(myTeam, kit, pace) {
   const showdownView = new ShowdownView(scene, { color: myCol, dark: CONFIG.teams[myTeam].dark, groundY: (x, z) => groundH(x, z), reduceMotion });
   const fireworks = z => { if (reduceMotion) return; for (const col of [myCol, '#ffffff', '#ffd166', '#7cc4f0']) fx.emit(z.x, 3.5, z.z, 40, col, 6, 1.4, 1.2); };
   stages = flow ? new StageRunner({
-    match, flow, unit, unitProgress, save, writeSave, pace, rng, team: myTeam, kit, reduceMotion,
+    match, flow, unit, unitProgress, save, writeSave, pace, rng, team: myTeam, kit, reduceMotion, league,
     ui: { warm: sled => warmRide(sled), banner: (...a) => banner(...a), coach: (...a) => coach(...a), play, intro: (z, o) => startIntro(z, o),
-      guide: (id, o = {}) => guide.show(id, guideSteps(id, { touch: touchUI, ...o })), guided: id => guide.seen(id),
+      guide: (id, o = {}) => guide.show(id, guideSteps(id, { touch: touchUI, ulti: league.enabled, ...o })), guided: id => guide.seen(id),
       snapCamera: () => { focus.set(player.x, 0, player.z - 1.2); camShift = 0; },
       showWall: cells => showWall(cells), onGone: list => { dropSnowmen(list); dropGoneKids(); }, recruited: (c, R) => fx.number(c.x, c.z, `${c.name} · ${R.name}`, 'word'), rebuildWorld: z => rebuildWorld(z), markRival: z => world.setOwner(z.id, rivCol), fireworks,
       seizeButton: on => { $('#seizebtn').hidden = !on; },
@@ -493,7 +508,7 @@ async function startGame(myTeam, kit, pace) {
   $('#pause').onclick = () => pause(true); $('#resume').onclick = () => pause(false);
   $('#howto').onclick = () => { // Mr. Saymaz again: the main ideas, from the sled to the tasks
     pause(false); const o = { touch: touchUI };
-    const steps = [guideSteps('welcome', o)[1], ...guideSteps('sled', o).slice(0, 3), ...guideSteps('fight', o).slice(0, 3), guideSteps('shop', o)[1], ...guideSteps('task', o)];
+    const steps = [guideSteps('welcome', o)[1], ...(league.enabled ? [guideSteps('welcome', { ...o, ulti: true })[2]] : []), ...guideSteps('sled', o).slice(0, 3), ...guideSteps('fight', o).slice(0, 3), guideSteps('shop', o)[1], ...guideSteps('task', o)];
     guide.show('howto', steps.map((st, i) => (i === steps.length - 1 ? { ...st, go: 'Back to the snow' } : { ...st, spot: null })), { force: true });
   };
   $('#q-cycle').onclick = () => { const n = quality.forced === null ? 0 : quality.forced + 1; if (n >= LEVELS.length) quality.auto(); else quality.set(n); pause(true); };
