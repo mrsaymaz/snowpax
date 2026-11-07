@@ -748,5 +748,13 @@ body.intro #banner, body.intro #seizebtn, body.intro #feed, body.intro #hunt, bo
 #banner, .fx-num, .rh-toast, #stagetoast, #coach, .rh-cine b, .rh-cine small, #hunt, #hunt b, .rh-spell, .ic-line, .wt-say { font-family: 'Fredoka', system-ui, sans-serif; font-weight: 700; letter-spacing: 0.01em; }
 #banner { letter-spacing: 0.02em; -webkit-text-stroke-width: 2.5px; } .rh-toast { font-weight: 700; -webkit-text-stroke: 1px #1c2340; }
 /* ride words: never the task card's green glow (.show is shared), and below the spell panel on short landscape screens */
-.rh-banner.show, .rh-toast.show { animation: none; box-shadow: none; }
+.rh-banner.show, .rh-toast.show, #banner.show, #stagetoast.show, #coach.show { animation: none; box-shadow: none; }
 @media (max-height: 500px) { .rh-banner { top: 44%; font-size: 26px; } .rh-banner.look { font-size: 23px; } .rh-toast { top: 52%; } .rh-toast.bonus { top: 66%; } }
+/* on-screen remarks: a solid outline drawn only outside the letters (a text-stroke sits across each
+   letter's edge, eats into it and leaves thin lines inside), then the drop shadow */
+#banner, .rh-banner, .rh-toast, .fx-num { -webkit-text-stroke: 0; paint-order: normal;
+  text-shadow: 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 2px 0 var(--ink), 0 -2px 0 var(--ink),
+    1.5px 1.5px 0 var(--ink), -1.5px 1.5px 0 var(--ink), 1.5px -1.5px 0 var(--ink), -1.5px -1.5px 0 var(--ink),
+    0 4px 0 var(--ink), 2px 4px 0 var(--ink), -2px 4px 0 var(--ink), 0 6px 0 var(--ink); }
+.fx-num, .rh-toast { text-shadow: 1.5px 0 0 var(--ink), -1.5px 0 0 var(--ink), 0 1.5px 0 var(--ink), 0 -1.5px 0 var(--ink),
+    1px 1px 0 var(--ink), -1px 1px 0 var(--ink), 1px -1px 0 var(--ink), -1px -1px 0 var(--ink), 0 3px 0 var(--ink), 1.5px 3px 0 var(--ink), -1.5px 3px 0 var(--ink); }
