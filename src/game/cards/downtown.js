@@ -271,9 +271,9 @@ function cat(col) {
 }
 export function cihangirMatch(ctx) {
   const s = ctx.world, st = ctx.step, K = s.set.K, A = s.set.A;
-  const T = tall(); frameFor(s, { eye: [0, 5.4, 10.4], look: [0, 0.6, -0.6] }, { eye: [0, 5.8, 11.2], look: [0, 0.5, -0.6] }, { eye: [0, 6.0, 9.4], look: [0, 0.6, -1.0], width: 44 }); // portrait: lower, so the cats are seen sitting up
+  const T = tall(); frameFor(s, { eye: [0, 8.2, 9.6], look: [0, 0.5, -0.8] }, { eye: [0, 7.6, 10.4], look: [0, 0.4, -0.6] }, { eye: [0, 6.0, 9.4], look: [0, 0.6, -1.0], width: 44 }); // portrait: lower, so the cats are seen sitting up
   s.say(esc(st.prompt));
-  const right = shuffle(st.right, ctx.rng), n = st.left.length, zs = Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * (T ? 1.7 : 1.3) - 0.3);
+  const right = shuffle(st.right, ctx.rng), n = st.left.length, zs = Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * (T ? 1.7 : 1.5) - 0.3);
   const FUR = ['#e09a4a', '#3b3b44', '#f2ede4', '#9a9aa6', '#e8c9a0', '#6b5a4a'];
   const html = t => (t.pic ? `<img src="${esc(t.pic)}" alt="${esc(t.alt || '')}">` : `<span ${t.lang === 'tr' ? 'lang="tr"' : ''}>${esc(t.text)}</span>`);
   const els = new Map(), cats = new Map();
@@ -352,7 +352,7 @@ export function tophaneStation(s, { color = '#f5b616' } = {}) {
 }
 export function tophaneChoice(ctx) {
   const s = ctx.world, st = ctx.step, set = s.set, K = set.K, A = set.A;
-  const T = tall(); frameFor(s, { eye: [0, 3.4, 11.4], look: [0, 2.2, -1.6] }, { eye: [0, 3.6, 12.2], look: [0, 2.0, -1.6] }, { eye: [0, 3.6, 12.0], look: [0, 2.4, -2.0], width: 48 });
+  const T = tall(); frameFor(s, { eye: [0, 4.6, 13.6], look: [0, 3.4, -3.0] }, { eye: [0, 4.4, 14.4], look: [0, 3.0, -3.0] }, { eye: [0, 3.6, 12.0], look: [0, 2.4, -2.0], width: 48 }); // the lit clock tower above the dials
   s.say(caption(st));
   const els = st.options.map((o, i) => s.label(esc(o), { cls: 'wt-opt', onTap: () => pick(i) }));
   const ws = els.map(el => sized(s, el, 1.4, 0.3)), xs = T ? st.options.map(() => 0) : row(ws.map(w => Math.max(w, 1.5)), 0.4);
