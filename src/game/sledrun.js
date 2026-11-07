@@ -18,6 +18,26 @@ import { CINEMA, shotAt, TRACK_Z, SCENE_SECONDS } from './render/cinema.js';
 import { CUT } from './render/cutout.js';
 
 const LANE = 1.8, LANES = [-LANE, 0, LANE];
+// the first time a player meets each kind of thing on the track (remembered on the device): a line on
+// screen and a little badge bobbing over it, saying what to do
+const HINTS = {
+  fence: ['jump', t => `JUMP over the fence!\n${t ? 'Swipe up' : 'Press ↑'}`],
+  line: ['duck', t => `DUCK under the rope!\n${t ? 'Swipe down' : 'Press ↓'}`],
+  branch: ['duck', t => `DUCK under the branch!\n${t ? 'Swipe down' : 'Press ↓'}`],
+  awning: ['duck', t => `DUCK under the awning!\n${t ? 'Swipe down' : 'Press ↓'}`],
+  gull: ['duck', t => `DUCK! A gull!\n${t ? 'Swipe down' : 'Press ↓'}`],
+  car: ['steer', t => `STEER round it, or JUMP!\n${t ? 'Swipe ← →' : 'Press ← →'}`],
+  snowman: ['steer', t => `STEER round it, or JUMP!\n${t ? 'Swipe ← →' : 'Press ← →'}`],
+  crate: ['steer', t => `STEER round it, or JUMP!\n${t ? 'Swipe ← →' : 'Press ← →'}`],
+  ramp: ['ramp', () => 'RAMP! Ride up it and fly'],
+  letter: ['steer', () => 'Ride into the RIGHT letter!'],
+  word: ['star', () => 'Catch the purple snowflake!'],
+};
+const BADGE = { jump: ['↑', 'JUMP'], duck: ['↓', 'DUCK'], steer: ['← →', 'STEER'], ramp: ['↗', 'RAMP'], star: ['❄', 'CATCH'] };
+const badgeTex = type => { const [ar, word] = BADGE[type] || BADGE.steer, c = document.createElement('canvas'); c.width = 256; c.height = 150; const g = c.getContext('2d');
+  g.fillStyle = '#1c2340'; g.beginPath(); g.roundRect(8, 10, 240, 128, 34); g.fill(); g.fillStyle = '#ffd23f'; g.beginPath(); g.roundRect(16, 16, 224, 112, 28); g.fill();
+  g.fillStyle = '#1c2340'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '900 54px system-ui, sans-serif'; g.fillText(ar, 128, 56); g.font = '900 34px system-ui, sans-serif'; g.fillText(word, 128, 104);
+  const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; return t; };
 const CHIME = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24]; // a major pentatonic run up from D, in semitones
 const rnd = (a, b = 0) => { let h = Math.imul((a * 73856093) ^ (b * 19349663), 2654435761); h ^= h >>> 13; h = Math.imul(h, 1597334677); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 
@@ -109,7 +129,8 @@ export class SledRun {
   // spell: {en, tr} or null; lives: Lives
   // cinema: the places the ride passes, in task order ([{ id, title, task, part }]); the ones with a
   // scene in render/cinema.js get a clear, straight stretch where the camera turns to them
-  constructor({ theme = 'boulevard', seconds = 50, pace = 'relaxed', team = 'hufflepuff', kit = 'thrower', look = null, words = [], spell = null, lives, rng = Math.random, first = false, reduceMotion = false, cinema = [], views = null, on = {} }) {
+  constructor({ theme = 'boulevard', seconds = 50, pace = 'relaxed', team = 'hufflepuff', kit = 'thrower', look = null, words = [], spell = null, lives, rng = Math.random, first = false, reduceMotion = false, cinema = [], views = null, seen = null, touch = true, on = {} }) {
+    this.seen = seen || new Set(); this.touch = touch; this.boost = false; this.fovKick = 0; // the kinds of things this player has met before (hints once); holding = faster
     this.views = views; // the places' scenes, built ahead (stagerun.js builds them while the map is shown)
     Object.assign(this, { theme, seconds, pace, words, spell, lives, rng, first, reduceMotion, on });
     const T = this.T = THEMES[theme] || THEMES.boulevard;
@@ -374,6 +395,13 @@ export class SledRun {
   jump() { if (this.finished || this.cine || this.y > 0.05 || this.duckT > 0.2) return; this.vy = 7.4; this.on.sound?.('dodge'); }
   duck() { if (this.finished || this.cine) return; this.duckT = 0.65; if (this.y > 0.05) this.vy = -9; }
   // a tap in the air: a spin (land it for bonus snowballs)
+  // holding a finger on the screen (or Shift): faster, until let go
+  setBoost(on) { this.boost = !!on && !this.finished; }
+  showBadge(type) {
+    this.badgeTex ||= {}; const tex = this.badgeTex[type] ||= badgeTex(type);
+    if (!this.badge) { this.badge = new Sprite(new SpriteMaterial({ map: tex, depthTest: false, transparent: true })); this.badge.renderOrder = 30; this.badge.scale.set(2.3, 1.35, 1); this.scene.add(this.badge); }
+    this.badge.material.map = tex; this.badge.material.needsUpdate = true; this.badge.visible = true;
+  }
   trick() { if (this.finished || this.cine || this.y < 0.45 || this.spin) return false; this.spin = { t: 0, dur: 0.55 }; this.on.sound?.('whoosh'); return true; }
 
   spark(x, y, z, n, col, power = 3) { const c = new Color(col), w = this.at(this.dist + z, x, y); x = w.x; y = w.y; z = w.z; for (let k = 0; k < n; k++) { if (this.sparks.length > 110) this.sparks.shift(); const a = this.rng() * 6.28; this.sparks.push({ x, y, z, vx: Math.cos(a) * power * this.rng(), vy: 1 + this.rng() * power, vz: Math.sin(a) * power * this.rng(), t: 0.6, c }); } }
@@ -401,10 +429,11 @@ export class SledRun {
     if (!this.secPaid?.[sec] && this.dist >= this.secEnd[sec] - this.vmax * 3 && this.dist < this.secEnd[sec]) { (this.secPaid ||= {})[sec] = true; if (!this.secCrash && this.dist > 60) this.bonus(5, 'Perfect section! +5'); }
     // the speed: a little faster each section, quicker downhill and slower up, gentler through the letters, faster tucked
     const inLetters = this.letterSpan && this.dist > this.letterSpan[0] && this.dist < this.letterSpan[1];
-    let target = this.cine ? this.vmax * 0.6 : this.stumbleT > 0 ? 3.5 : this.vmax * (1 + 0.035 * Math.min(4, sec)) * (inLetters ? 0.85 : 1) * (this.duckT > 0 ? 1.06 : 1);
+    const boosting = this.boost && !this.cine && this.stumbleT <= 0;
+    let target = this.cine ? this.vmax * 0.6 : this.stumbleT > 0 ? 3.5 : this.vmax * (1 + 0.035 * Math.min(4, sec)) * (inLetters ? 0.85 : 1) * (this.duckT > 0 ? 1.06 : 1) * (boosting ? 1.22 : 1); // holding: 22% faster
     if (!this.cine && this.stumbleT <= 0) target = Math.max(this.vmax * 0.7, target - this.slope(this.dist) * 7);
     if (this.cine) this.lane = 1;
-    this.v += (target - this.v) * Math.min(1, dt * (this.stumbleT > 0 ? 4 : 0.6));
+    this.v += (target - this.v) * Math.min(1, dt * (this.stumbleT > 0 ? 4 : boosting || this.boostWas ? 1.8 : 0.6)); this.boostWas = boosting; // the boost bites (and lets go) quickly
     this.stumbleT = Math.max(0, this.stumbleT - dt); this.blinkT = Math.max(0, this.blinkT - dt); this.duckT = Math.max(0, this.duckT - dt); this.bump = Math.max(0, this.bump - dt * 3);
     this.dist += this.v * dt;
     this.x += (LANES[this.lane] - this.x) * Math.min(1, dt * 12);
@@ -432,13 +461,22 @@ export class SledRun {
       if (it.kind === 'arrow') { it.done = true; continue; }
       if (it.kind === 'ball' || it.kind === 'word') { if (Math.abs((it.y || 0.6) - (this.y + 0.6)) > (it.kind === 'word' ? 1.45 : 1.1)) continue; it.done = true; this.collect(it); continue; }
       if (it.kind === 'letter') { it.done = true; this.letter(it); continue; }
-      if (it.kind === 'ramp') { it.done = true; if (this.y < 0.3) { this.vy = 10.5; this.rampAir = true; this.fitArc(it); this.on.sound?.('sled'); if (this.first && !this.hintDone.has('spin')) { this.hintDone.add('spin'); this.on.hint?.('TAP to spin!'); } } continue; }
+      if (it.kind === 'ramp') { it.done = true; if (this.y < 0.3) { this.vy = 10.5; this.rampAir = true; this.fitArc(it); this.on.sound?.('sled'); if (!this.seen.has('spin')) { this.seen.add('spin'); this.on.seen?.('spin'); this.on.hint?.(this.touch ? 'TAP to spin!' : 'Press T to spin!'); } } continue; }
       if (it.needs === 'j' && this.y < (OBST[it.kind].h || 1) * 0.55) { it.done = true; this.crash(); }
       else if (it.needs === 'd' && this.duckT <= 0) { it.done = true; this.crash(); }
       else it.done = true;
     }
     // first ride: say what to do just before each new kind of thing
-    if (this.first) for (const it of this.items) { const dz = it.d - this.dist; if (dz > this.v * 1.4) break; if (dz < 0 || !it.needs || this.hintDone.has(it.needs)) continue; this.hintDone.add(it.needs); this.on.hint?.(it.needs === 'j' ? 'JUMP! Swipe up' : it.needs === 'd' ? 'DUCK! Swipe down' : 'RAMP! Ride up it'); }
+    this.hintT = Math.max(0, (this.hintT || 0) - dt);
+    if (!this.cine && this.hintT <= 0) { // the first of each kind this player meets: a hint and a badge over it (one at a time, obstacles first)
+      let pick = null;
+      for (const it of this.items) {
+        const dz = it.d - this.dist; if (dz > this.v * 1.6) break; if (dz < 0 || it.done || !HINTS[it.kind] || this.seen.has(it.kind)) continue;
+        if (!pick || (it.needs && !pick.needs)) pick = it; if (pick.needs) break;
+      }
+      if (pick) { const kind = pick.kind; this.seen.add(kind); this.on.seen?.(kind); this.on.hint?.(HINTS[kind][1](this.touch)); this.hintItem = pick; this.showBadge(HINTS[kind][0]); this.hintT = 2.4; }
+    }
+    if (!this.seen.has('boost') && !this.cine && !inLetters && this.time > 7 && !this.hintItem && this.hintT <= 0) { this.hintT = 2.4; this.seen.add('boost'); this.on.seen?.('boost'); this.on.hint?.(this.touch ? 'HOLD your finger down to go faster!' : 'HOLD Shift to go faster!'); }
     if (this.dist >= this.length + 4) { this.finished = true; this.on.done?.({ flakes: this.flakes, snowballs: this.snowballs, spelled: this.spelled, word: this.spell }); }
     this.on.progress?.(Math.min(1, this.dist / this.length));
     this.place(dt);
@@ -520,7 +558,7 @@ export class SledRun {
     this.tuck = (this.tuck || 0) + ((this.duckT > 0 ? 1 : 0) - (this.tuck || 0)) * Math.min(1, dt * 18);
     k.kid.scale.y = k.kid.scale.x * (1 - 0.28 * this.tuck); k.kid.rotation.x = 0.6 * this.tuck; k.kid.position.z = 0.12 * this.tuck;
     if (this.tuck > 0.05) { k.arms[0].rotation.x = k.arms[1].rotation.x = -1.1 * this.tuck; }
-    const fast = !this.reduceMotion && !this.cine && (this.tuck > 0.5 || this.rampAir); if (fast !== this.fastShown) { this.fastShown = fast; this.on.fast?.(fast); } // speed lines: tucked down, or flying off a ramp
+    const fast = !this.reduceMotion && !this.cine && (this.tuck > 0.5 || this.rampAir || (this.boost && this.v > this.vmax * 1.08)); if (fast !== this.fastShown) { this.fastShown = fast; this.on.fast?.(fast); } // speed lines: tucked down, or flying off a ramp
     // the obstacles and pickups in view
     for (const it of this.items) {
       const dz = it.d - d;
@@ -561,8 +599,12 @@ export class SledRun {
       this.camera.position.lerp(P, kPos); look.lerp(Lk, kLook); this.camRoll *= 1 - kLook;
       const lens = 58 + ((this.camera.aspect < 1 ? 58 : 40) - 58) * kPos; // a longer lens for the views: the landmark fills the frame, the skyline draws close behind it
       if (Math.abs(this.camera.fov - lens) > 0.01) { this.camera.fov = lens; this.camera.updateProjectionMatrix(); }
-    } else if (this.camera.fov !== 58) { this.camera.fov = 58; this.camera.updateProjectionMatrix(); }
+    } else { // holding to go faster: the lens widens a little, so the speed shows
+      this.fovKick += ((this.boost && !this.reduceMotion ? 1 : 0) - this.fovKick) * Math.min(1, dt * 4); const fov = 58 + 6 * this.fovKick;
+      if (Math.abs(this.camera.fov - fov) > 0.01) { this.camera.fov = fov; this.camera.updateProjectionMatrix(); }
+    }
     this.camera.lookAt(look); this.camera.rotateZ(this.camRoll);
+    if (this.badge?.visible) { const it = this.hintItem; if (!it || it.d - this.dist < -1 || this.cine) { this.badge.visible = false; this.hintItem = null; } else { this.at(it.d, it.full ? 0 : LANES[it.lane] ?? 0, 2.7 + (this.reduceMotion ? 0 : Math.sin(this.time * 5) * 0.12), this.badge.position); } } // the badge bobs over the thing it explains
     // sparks
     let n = 0;
     for (const s of this.sparks) { if (s.t <= 0) continue; s.t -= dt; s.vy -= 9 * dt; s.x += s.vx * dt; s.y += s.vy * dt; s.z += s.vz * dt; o.position.set(s.x, s.y, s.z); o.scale.setScalar(Math.max(0.1, s.t * 1.6)); o.updateMatrix(); this.sparkMesh.setMatrixAt(n, o.matrix); this.sparkMesh.setColorAt(n, s.c); n++; }

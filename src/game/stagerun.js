@@ -87,14 +87,15 @@ export class StageRunner {
     const spellPool = this.unit.words.filter(w => /^[a-z]{3,7}$/i.test(w.en)), spell = st.ride.spell && spellPool.length ? spellPool[Math.floor(this.rng() * spellPool.length)] : null;
     // the places on the way, in the order their tasks are played: a scene where the camera turns to each
     const cinema = (st.parts || []).flatMap((fams, p) => fams.map(f => ({ id: st.places?.[f]?.id || PLACE_ID[f], title: st.places?.[f]?.title || PLACE_OF[f], task: FAMILY_NAME[f], part: p + 1 })));
-    const sled = new SledRun({ theme: st.ride.theme, seconds: st.ride.seconds, pace: this.pace, team: this.team, kit: this.kit, look: this.match.player.look, words, spell, views, lives: this.lives, rng: this.rng, first: this.ridesDone === 0, reduceMotion: this.reduceMotion, cinema,
+    const sled = new SledRun({ theme: st.ride.theme, seconds: st.ride.seconds, pace: this.pace, team: this.team, kit: this.kit, look: this.match.player.look, words, spell, views, lives: this.lives, rng: this.rng, first: this.ridesDone === 0, reduceMotion: this.reduceMotion, cinema, seen: new Set(this.save.sledSeen || []), touch: matchMedia('(pointer: coarse)').matches,
       on: {
         cinema: e => this.cinema(e),
         crash: lost => { this.ui.play('hit'); const left = this.lives.lose(); this.drawRunHud(); this.toast(lost ? `Ouch! −${lost} snowballs` : 'Ouch!'); if (!left) this.outOfLives(); },
         count: () => this.drawRunHud(), sound: (k, o) => this.ui.play(k, o),
         word: w => { this.toast(`+1 ❄  ${w.en} = ${w.tr}`, 'word'); speech.say(w.en); },
         spell: (sofar, right) => { this.drawRunHud(); if (sofar.length === spell.en.length) { const ok = !this.sled.missedLetters; this.toast(ok ? `You spelled\n${spell.en.toUpperCase()}! +1 ❄` : `The word was\n${spell.en.toUpperCase()}\n(${spell.tr})`, 'word'); if (ok) this.sled.flakes += 1; speech.say(spell.en); } },
-        hint: text => this.rideBanner(text, '', 1.3),
+        hint: text => this.rideBanner(text, '', 2.2),
+        seen: kind => { const a = this.save.sledSeen ||= []; if (!a.includes(kind)) { a.push(kind); this.writeSave(this.save); } }, // each kind's hint once per player, on this device
         look: () => this.rideBanner('LOOK TO THE LEFT! ←', 'look', 2.6),
         fast: on => document.body.classList.toggle('sled-fast', on), // empty lanes ahead: a place's view is coming
         bonus: text => { this.toast(text, 'bonus'); this.ui.play('chime', { freq: 1046.5 }); this.drawRunHud(); },
@@ -605,16 +606,29 @@ export class StageRunner {
       if (this.mode !== 'sled' || !this.sled) return;
       const k = e.key.toLowerCase();
       if (k === 'arrowleft' || k === 'a') this.sled.move(-1); else if (k === 'arrowright' || k === 'd') this.sled.move(1);
-      else if (k === 'arrowup' || k === 'w' || k === ' ') { if (!this.sled.trick()) this.sled.jump(); } else if (k === 'arrowdown' || k === 's') this.sled.duck(); else if (k === 't' || k === 'enter') this.sled.trick(); else return; // up in the air: a spin
+      else if (k === 'arrowup' || k === 'w' || k === ' ') { if (!this.sled.trick()) this.sled.jump(); } else if (k === 'arrowdown' || k === 's') this.sled.duck(); else if (k === 't' || k === 'enter') this.sled.trick(); else if (k === 'shift') this.sled.setBoost(true); else return; // up in the air: a spin; Shift held: faster
       e.preventDefault();
     });
-    let sx = 0, sy = 0, st = 0;
+    addEventListener('keyup', e => { if (e.key === 'Shift' && this.sled) this.sled.setBoost(false); });
+    addEventListener('blur', () => this.sled?.setBoost(false));
+    // every finger on its own: a quick swipe steers, jumps or ducks; a tap spins in the air; a finger held
+    // still (about a fifth of a second) goes faster until it is lifted (another finger can swipe meanwhile)
+    const fingers = new Map(), HOLD_MS = 200, SLOP = 24;
+    const boostNow = () => this.sled?.setBoost([...fingers.values()].some(f => f.holding));
     const sw = $('#swipe');
-    sw.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; st = performance.now(); });
+    sw.addEventListener('pointerdown', e => {
+      const f = { sx: e.clientX, sy: e.clientY, st: performance.now(), holding: false, moved: false };
+      f.timer = setTimeout(() => { if (!f.moved && this.mode === 'sled' && this.sled && !this.sled.cine) { f.holding = true; boostNow(); } }, HOLD_MS);
+      fingers.set(e.pointerId, f);
+    });
+    sw.addEventListener('pointermove', e => { const f = fingers.get(e.pointerId); if (f && !f.moved && Math.hypot(e.clientX - f.sx, e.clientY - f.sy) > SLOP) { f.moved = true; clearTimeout(f.timer); if (f.holding) { f.holding = false; boostNow(); } } });
+    sw.addEventListener('pointercancel', e => { const f = fingers.get(e.pointerId); if (f) { clearTimeout(f.timer); fingers.delete(e.pointerId); boostNow(); } });
     sw.addEventListener('pointerup', e => {
+      const f = fingers.get(e.pointerId) || { sx: e.clientX, sy: e.clientY }; clearTimeout(f.timer); fingers.delete(e.pointerId); const held = f.holding; boostNow();
       if (this.mode !== 'sled' || !this.sled) return;
       if (this.sled.cine) { if (this.seenCinema?.has(this.sled.cine.q.id)) this.sled.skipCine(); return; } // a scene you have seen: a tap skips it
-      const dx = e.clientX - sx, dy = e.clientY - sy;
+      const dx = e.clientX - f.sx, dy = e.clientY - f.sy;
+      if (held && Math.max(Math.abs(dx), Math.abs(dy)) < SLOP) return; // the end of a hold: no spin
       if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) { this.sled.trick(); return; } // a tap in the air: a spin
       if (Math.abs(dx) > Math.abs(dy)) this.sled.move(dx > 0 ? 1 : -1); else if (dy < 0) { if (!this.sled.trick()) this.sled.jump(); } else this.sled.duck();
     });

@@ -2,7 +2,7 @@
 
 SnowPax is a free English-practice snowball game by Mr. Saymaz for Grades 5–8 (CEFR A1–A2+). Static web game, deployed on Vercel. No ads, no accounts, no data collection.
 
-**Version 0.3.0.** Three arenas (Kasımpaşa, The Golden Horn, Downtown), each a stage: a sled ride in, an outpost taken with English and snowball fights, a Final Showdown. Stages won with good English add **Ulti points** to the student's team in Mr. Saymaz's English League (see `docs/ENGLISH-LEAGUE.md`).
+**Version 0.4.0.** Three arenas (Kasımpaşa, The Golden Horn, Downtown), each a stage: a sled ride in, an outpost taken with English and snowball fights, a Final Showdown. Stages won with good English add **Ulti points** to the student's team in Mr. Saymaz's English League (see `docs/ENGLISH-LEAGUE.md`).
 
 ## Commands
 
@@ -45,6 +45,7 @@ Ulti points are not spent in the game: they live only in the English League. A s
 
 ## Release notes
 
+- **0.4.0**: hold a finger down on the sled ride to go faster; the first time each kind of obstacle comes, a hint says what to do (with a badge over it), once per player; the on-screen font is now Baloo 2, which has every Turkish letter (Fredoka had no ş, ğ or İ).
 - **0.3.0**: "Who are you?": students pick their class and name from the English League's class list once on a device (only their grade's classes and their team's names), a "Playing as" pill to change it, and every Ulti win says who earned it; nothing is played without the League's own list, and no names are in the code.
 - **0.2.0**: Ulti points and the English League (team buttons show each team's live Ulti, a League panel, the win line on the results card); Mr. Saymaz's first-time guide; the new logo and icons; the snowball style chosen in the Snow Shop; your own kid stands out (a little bigger, violet, a gold ring); hits that land (hit-stop, splats, freezes that shatter).
 - **0.1.0**: the three arenas, the sled rides and the task scenes.

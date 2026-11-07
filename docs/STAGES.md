@@ -67,11 +67,19 @@ is built from one seed by `plan()` in `sledrun.js`, so the same rules hold in ev
   speed lines when tucked or flying.
 - **Bonuses:** "Close! +1" for changing out of a lane just before its obstacle, "Perfect section! +5"
   for a section without a crash. A crash ends the streak.
-- **First ride:** a short hint the first time each thing comes ("JUMP! Swipe up", "DUCK! Swipe
-  down", "RAMP! Ride up it", "TAP to spin!"); on a touch screen it starts with "SWIPE ← → TO STEER".
+- **Hold to go faster:** a finger held still on the screen (about a fifth of a second, Shift on a
+  keyboard) makes the sled 22% faster until it is lifted: speed lines, a slightly wider lens; a quick
+  tap still spins in the air and swipes still steer, jump and duck (another finger can swipe while
+  one holds). Not during a place's scene. The long press never opens the phone's selection menu.
+- **First time for each kind of thing** (remembered on the device, so once per player, not per
+  ride): a line on screen with what to do and how ("JUMP over the fence!" / "Swipe up", "DUCK under
+  the rope!", "DUCK under the branch!", "STEER round it, or JUMP!", "RAMP! Ride up it and fly",
+  "Ride into the RIGHT letter!", "Catch the purple snowflake!", then "TAP to spin!" and "HOLD your
+  finger down to go faster!"), and a gold badge bobbing over that thing (↑ JUMP, ↓ DUCK, ← → STEER,
+  ↗ RAMP, ❄ CATCH). One at a time, obstacles first; keyboard players read "Press ↑" instead.
 - **No buttons on a touch screen:** swipes and taps only, so nothing covers the track (the arrow
   buttons stay for a mouse).
-- **On screen:** remarks, hints and bonuses use Fredoka (self-hosted, `public/fonts/`), in their own
+- **On screen:** remarks, hints and bonuses use Baloo 2 (self-hosted, `public/fonts/`, with every Turkish letter), in their own
   spot in the ride's display, below the spell panel on short landscape screens.
 
 ## The places on the way: cinematic views on the sled ride

@@ -141,7 +141,8 @@ captain were skipped (they need real throwing), and the kids at the camp were re
 A real perfect player also has to freeze 12 rivals in the opening fight (at least about 30 s, with
 the team's help), freeze the captain (at least about 10 s) and walk to the three children (about
 6 s): about **300 s**. On a replay in the same session the five scenes can be skipped (about 28 s
-less): about **275 s** at the very fastest. `minSeconds: 240` leaves a margin of about 35 seconds
+less): about **275 s** at the very fastest. Holding a finger down on the sled ride makes the riding about 22% faster, which takes about 14
+seconds off the ride: about **261 s** at the very fastest. `minSeconds: 240` still leaves a margin of about 20 seconds
 under that, and refuses anything faster than the ride, the hold and the English alone allow. The
 start ticket is asked for when the stage begins (before the ride), so the League's clock covers
 the whole stage.

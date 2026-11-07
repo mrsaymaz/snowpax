@@ -101,6 +101,7 @@ export function guideSteps(id, { touch = true, spell = false, ulti = false } = {
     case 'sled': return [
       { pose: 'point', title: 'Steer the sled', text: T ? '*Swipe left or right* to change lanes.' : 'Press *← and →* to change lanes.', gesture: T ? 'swipe' : null },
       { pose: 'point', title: 'Jump and duck', text: T ? '*Swipe up* to jump over fences. *Swipe down* to duck under lines.' : 'Press *↑* to jump and *↓* to duck.', gesture: T ? 'updown' : null },
+      { pose: 'cheer', title: 'Go faster', text: T ? '*Hold your finger* still on the screen to go faster. Let go to slow down.' : 'Hold *Shift* to go faster. Let go to slow down.', gesture: T ? 'tap' : null },
       { pose: 'smile', title: 'Ramps and snowflakes', text: 'Ride up the *blue ramps* and catch the *purple snowflakes*. Tap in the air to spin!', gesture: T ? 'tap' : null },
       ...(spell ? [{ pose: 'think', title: 'Spell the word', text: 'Ride into the letters *in the right order*. The first letter is a gift!' }] : []),
       { pose: 'cheer', title: 'Look to the left!', text: 'On the way you pass the places of this stage. Enjoy the view!', go: 'Ride!' },
