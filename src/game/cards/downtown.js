@@ -166,7 +166,7 @@ export function istiklalStation(s, { color = '#f5b616' } = {}) {
       const cars = s.persist.children.filter(o => !known.has(o)); for (const c of cars) { known.add(c); leaving.push({ m: c, t: 0, x0: c.position.x }); }
       set.top = set.base; s.sound?.('chime');
     },
-    tick: dt => { t += dt; K.tick(dt); A?.tick(dt); if (!s.reduceMotion) tw.forEach(f => f(t)); for (const q of [...leaving]) { q.t += dt; const k = Math.max(0, q.t - 0.25); q.m.position.x = q.x0 + k * k * 9; if (q.t > 1.9) { s.persist.remove(q.m); leaving.splice(leaving.indexOf(q), 1); } } },
+    tick: dt => { t += dt; K.tick(dt); A?.tick(dt); if (!s.reduceMotion) tw.forEach(f => f(t)); for (const q of [...leaving]) { q.t += dt; q.m.position.x = q.x0 + q.t * 5 + q.t * q.t * 10; if (q.t > 1.1) { s.persist.remove(q.m); leaving.splice(leaving.indexOf(q), 1); } } },
     K, A, colors: [color, '#ffffff', '#ffd166', '#c8302e'],
   };
   return set;
@@ -331,7 +331,7 @@ export function tophaneStation(s, { color = '#f5b616' } = {}) {
   // the art museum on the left: a long low box, its overhanging roof, glass below
   add(P, new BoxGeometry(7, 2.6, 3), L('#c9ced8'), -8, 1.3, -8.5); add(P, new BoxGeometry(8, 0.3, 4), L('#dfe3ea'), -8, 2.75, -8.3); add(P, new BoxGeometry(7.8, 0.2, 3.8), snowM, -8, 2.98, -8.3); add(P, new PlaneGeometry(6.4, 1.6), B('#bcd4f2'), -8, 0.95, -6.99);
   // the clock tower: three tiers, a clock face on every side, the lantern on top
-  const ct = new Group(); ct.position.set(-2.4, 0, -5.4); P.add(ct);
+  const ct = new Group(); ct.position.set(-2.4, 0, -5.4); ct.scale.setScalar(0.8); P.add(ct);
   const part = (geo, mat, x, y, z, ry = 0) => { const m = new Mesh(geo, mat); m.position.set(x, y, z); m.rotation.y = ry; m.castShadow = true; ct.add(m); return m; };
   part(new BoxGeometry(2.0, 3.6, 2.0), stone, 0, 1.8, 0); part(new BoxGeometry(2.2, 0.25, 2.2), stoneD, 0, 3.7, 0); part(new BoxGeometry(1.7, 2.8, 1.7), stone, 0, 5.2, 0); part(new BoxGeometry(1.9, 0.25, 1.9), stoneD, 0, 6.7, 0); part(new BoxGeometry(1.45, 1.8, 1.45), stone, 0, 7.7, 0);
   const hands = [];
@@ -352,7 +352,7 @@ export function tophaneStation(s, { color = '#f5b616' } = {}) {
 }
 export function tophaneChoice(ctx) {
   const s = ctx.world, st = ctx.step, set = s.set, K = set.K, A = set.A;
-  const T = tall(); frameFor(s, { eye: [0, 4.6, 13.6], look: [0, 3.4, -3.0] }, { eye: [0, 4.4, 14.4], look: [0, 3.0, -3.0] }, { eye: [0, 3.6, 12.0], look: [0, 2.4, -2.0], width: 48 }); // the lit clock tower above the dials
+  const T = tall(); frameFor(s, { eye: [0, 5.0, 14.6], look: [0, 3.9, -4.0] }, { eye: [0, 4.8, 15.4], look: [0, 3.5, -4.0] }, { eye: [0, 3.6, 12.0], look: [0, 2.4, -2.0], width: 48 }); // the lit clock tower above the dials
   s.say(caption(st));
   const els = st.options.map((o, i) => s.label(esc(o), { cls: 'wt-opt', onTap: () => pick(i) }));
   const ws = els.map(el => sized(s, el, 1.4, 0.3)), xs = T ? st.options.map(() => 0) : row(ws.map(w => Math.max(w, 1.5)), 0.4);
