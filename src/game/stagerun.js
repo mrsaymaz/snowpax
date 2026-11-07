@@ -87,7 +87,7 @@ export class StageRunner {
       <div class="rh-cine" hidden><small></small><b></b><span class="rh-skip" hidden>Tap to skip</span></div>
       <div class="rh-btns"><button type="button" data-k="left" aria-label="Left">◀</button><button type="button" data-k="duck" aria-label="Duck">▼</button><button type="button" data-k="jump" aria-label="Jump">▲</button><button type="button" data-k="right" aria-label="Right">▶</button></div>`;
     this.spell = spell; this.drawRunHud();
-    music('sled'); // the sleigh-ride tune, all the way in
+    this.rideTune = hasMusic('sled-' + st.id) ? 'sled-' + st.id : 'sled'; music(this.rideTune); // the ride's tune (the arena's own, if it has one), all the way in
     this.ui.coach(this.ridesDone === 0 ? `Sled into ${st.title}! Swipe left and right to steer, up to jump, down to duck. Grab the snowballs, and catch the rare golden snowflakes: each one is a ❄ for the Snow Shop!` : `Sled into ${st.title}! Catch the golden snowflakes for the Snow Shop!`, 6);
   }
   // a place on the way: letterbox bars, its name card, its welcome read aloud
@@ -99,13 +99,13 @@ export class StageRunner {
       clearTimeout(this.cineT); this.cineT = setTimeout(() => { card.hidden = false; card.classList.remove('show'); void card.offsetWidth; card.classList.add('show'); this.cineT = setTimeout(() => { card.hidden = true; }, 3400); }, 900); // the name card, then the scene alone
       clearTimeout(this.sayT); this.sayT = setTimeout(() => { if (this.sled?.cine) speech.say(e.welcome); }, 1300);
       this.ui.play('whoosh');
-      if (hasMusic(e.id)) { duckMusic('sled', 0.18, 0.6); music(e.id); } // the place's own theme over the ride's tune, turned down
+      if (hasMusic(e.id)) { duckMusic(this.rideTune, 0.18, 0.6); music(e.id); } // the place's own theme over the ride's tune, turned down
       return;
     }
     // the camera swings back ('ready', also on a skip), then the ride goes on ('end')
     card.hidden = true; card.classList.remove('show'); clearTimeout(this.cineT); document.body.classList.remove('cinema'); (this.seenCinema ||= new Set()).add(e.id);
     if (e.phase === 'ready') stopMusic(e.id, 0.8);
-    if (e.phase === 'end') duckMusic('sled', 1, 1.2);
+    if (e.phase === 'end') duckMusic(this.rideTune, 1, 1.2);
   }
   drawRunHud() {
     const h = $('#runhud'); if (!h || h.hidden || !this.sled) return;
@@ -167,7 +167,7 @@ export class StageRunner {
     // the finale of the ride in: the camera arrives at the carousel first, the rival team lined up in front of it
     const lineUp = this.plan && z.battlefield ? this.sim.chars.filter(c => c.side === 'rival' && c.role !== 'minion').slice(0, 3) : [];
     lineUp.forEach((c, k) => Object.assign(c, { benched: false, x: z.x + (k - 1) * 2.3, z: z.z + 6.4 + (k === 1 ? 0.5 : 0), face: 0, frozen: 0, thaw: 0, vx: 0, vz: 0, travel: null }));
-    const wait = this.ui.intro ? this.ui.intro(z, { title: st.title, kicker: `Arena ${st.arena || 1} · The outpost`, line: `Welcome to ${st.title}! Let's take it back!`, onDone: () => { for (const c of lineUp) this.bench(c); } }) || 0 : 0;
+    const wait = this.ui.intro ? this.ui.intro(z, { title: st.title, kicker: `Arena ${st.arena || 1} · The outpost`, line: `Welcome to ${st.title}! Let's take it back!`, tune: hasMusic('arrive-' + st.id) ? 'arrive-' + st.id : 'carousel', onDone: () => { for (const c of lineUp) this.bench(c); } }) || 0 : 0;
     this.introWait = wait;
     setTimeout(() => { if (this.mode === 'outpost') this.ui.banner(st.title.toUpperCase(), 'go', 1.6); }, wait);
     this.ui.hush?.(); // a calm arrival: nothing left over from the ride

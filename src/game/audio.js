@@ -112,7 +112,31 @@ const PIER = { mel: [[4, 76, 4], [12, 80, 4], [20, 78, 4], [28, 73, 4], [36, 75,
 const CAROUSEL = [[0, 69, 3], [3, 70, 3], [6, 69, 3], [9, 65, 3], [12, 62, 6], [18, 65, 3], [21, 69, 3], [24, 74, 6], [30, 73, 3], [33, 70, 3],
   [36, 69, 3], [39, 70, 3], [42, 69, 3], [45, 64, 3], [48, 61, 6], [54, 64, 3], [57, 67, 3], [60, 73, 6], [66, 70, 3], [69, 69, 3], [72, 74, 12]];
 const CAROUSEL_BASS = [50, 50, 46, 45, 50, 50, 45, 50], CAROUSEL_CH = [[62, 65, 69], [62, 65, 69], [58, 62, 65], [57, 61, 64], [62, 65, 69], [62, 65, 69], [57, 61, 64], [62, 65, 69]];
+// the Golden Horn's sled ride: a lilting sea song in 6/8 (D minor), sleigh bells on every eighth, an accordion's chords
+const HORN_RIDE = [[0, 69, 2], [2, 74, 1], [3, 74, 2], [5, 76, 1], [6, 77, 2], [8, 76, 1], [9, 74, 3], [12, 70, 2], [14, 74, 1], [15, 74, 2], [17, 72, 1], [18, 73, 3], [21, 69, 3],
+  [24, 69, 2], [26, 74, 1], [27, 77, 2], [29, 76, 1], [30, 77, 2], [32, 79, 1], [33, 81, 3], [36, 79, 2], [38, 77, 1], [39, 76, 2], [41, 73, 1], [42, 74, 6]].map(([a, n, l]) => [a * 2, n, l * 2]);
+const HORN_CH = [[62, 65, 69], [62, 65, 69], [62, 67, 70], [61, 64, 69], [62, 65, 69], [60, 65, 69], [60, 64, 67], [61, 64, 69]], HORN_BASS = [50, 50, 43, 45, 50, 41, 48, 45];
+// the arrival at the Golden Horn: a ferry's horn, then a stately harbour waltz on brass (D major), the great chain clinking
+const HORN_ARRIVE = [[0, 62, 6], [6, 66, 3], [9, 69, 3], [12, 74, 9], [21, 73, 3], [24, 71, 6], [30, 74, 3], [33, 71, 3], [36, 69, 9], [45, 66, 3], [48, 67, 3], [51, 69, 3], [54, 71, 3], [57, 73, 3], [60, 74, 12]];
+const HORN_ARRIVE_BASS = [50, 50, 43, 45, 43, 50], HORN_ARRIVE_CH = [[62, 66, 69], [62, 66, 69], [59, 62, 67], [61, 64, 69], [59, 62, 67], [62, 66, 69]];
 const TRACKS = {
+  'sled-golden-horn': { bpm: 100, steps: 96, loop: true, step(k, t, sp, dest) {
+    const bar = Math.floor(k / 12) % 8, inBar = k % 12;
+    if (k % 2 === 0) hit(t, { f0: 7000, f1: 9000, dur: 0.05, gain: inBar % 6 === 0 ? 0.05 : 0.028, type: 'highpass', dest }); // sleigh bells
+    if (inBar === 0 || inBar === 6) { thump(t, 92, 0.14, dest); synth(t, hz(HORN_BASS[bar] + (inBar === 6 ? 7 : 0)), sp * 4, { gain: 0.1, attack: 0.005, release: 0.2, dest }); }
+    if ([2, 4, 8, 10].includes(inBar)) for (const n of HORN_CH[bar]) synth(t, hz(n), sp * 1.6, { type: 'square', gain: 0.011, attack: 0.01, release: 0.08, cutoff: 1500, dest }); // the accordion's chords
+    for (const [at0, n, len] of HORN_RIDE) if (at0 === k) { synth(t, hz(n), sp * len * 0.9, { type: 'square', gain: 0.03, attack: 0.03, release: 0.15, cutoff: 2000, dest }); synth(t, hz(n) * 1.005, sp * len * 0.9, { type: 'square', gain: 0.022, attack: 0.03, release: 0.15, cutoff: 2000, dest }); } // two reeds a hair apart
+    if (k === 60) synth(t, 1500, 0.2, { type: 'sawtooth', gain: 0.018, attack: 0.01, release: 0.1, cutoff: 3000, dest }); // a gull
+  } },
+  'arrive-golden-horn': { bpm: 120, steps: 72, loop: false, step(k, t, sp, dest) {
+    if (k === 0) { synth(t, 98, 1.1, { type: 'sawtooth', gain: 0.05, attack: 0.06, release: 0.4, cutoff: 380, dest }); synth(t, 147, 1.1, { type: 'sawtooth', gain: 0.025, attack: 0.06, release: 0.4, cutoff: 500, dest }); } // the ferry's horn
+    const bar = Math.floor(k / 12), inBar = k % 12;
+    if (inBar === 0) { synth(t, hz(HORN_ARRIVE_BASS[bar] - 12), sp * 4, { gain: 0.12, attack: 0.005, release: 0.2, dest }); hit(t, { f0: 3200, f1: 2400, dur: 0.06, gain: 0.05, type: 'bandpass', dest }); bellAt(t, hz(91), 0.012, 0.3, dest); } // the chain clinks on the downbeat
+    if (inBar === 4 || inBar === 8) for (const n of HORN_ARRIVE_CH[bar]) synth(t, hz(n), sp * 2, { type: 'sawtooth', gain: 0.012, attack: 0.01, release: 0.1, cutoff: 1200, dest });
+    for (const [at0, n, len] of HORN_ARRIVE) if (at0 === k) { synth(t, hz(n), sp * len * 0.85, { type: 'sawtooth', gain: 0.04, attack: 0.04, release: 0.2, cutoff: 1600, dest }); synth(t, hz(n - 12), sp * len * 0.85, { type: 'triangle', gain: 0.04, attack: 0.02, release: 0.2, dest }); } // brass, an octave below
+    if (k === 60) bellAt(t, hz(86), 0.04, 1.2, dest);
+  } },
+
   carousel: { bpm: 150, steps: 84, loop: false, step(k, t, sp, dest) {
     const bar = Math.floor(k / 12) % 8, inBar = k % 12;
     if (inBar === 0) synth(t, hz(CAROUSEL_BASS[bar] - 12), sp * 3, { gain: 0.12, attack: 0.005, release: 0.15, dest });

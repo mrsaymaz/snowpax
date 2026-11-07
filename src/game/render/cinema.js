@@ -218,8 +218,8 @@ function skyline(g, L, hH, items = []) {
     },
     // the tall towers of the business district, far off on the horizon, lit at dusk
     towers({ a, r, s = 1, n = 9, span = 0.3 }) {
-      const glass = tex(32, 128, (x2, w, h) => { x2.fillStyle = '#7c8db0'; x2.fillRect(0, 0, w, h); for (let yy = 4; yy < h; yy += 6) for (let xx = 3; xx < w; xx += 6) { x2.fillStyle = lit && Math.random() < 0.55 ? '#ffd68a' : '#9fb2d4'; x2.fillRect(xx, yy, 3, 3); } });
-      for (let k = 0; k < n; k++) { const q = a + (k / (n - 1) - 0.5) * span + (R() - 0.5) * 0.03, rr = r + R() * 30, [x, y, z] = where(q, rr), h = (40 + R() * 70) * s, w = (7 + R() * 6) * s; const m = new MeshBasicMaterial({ map: glass, color: haze('#ffffff', rr, 0.5) }); put(new BoxGeometry(w, h, w), m, x, y + h / 2 - 1, z, g); if (k % 3 === 0) put(new CylinderGeometry(0.2, 0.2, 10 * s, 6), M('#c8cede', rr, 0.5), x, y + h + 4 * s, z, g); }
+      const glass = tex(32, 128, (x2, w, h) => { x2.fillStyle = '#6f80a6'; x2.fillRect(0, 0, w, h); for (let yy = 4; yy < h; yy += 6) for (let xx = 3; xx < w; xx += 6) { x2.fillStyle = lit && Math.random() < 0.55 ? '#ffd68a' : '#a9bcdc'; x2.fillRect(xx, yy, 3, 3); } x2.fillStyle = 'rgba(255,255,255,0.18)'; x2.fillRect(0, 0, 6, h); /* a lit edge */ });
+      for (let k = 0; k < n; k++) { const q = a + (k / (n - 1) - 0.5) * span + (R() - 0.5) * 0.03, rr = r + R() * 30, [x, y, z] = where(q, rr), h = (40 + R() * 70) * s, w = (7 + R() * 6) * s; const m = new MeshLambertMaterial({ map: glass, color: haze('#eef2fa', rr, 0.32), emissive: new Color(lit ? '#3a3020' : '#262c3c'), fog: false }); put(new BoxGeometry(w, h, w), m, x, y + h / 2 - 1, z, g); put(new BoxGeometry(w * 1.04, 1.2 * s, w * 1.04), new MeshLambertMaterial({ color: haze('#5d6684', rr, 0.22), fog: false }), x, y + h - 0.4, z, g); /* solid glass and steel, softened by the haze but never see-through */ if (k % 3 === 0) put(new CylinderGeometry(0.2, 0.2, 10 * s, 6), M('#c8cede', rr, 0.5), x, y + h + 4 * s, z, g); }
     },
     // a hill of tall dark cypresses (the old hillside above Eyüp)
     cypresses({ a, r, n = 160, span = 0.4 }) {

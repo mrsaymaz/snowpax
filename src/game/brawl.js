@@ -209,19 +209,19 @@ async function startGame(myTeam, kit, pace) {
     document.body.appendChild(el); return el;
   })();
   const smooth01 = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
-  function startIntro(z, { title, kicker, line, onDone }) {
+  function startIntro(z, { title, kicker, line, onDone, tune = 'carousel' }) {
     const id = 'arrive-' + z.id, dur = reduceMotion ? 3.2 : 8.4;
-    intro = { z, t: 0, dur, onDone, skippable: seenIntro.has(id) }; seenIntro.add(id);
+    intro = { z, t: 0, dur, onDone, tune, skippable: seenIntro.has(id) }; seenIntro.add(id);
     document.body.classList.add('intro'); introCard.hidden = false;
     const card = introCard.querySelector('.rh-cine'); card.querySelector('small').textContent = kicker; card.querySelector('b').textContent = title; card.querySelector('.ic-line').textContent = ''; card.querySelector('.rh-skip').hidden = !intro.skippable;
     card.classList.remove('show'); card.hidden = false; void card.offsetWidth; setTimeout(() => { if (intro) card.classList.add('show'); }, 700); setTimeout(() => { if (intro) card.hidden = true; }, 4300); // then the carousel alone
     setTimeout(() => { if (intro) { card.querySelector('.ic-line').textContent = `"${line}"`; speech.say(line); } }, 1600);
-    world.carousel?.setRate(reduceMotion ? 0.16 : 0.55); music('carousel'); play('whoosh');
+    world.carousel?.setRate(reduceMotion ? 0.16 : 0.55); music(tune); play('whoosh');
     return dur * 1000;
   }
   function endIntro() {
-    if (!intro) return; const done = intro.onDone; intro = null;
-    document.body.classList.remove('intro'); introCard.hidden = true; world.carousel?.setRate(0.16); stopMusic('carousel', 0.8); play('cheer');
+    if (!intro) return; const done = intro.onDone, tune = intro.tune || 'carousel'; intro = null;
+    document.body.classList.remove('intro'); introCard.hidden = true; world.carousel?.setRate(0.16); stopMusic(tune, 0.8); play('cheer');
     done?.();
   }
   addEventListener('pointerdown', () => { if (intro?.skippable && intro.t < intro.dur - 2) intro.t = intro.dur - 2; }); // a tap skips to the drop behind the team
