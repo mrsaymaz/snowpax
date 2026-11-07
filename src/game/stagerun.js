@@ -78,7 +78,7 @@ export class StageRunner {
     const L = this.league, st = this.cur, runId = this.runId;
     if (!L?.enabled || !st || !runId || this.leagueTicket || this.leagueAsking || !CONFIG.teams[this.team]) return;
     this.leagueAsking = true;
-    L.start({ runId, grade: gradeOfUnit(this.unit?.id), team: this.team, arena: Math.max(0, STAGES.indexOf(st)), pace: this.pace === 'challenge' ? 'challenge' : 'relaxed', unit: this.unit?.id || '' })
+    L.start({ runId, grade: gradeOfUnit(this.unit?.id), team: this.team, arena: Math.max(0, STAGES.indexOf(st)), pace: this.pace === 'challenge' ? 'challenge' : 'relaxed', unit: this.unit?.id || '', student: this.save?.student?.id || '' }) // a named student's id rides along
       .then(t => { if (t && this.runId === runId) this.leagueTicket = t; }).catch(() => {}).finally(() => { this.leagueAsking = false; });
   }
   // the ride for a stage: its track, its things and its places' scenes (not started)

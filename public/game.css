@@ -1001,3 +1001,57 @@ body.guiding #wt-layer { opacity: 0.35; } /* a task scene's words step back whil
 #results .rs-ulti.good { background: linear-gradient(#efe4ff, #d9c6ff); color: #2a1a5e; border: 2px solid #7b4fd6; }
 #results .rs-ulti.pending { opacity: 0.75; font-weight: 700; }
 #stagemap .sm-ulti { margin: 6px auto 0; padding: 6px 10px; max-width: 420px; border-radius: 12px; background: #efe9ff; color: #3a2a7a; font-size: 13px; font-weight: 700; text-align: center; }
+/* ---------- "Who are you?": the pill beside LEAGUE and the class / name picker (picker.js) ---------- */
+.start2 .wp-pill { flex: 0 1 auto; min-width: 0; display: inline-flex; align-items: center; gap: 5px; margin-left: auto; padding: 2px 2px 2px 8px; border-radius: 999px; border: 2px solid var(--ink); background: #fff; color: var(--ink); font: 800 11px system-ui, sans-serif; box-shadow: 0 2px 0 var(--ink); cursor: pointer; }
+.start2 .wp-pill[hidden] { display: none; }
+.start2 .wp-pill.empty { border-style: dashed; background: #fff8dc; }
+.start2 .wp-pill-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.start2 .wp-pill em { font-style: normal; color: #6b7aa0; font-weight: 700; }
+.start2 .wp-pill small { flex: none; padding: 2px 7px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.start2 .wp-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--team); box-shadow: 0 0 0 1.5px var(--ink); }
+.start2 .st-lbl em[hidden] { display: none; }
+.start2 .st-league { margin-left: 0; }
+/* a phone: the grade is on the lesson card, so LEAGUE drops it, and "Playing as" goes, to keep one row */
+@media (max-width: 480px) { .start2 .lg-g, .start2 .wp-pill em { display: none; } }
+@media (max-width: 370px) { .start2 .wp-dot { display: none; } .start2 .wp-pill { padding-left: 6px; } .start2 .st-lbl span { letter-spacing: 0.08em; } }
+.who-sheet { position: fixed; inset: 0; z-index: 66; display: grid; place-items: center; padding: 14px; background: rgba(20, 16, 60, 0.55); font-family: system-ui, sans-serif; }
+.who-sheet .wp-card-wrap { width: min(500px, 100%); max-height: 92dvh; overflow-y: auto; padding: 14px 16px 12px; border: 3px solid var(--ink); border-radius: 24px; background: #f7f4ff; box-shadow: 0 7px 0 var(--ink); color: var(--ink); }
+.who-sheet .wp-head { display: flex; align-items: flex-start; gap: 8px; }
+.who-sheet .wp-head > div { flex: 1; min-width: 0; padding-top: 4px; }
+.who-sheet .wp-man { flex: none; order: 2; height: 92px; width: auto; margin: -6px -4px -10px 0; }
+.who-sheet .wp-x { order: 3; flex: none; width: 38px; height: 38px; border-radius: 11px; border: 2.5px solid var(--ink); background: #fff; font-size: 16px; font-weight: 900; cursor: pointer; }
+.who-sheet .wp-kicker { display: block; font: 800 10.5px system-ui, sans-serif; letter-spacing: 0.14em; text-transform: uppercase; color: #7b4fd6; }
+.who-sheet h2 { margin: 3px 0 0; font: 700 26px 'Fredoka', system-ui, sans-serif; }
+.who-sheet .wp-ask { margin: 12px 0 10px; font-size: 16px; font-weight: 800; line-height: 1.35; color: #2b3556; }
+.who-sheet .wp-classes { display: flex; flex-wrap: wrap; gap: 8px; }
+.who-sheet .wp-class { flex: 1 1 110px; min-height: 60px; border-radius: 16px; border: 2.5px solid var(--ink); background: linear-gradient(#fff, #eef0ff); box-shadow: 0 3px 0 var(--ink); font: 700 26px 'Fredoka', system-ui, sans-serif; color: var(--ink); cursor: pointer; }
+.who-sheet .wp-names { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 7px; max-height: min(46dvh, 400px); overflow-y: auto; overscroll-behavior: contain; padding: 2px 3px 6px 1px; }
+.who-sheet .wp-name { display: flex; align-items: center; gap: 9px; min-height: 48px; padding: 8px 11px; border-radius: 13px; border: 2.5px solid var(--ink); background: #fff; box-shadow: 0 3px 0 var(--ink); font: 800 15px system-ui, sans-serif; color: var(--ink); text-align: left; line-height: 1.2; overflow-wrap: anywhere; cursor: pointer; }
+.who-sheet .wp-name i { flex: none; width: 7px; height: 26px; border-radius: 4px; background: var(--team); }
+.who-sheet .wp-name span { min-width: 0; }
+.who-sheet .wp-class:active, .who-sheet .wp-name:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.who-sheet .wp-card { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border: 2.5px solid var(--team); border-left-width: 12px; border-radius: 16px; background: color-mix(in srgb, var(--team) 12%, white); }
+.who-sheet .wp-card b { font: 700 30px 'Fredoka', system-ui, sans-serif; line-height: 1.1; overflow-wrap: anywhere; }
+.who-sheet .wp-card span { font-size: 13.5px; font-weight: 800; color: color-mix(in srgb, var(--team) 70%, black); }
+.who-sheet .wp-card small { font-size: 13.5px; line-height: 1.4; color: #3e4c78; }
+.who-sheet .wp-actions { display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px; margin-top: 14px; }
+.who-sheet .wp-actions .play-btn { min-height: 52px; font-size: 18px; margin: 0; } .who-sheet .wp-actions .menu-btn { min-height: 52px; margin: 0; }
+.who-sheet .wp-grades { display: flex; gap: 6px; margin: 0 0 10px; }
+.who-sheet .wp-grades button { flex: 1; min-height: 40px; border-radius: 11px; border: 2.5px solid var(--ink); background: #fff; font: 800 13px system-ui, sans-serif; cursor: pointer; }
+.who-sheet .wp-grades button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.who-sheet .wp-note { font-size: 14.5px; line-height: 1.45; color: #3e4c78; margin: 4px 0 10px; }
+.who-sheet .wp-back, .who-sheet .wp-retry { min-height: 44px; padding: 0 18px; margin-top: 10px; }
+.who-sheet .wp-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 16px; margin-top: 8px; }
+.who-sheet .wp-link { min-height: 44px; padding: 0 4px; border: 0; background: none; color: #5a4aa8; font: 700 13px system-ui, sans-serif; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+@media (max-width: 560px) { .who-sheet .wp-names { grid-template-columns: repeat(2, minmax(0, 1fr)); } .who-sheet .wp-name { font-size: 14px; padding: 8px 9px; gap: 7px; } .who-sheet .wp-man { height: 76px; } .who-sheet .wp-class { font-size: 23px; min-height: 54px; } }
+@media (max-height: 620px) { .who-sheet .wp-man { display: none; } .who-sheet .wp-names { max-height: 40dvh; } }
+/* the pill's own text, not the row label's capitals and snowflake; the label stays on one line */
+.start2 .st-lbl > span:first-child { white-space: nowrap; flex: none; }
+.start2 .wp-pill span { text-transform: none; letter-spacing: 0; font-size: 11.5px; font-weight: 800; color: var(--ink); }
+.start2 .wp-pill span::before { content: none; }
+@media (max-width: 480px) {
+  .start2 .st-team .st-lbl > span:first-child { letter-spacing: 0.05em; }
+  .start2 .st-team .st-lbl { gap: 4px; }
+  .start2 .wp-pill { gap: 4px; padding-left: 6px; } .start2 .wp-pill small { padding: 2px 5px; font-size: 9px; letter-spacing: 0.02em; }
+  .start2 .st-league { padding: 2px 7px; letter-spacing: 0.03em; }
+}

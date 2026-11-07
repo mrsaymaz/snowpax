@@ -1,6 +1,6 @@
 {
   "name": "snowpax",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "SnowPax by Mr. Saymaz: a free English-practice snowball game for Grades 5–8.",
   "type": "module",

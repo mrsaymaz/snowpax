@@ -54,9 +54,34 @@ error, the timeout, a 5xx or `retry: true` means "try again later".
 - **Pools**: `{action:'pools', grade}` when the start screen opens (and when the lesson changes) and
   when the League panel opens. The last reply (settings and pools) is kept in this browser.
 - **Device**: a random 24-character id (`A-Z a-z 0-9`), made once and kept in localStorage.
+- **Roster** ("Who are you?", League v11.7.0): `{action:'roster', grade}`, public, no key or PIN,
+  when the picker opens. Entries whose id (`/^[A-Za-z0-9:_-]{1,100}$/`), class (`/^[5-8]-[A-Z]$/`, of
+  the requested grade) or team is not valid, or whose name is empty, are dropped; only id, name,
+  class and team are kept. The last good list per grade is kept in this browser and shown at once;
+  the fresh one replaces it in the background. The names come from the League at play time: none
+  are in SnowPax's code.
+- **Student**: once a student has chosen their name, every start also carries
+  `student: '5-A:slytherin:0'`, their League Student ID, sent only if it matches
+  `/^[A-Za-z0-9:_-]{1,100}$/`. Without it the start is exactly as before. The claim reply's `grade`
+  and `team` (for a named student: their own class grade and League team) are what the win line
+  names.
 
 ## What students see
 
+- **Who are you?** With the League on, the first Play on a device (once the team and the lesson
+  are chosen) asks the student to tap their class and name: only the lesson's grade's classes, and
+  only the chosen team's names, sorted in Turkish order, two columns of big buttons on a phone. A
+  grade with one class for that team (6-C, 7-A and 8-B are one-class grades) goes straight to the
+  names. Then "Are you Zeynep?" with the class and team and "Your wins add Ulti to Grade 5
+  Slytherin.", and "No, go back" / "Yes, that's me!". Two small links on every screen: "Not here?
+  Show everyone" (grade tabs 5–8, every team) and "Not on the list? Play without a name" (plays as
+  before, remembered). × or Escape goes back to the start screen; Play asks again next time. If
+  the class list can't be loaded and nothing is cached: "The class list can't be loaded right now"
+  and Try again; play never waits for the League. The choice is kept on this device.
+- **The pill** beside LEAGUE in the team row: "Playing as Zeynep · 5-A  Change" (on a phone just
+  "Zeynep · 5-A  Change", and LEAGUE without the grade, which is on the lesson card), or "Who are
+  you?  Choose" before a choice. A tap opens the picker, so students sharing a tablet can switch.
+  The start screen is no taller for it.
 - **Team buttons** on the start screen: each shows its team's live Ulti for the lesson's grade
   (hidden until the League has answered at least once; the last known values offline).
 - **LEAGUE · G5 ›** beside "Your team": the four team pools for the grade, each with its live points
@@ -124,6 +149,5 @@ the whole stage.
 ## Anything else on the League side
 
 Nothing else needs to change: SnowPax uses the same protocol as Wordramp and solMaxima (start,
-claim, pools; League v11.7.0 or later). Adding the line above switches it on. The "Who are you?"
-student picker (the League's `roster` action and the `student` field on start) is step 2 and is not
-in this version.
+claim, pools, roster; League v11.7.0 or later). Adding the line above switches it on. The "Who are
+you?" picker needs nothing more in the Apps Script.

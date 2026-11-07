@@ -5,7 +5,9 @@
 // this browser keeps just the League's last reply (settings and pools, to show offline), the start
 // tickets of runs in progress and an outbox of wins waiting to be sent.
 // An empty ultiApi (public/config.js) switches all of this off: no requests at all.
-// (Adapted from Wordramp's league.js; the student picker, step 2, is not here yet.)
+// (Adapted from Wordramp's league.js.) "Who are you?" (League v11.7.0): the League's public class list
+// for a grade (names come from the League at play time, never from this code) and the chosen
+// student's id on each start ticket, so a win says who earned it.
 export const LEAGUE_GAME = 'snowpax';
 export const LEAGUE_URL = 'https://mrsaymaz.netlify.app/api/ulti';
 export const LEAGUE_TEAMS = Object.freeze(['gryffindor', 'hufflepuff', 'slytherin', 'ravenclaw']);
@@ -32,6 +34,18 @@ export function gameSettings(settings) {
   return settings && settings.enabled !== false && game && game.enabled !== false ? game : null;
 }
 export function hoursLabel(hours) { return hours % 24 === 0 ? `${hours / 24} day${hours === 24 ? '' : 's'}` : `${hours} hours`; }
+// a Student ID as the League's Roster tab writes them (e.g. "5-A:slytherin:0"); only this form is ever sent
+export const validStudentId = id => typeof id === 'string' && /^[A-Za-z0-9:_-]{1,100}$/.test(id);
+// keep only well-formed roster entries of this grade (names stay plain text: the picker escapes them)
+export function cleanRoster(data, grade) {
+  const g = Number(grade), seen = new Set(), students = [];
+  for (const p of Array.isArray(data?.students) ? data.students : []) {
+    if (!validStudentId(p?.id) || seen.has(p.id) || typeof p.name !== 'string' || !p.name.trim() || typeof p.className !== 'string' || !/^[5-8]-[A-Z]$/.test(p.className) || Number(p.className[0]) !== g || !LEAGUE_TEAMS.includes(p.team)) continue;
+    seen.add(p.id); students.push({ id: p.id, name: p.name.trim().slice(0, 60), className: p.className, team: p.team });
+  }
+  const classes = [...new Set(students.map(p => p.className))].sort();
+  return { grade: g, classes, students };
+}
 export const gradeOfUnit = id => { const g = Number(/^g(\d+)/.exec(String(id || ''))?.[1]); return LEAGUE_GRADES.includes(g) ? g : 5; };
 
 function randomId(length = 24) {
@@ -92,10 +106,11 @@ export function createLeague({ api = LEAGUE_URL, storage = globalThis.localStora
     s.outbox = s.outbox.filter(item => item && t - item.at <= OUTBOX_MS);
   }
   // a ticket when a stage run begins (kept under its run, so a reloaded game can still claim); null offline
-  async function start({ runId, grade, team, arena, pace, unit = '' }) {
+  // a named student's Student ID rides along; without a valid one the start is exactly as before
+  async function start({ runId, grade, team, arena, pace, unit = '', student = '' }) {
     if (!enabled || !runId) return null;
     const existing = state().tickets[runId]; if (existing) return existing.ticket;
-    const reply = await request({ action: 'start', game: LEAGUE_GAME, grade, team, arena, pace, unit: String(unit).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24), device: device() });
+    const reply = await request({ action: 'start', game: LEAGUE_GAME, grade, team, arena, pace, unit: String(unit).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24), device: device(), ...(validStudentId(student) ? { student } : {}) });
     if (reply.kind !== 'ok' || typeof reply.data.ticket !== 'string') return null;
     const s = state(); forgetOld(s); s.tickets[runId] = { ticket: reply.data.ticket, at: now(), grade, team }; save(s);
     return reply.data.ticket;
@@ -134,7 +149,24 @@ export function createLeague({ api = LEAGUE_URL, storage = globalThis.localStora
     return results;
   }
   const outbox = () => state().outbox.slice();
-  return { enabled, device, refresh, snapshot, start, ticketFor, claim, forget, flush, outbox };
+  // "Who are you?" class lists (public, no key): the last good list per grade stays on this device,
+  // so the picker opens at once, and offline
+  function cachedRoster(grade) {
+    const r = state().rosters?.[grade];
+    return r && Array.isArray(r.students) && Array.isArray(r.classes) ? { grade: Number(grade), classes: r.classes, students: r.students, at: r.at, online: false } : null;
+  }
+  // the League's list for a grade (online: true), else the cached one (online: false), else null; never throws
+  async function roster(grade) {
+    if (!enabled || !LEAGUE_GRADES.includes(Number(grade))) return null;
+    const reply = await request({ action: 'roster', grade: Number(grade) });
+    if (reply.kind === 'ok' && Array.isArray(reply.data.students)) {
+      const clean = cleanRoster(reply.data, grade), s = state(), at = now();
+      s.rosters = { ...(s.rosters || {}), [clean.grade]: { classes: clean.classes, students: clean.students, at } }; save(s);
+      return { ...clean, at, online: true };
+    }
+    return cachedRoster(grade);
+  }
+  return { enabled, device, refresh, snapshot, start, ticketFor, claim, forget, flush, outbox, roster, cachedRoster };
 }
 
 // ---------- which wins SnowPax claims ----------

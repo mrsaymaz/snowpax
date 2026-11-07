@@ -44,6 +44,7 @@ import { makeGuide, guideSteps } from './guide.js';
 import { ImpactFx } from './render/impact.js';
 import { createLeague, leagueApi, gradeOfUnit } from '../league.mjs';
 import { leaguePanel, showTeamUlti } from './leagueui.js';
+import { openPicker, needsStudent, savedStudent, studentPillMarkup, studentPillLabel } from './picker.js';
 
 const $ = s => document.querySelector(s);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -78,10 +79,22 @@ function startScreen() {
   // the League: each team's live Ulti for this lesson's grade on the team buttons, and the LEAGUE button
   const leagueGrade = () => gradeOfUnit(unitId);
   const showLeague = () => {
-    const b = $('#st-league'); b.hidden = !league.enabled; if (!league.enabled) return;
-    const g = leagueGrade(); b.textContent = `League · G${g} ›`; b.setAttribute('aria-label', `English League, Grade ${g}`);
+    const b = $('#st-league'); b.hidden = !league.enabled; showWho(); if (!league.enabled) return;
+    const g = leagueGrade(); b.innerHTML = `League<span class="lg-g"> · G${g}</span> ›`; b.setAttribute('aria-label', `English League, Grade ${g}`);
     showTeamUlti(league.snapshot(g)); league.refresh(g).then(s => { if (leagueGrade() === g) showTeamUlti(s); }).catch(() => {});
   };
+  // "Who are you?": the pill beside LEAGUE says who is playing (tap to change: shared tablets); the
+  // first Play on this device asks, once the team and the lesson are chosen
+  save.student = savedStudent(save.student); if (!save.student) delete save.student; save.studentSkip = !!save.studentSkip;
+  function showWho() {
+    const pill = $('#st-who'); pill.hidden = !league.enabled; $('#st-team-hint').hidden = league.enabled; if (!league.enabled) return;
+    pill.innerHTML = studentPillMarkup(save.student); pill.classList.toggle('empty', !save.student); pill.setAttribute('aria-label', studentPillLabel(save.student)); pill.title = save.student ? `${save.student.name} · ${save.student.className}` : '';
+  }
+  const askWho = (then = null) => openPicker({ league, grade: leagueGrade(), team, sound: n => play(n), done: r => {
+    if (r?.student) { save.student = r.student; save.studentSkip = false; } else if (r?.skip) save.studentSkip = true;
+    if (r) writeSave(save); showWho(); if (r && then) then();
+  } });
+  $('#st-who').onclick = () => { play('tap'); askWho(); };
   $('#st-league').onclick = () => { play('tap'); leaguePanel({ league, grade: leagueGrade(), team, onClose: () => showTeamUlti(league.snapshot(leagueGrade())) }); };
   const showLesson = async () => {
     showLeague();
@@ -100,7 +113,8 @@ function startScreen() {
   $('#teams').onclick = e => { const b = e.target.closest('.team-btn'); if (b) { team = b.dataset.team; refresh(); } };
   document.querySelectorAll('.pace-btn').forEach(b => { b.onclick = () => { const other = [...document.querySelectorAll('.pace-btn')].find(x => x !== b); pace = b.dataset.pace === pace && other && !other.offsetParent ? other.dataset.pace : b.dataset.pace; refresh(); }; }); // a narrow screen shows one pace button: a tap switches it
   document.querySelectorAll('.who-btn').forEach(b => { b.onclick = () => { gender = b.dataset.who; refresh(); }; });
-  $('#play').onclick = async () => {
+  $('#play').onclick = () => { if (team && needsStudent({ enabled: league.enabled, student: save.student, skip: save.studentSkip }) && !params.has('autostart')) { unlockAudio(); askWho(go); return; } go(); };
+  const go = async () => {
     unlockAudio(); save.team = team; save.kit = kit; save.pace = pace; save.unitId = unitId; if (save.look?.gender !== gender) save.look = { gender }; writeSave(save);
     $('#start').hidden = true; hero?.dispose(); hero = null;
     try { await startGame(team, kit, pace); } catch (err) { $('#loading').hidden = false; $('#loading').textContent = 'Sorry, the game could not start: ' + err.message; throw err; }
