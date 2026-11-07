@@ -78,13 +78,15 @@ export class Kid {
     this.ring = new Mesh(G.ring, new MeshBasicMaterial({ color: isPlayer ? '#ffffff' : this.team.color, transparent: true, opacity: 0.95, depthWrite: false, depthTest: false })); this.ring.renderOrder = 6; /* shows even when wading in deep snow */ this.ring.rotation.x = -Math.PI / 2; this.ring.position.y = 0.04; if (isPlayer) root.add(this.ring); // only the student's own kid has a ring (sides show by colour)
     if (isPlayer) {
       // the student's ring: gold, breathing a little, with a pointer the way they face
-      this.ring.geometry = new RingGeometry(0.4, 0.56, 40); this.ring.material.color.set('#ffd23f'); this.ring.material.opacity = 1; this.ring.scale.setScalar(1.18); // a bold gold band
-      const edge = this.ringEdge = new Mesh(new RingGeometry(0.35, 0.61, 40), new MeshBasicMaterial({ color: '#1c2340', transparent: true, opacity: 0.85, depthWrite: false, depthTest: false })); // with a navy edge, so it reads on bright snow
-      edge.rotation.x = -Math.PI / 2; edge.position.y = 0.035; edge.renderOrder = 5; root.add(edge);
-      const aim = this.aim = new Group(); aim.position.y = 0.05; root.add(aim);
-      const tri = new Mesh(new ConeGeometry(0.17, 0.32, 3), new MeshBasicMaterial({ color: '#ffd23f', transparent: true, depthWrite: false, depthTest: false }));
+      // on the snow, not over the kid: depth-tested (the kid hides the part behind it), lifted a hair and pulled forward so the ground never swallows it
+      const floor = m => Object.assign(m, { depthTest: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+      this.ring.geometry = new RingGeometry(0.4, 0.56, 40); this.ring.material.color.set('#ffd23f'); this.ring.material.opacity = 1; floor(this.ring.material); this.ring.position.y = 0.07; this.ring.scale.setScalar(1.18); // a bold gold band
+      const edge = this.ringEdge = new Mesh(new RingGeometry(0.35, 0.61, 40), floor(new MeshBasicMaterial({ color: '#1c2340', transparent: true, opacity: 0.85 }))); // with a navy edge, so it reads on bright snow
+      edge.rotation.x = -Math.PI / 2; edge.position.y = 0.065; edge.renderOrder = 5; root.add(edge);
+      const aim = this.aim = new Group(); aim.position.y = 0.08; root.add(aim);
+      const tri = new Mesh(new ConeGeometry(0.17, 0.32, 3), floor(new MeshBasicMaterial({ color: '#ffd23f', transparent: true })));
       tri.rotation.x = Math.PI / 2; tri.scale.set(1, 1, 0.2); tri.position.z = 0.9; tri.renderOrder = 7; aim.add(tri); // a flat arrowhead at the ring's edge
-      const triE = new Mesh(new ConeGeometry(0.24, 0.44, 3), new MeshBasicMaterial({ color: '#1c2340', transparent: true, opacity: 0.85, depthWrite: false, depthTest: false }));
+      const triE = new Mesh(new ConeGeometry(0.24, 0.44, 3), floor(new MeshBasicMaterial({ color: '#1c2340', transparent: true, opacity: 0.85 })));
       triE.rotation.x = Math.PI / 2; triE.scale.set(1, 1, 0.2); triE.position.z = 0.9; triE.renderOrder = 5; aim.add(triE);
       // seen through walls, trees and roofs: a light silhouette wherever something stands in front of the kid
       // (drawn before the kid, against the world only, so the kid's own arms never show through it)
