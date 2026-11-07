@@ -361,3 +361,28 @@ name on the sky (the carousel with its ship's mast and anchor for Kasımpaşa; t
 the Golden Horn at sunset with an old sailing ship; Galata Tower and the red nostalgic tram for
 Downtown, drawn for the game), Girl / Boy, the lesson and the pace are slimmer, and on a narrow
 screen the pace is one button that switches between Relaxed and Challenge.
+
+## Mr. Saymaz's guide (first-time players)
+
+The first time a player meets each part of the game, Mr. Saymaz steps in from the side (`guide.js`,
+his pictures in `public/img/saymaz/`: presenting, thumbs up, pointing, cheering, thinking, and his
+portrait on the card) with a speech card: a title, one short idea in simple English, a small moving
+picture of the gesture (swipe, swipe up and down, tap, drag, the thumb stick) and a spotlight on the
+button he talks about. The game holds still meanwhile (a task scene stays on screen). Next / Skip,
+dots for the cards; each guide shows once on this device (`save.guides`), and **How to play** in the
+pause menu shows the main cards again.
+
+| When | What he says |
+|---|---|
+| The first map | hello and the story; English gives ❄ (more when right first time); how a stage goes |
+| The first sled ride | steer (swipe or ← →); jump and duck; ramps, purple snowflakes, spin; spell the word (first letter given); look to the left |
+| The first camp | walk (thumb on the left half, or the map); walk up to the kids and answer them |
+| The first Snow Shop | your ❄; tap a price tag; try the snowball styles; Fight! |
+| The first fight | move; tap to throw, drag to aim; the super; freeze rivals (frozen is fine) |
+| The first task | read at the top, tap the answer in the scene; mistakes are fine, the right answer glows |
+| Holding the circle, the captain | one card each |
+
+He never stands on the button he points at: for a button at the bottom left he steps over to the
+right, for a wide row at the bottom he stands on top of it, and the card moves out of the way.
+Mr. Saymaz's coach strip stays quiet while he is talking. Automated test browsers skip the guides
+(they cannot press Next) unless the address has `?guides=on`.

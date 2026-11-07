@@ -40,11 +40,14 @@ import { InstancedMesh, MeshLambertMaterial, SphereGeometry, Object3D, Group, Me
 import { SHOP, ROLES } from './fights.mjs';
 import { buildKid, bakeKid } from './render/kids2.js';
 import { KID_SCALE } from './render/kids.js';
+import { makeGuide, guideSteps } from './guide.js';
 
 const $ = s => document.querySelector(s);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const params = new URLSearchParams(location.search);
 const save = loadSave();
+const touchUI = matchMedia('(pointer: coarse)').matches;
+const guide = makeGuide({ save, writeSave, sound: n => play(n) }); // Mr. Saymaz's first-time guides
 const KITS = CONFIG.kits;
 const KIT_ICON = { thrower: '⚡', lobber: '🌙', sprayer: '💥' };
 const KIT_TEXT = { thrower: 'Fast, straight throws', lobber: 'Throws over walls', sprayer: 'Three at once, close up' };
@@ -283,6 +286,7 @@ async function startGame(myTeam, kit, pace) {
   // often than every 12 s (the HUD line already says what to do)
   const coachSaid = new Set(); let coachLast = -1e9;
   const coach = (text, sec = 4.5) => {
+    if (guide.holding) return; // Mr. Saymaz is already talking
     const fighting = stages?.mode === 'outpost' && (stages.phase === 'fight' || stages.phase === 'strike' || stages.finalT != null), now = performance.now();
     if (fighting && (coachSaid.has(text) || now - coachLast < 12000)) return;
     coachSaid.add(text); coachLast = now; coachShow(text, sec);
@@ -298,12 +302,14 @@ async function startGame(myTeam, kit, pace) {
     sim, player, unit, unitProgress, save, writeSave, pace, rng, root: $('#taskcard'), familyOverride: params.get('family'), world: worldTasks, worldColor: myCol,
     ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play, fx, fireworks: z => { if (reduceMotion) return; for (const col of [myCol, '#ffffff', '#ffd166', '#7cc4f0']) fx.emit(z.x, 3.5, z.z, 40, col, 6, 1.4, 1.2); } },
   }) : null;
+  if (flow) flow.card.onScene = theme => { if (theme !== 'recruit' && !guide.seen('task')) setTimeout(() => guide.show('task', guideSteps('task', { touch: touchUI })), 650); }; // the first task scene: Mr. Saymaz says how it works
   // Arena 1 plays as stages
   const showdownView = new ShowdownView(scene, { color: myCol, dark: CONFIG.teams[myTeam].dark, groundY: (x, z) => groundH(x, z), reduceMotion });
   const fireworks = z => { if (reduceMotion) return; for (const col of [myCol, '#ffffff', '#ffd166', '#7cc4f0']) fx.emit(z.x, 3.5, z.z, 40, col, 6, 1.4, 1.2); };
   stages = flow ? new StageRunner({
     match, flow, unit, unitProgress, save, writeSave, pace, rng, team: myTeam, kit, reduceMotion,
     ui: { warm: sled => warmRide(sled), banner: (...a) => banner(...a), coach: (...a) => coach(...a), play, intro: (z, o) => startIntro(z, o),
+      guide: (id, o = {}) => guide.show(id, guideSteps(id, { touch: touchUI, ...o })), guided: id => guide.seen(id),
       snapCamera: () => { focus.set(player.x, 0, player.z - 1.2); camShift = 0; },
       showWall: cells => showWall(cells), onGone: list => { dropSnowmen(list); dropGoneKids(); }, recruited: (c, R) => fx.number(c.x, c.z, `${c.name} · ${R.name}`, 'word'), rebuildWorld: z => rebuildWorld(z), markRival: z => world.setOwner(z.id, rivCol), fireworks,
       seizeButton: on => { $('#seizebtn').hidden = !on; },
@@ -483,6 +489,11 @@ async function startGame(myTeam, kit, pace) {
   let paused = false;
   function pause(on) { paused = on; $('#pause-menu').hidden = !on; if (flow) { const a = flow.accuracy; $('#accuracy').hidden = false; $('#accuracy').innerHTML = `Right first time: <b>${a.firstTry} of ${a.total}</b> (${a.pct}%)<br><small>Get ${Math.round(CONFIG.demand.unlockAccuracy * 100)}% to unlock the next arena.</small>`; } $('#q-level').textContent = quality.forced === null ? `Auto (${LEVELS[quality.level].name})` : LEVELS[quality.level].name; }
   $('#pause').onclick = () => pause(true); $('#resume').onclick = () => pause(false);
+  $('#howto').onclick = () => { // Mr. Saymaz again: the main ideas, from the sled to the tasks
+    pause(false); const o = { touch: touchUI };
+    const steps = [guideSteps('welcome', o)[1], ...guideSteps('sled', o).slice(0, 3), ...guideSteps('fight', o).slice(0, 3), guideSteps('shop', o)[1], ...guideSteps('task', o)];
+    guide.show('howto', steps.map((st, i) => (i === steps.length - 1 ? { ...st, go: 'Back to the snow' } : { ...st, spot: null })), { force: true });
+  };
   $('#q-cycle').onclick = () => { const n = quality.forced === null ? 0 : quality.forced + 1; if (n >= LEVELS.length) quality.auto(); else quality.set(n); pause(true); };
   $('#sound').onclick = () => { save.settings.sound = !save.settings.sound; setSound(save.settings.sound); writeSave(save); $('#sound').textContent = `Sound: ${save.settings.sound ? 'on' : 'off'}`; };
   $('#sound').textContent = `Sound: ${save.settings.sound ? 'on' : 'off'}`; setSound(save.settings.sound);
@@ -518,7 +529,7 @@ async function startGame(myTeam, kit, pace) {
     const dt = rdt * tScale;
     requestAnimationFrame(frame); quality.tick(dt);
     LOOK.time.value += dt;
-    if (paused) { draw(stages?.mode === 'sled' ? stages.sled.scene : scene, stages?.mode === 'sled' ? stages.sled.camera : camera); return; }
+    if (paused || guide.holding) { const wts = worldTasks?.session, inSt = !paused && wts && stages?.mode !== 'sled' && now >= wts.showAt; draw(stages?.mode === 'sled' ? stages.sled.scene : inSt ? wts.scene : scene, stages?.mode === 'sled' ? stages.sled.camera : inSt ? wts.camera : camera); return; } // paused, or Mr. Saymaz is talking: everything holds still
     if (stages?.mode === 'sled') { stages.update(dt); draw(stages.sled.scene, stages.sled.camera); return; } // the sled journey has its own scene
     const live = !pose && !intro && countdown <= 0 && (!stages || stages.mode === 'outpost');
     if (!pose && countdown > 0) {

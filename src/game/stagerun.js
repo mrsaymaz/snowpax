@@ -56,6 +56,7 @@ export class StageRunner {
     $('#stagemap').innerHTML = `<div class="sm-card"><h2>Your arenas</h2><p class="sm-sub">${esc(this.unit.title)} · ★ ${totalStars(this.up)} of ${STAGES.length * 3}${acc !== null ? ` · Right first time ${acc}% (need ${Math.round(UNLOCK * 100)}%)` : ''}</p>
       <div class="sm-path">${nodes}</div><p class="sm-tip">Sled into ${esc(go.title)} and take its outpost from the rival team: English at ${esc(places.slice(0, -1).join(', '))} and ${esc(places.at(-1) || '')} earns ❄ for boosts. You will need them for the Final Showdown!</p></div>`;
     $('#stagemap').hidden = false;
+    setTimeout(() => { if (this.mode === 'map') this.ui.guide?.('welcome'); }, 500); // the very first time: Mr. Saymaz says hello
     $('#stagemap').onclick = e => { const b = e.target.closest('.sm-node'); if (b && !b.disabled) this.start(stageById(b.dataset.id)); };
   }
 
@@ -114,14 +115,14 @@ export class StageRunner {
     this.sled?.dispose(); this.sled = sled; const spell = sled.spell;
     this.sled.resize(innerWidth, innerHeight);
     this.mode = 'sled'; document.body.classList.add('sledding'); $('#hud').hidden = true; $('#runhud').hidden = false;
-    if (sled.first && matchMedia('(pointer: coarse)').matches) setTimeout(() => { if (this.sled === sled) this.rideBanner('SWIPE ← → TO STEER', '', 2.4); }, 1400); // no buttons on a touch screen: the first ride says how
     $('#runhud').innerHTML = `<div class="rh-top"><span class="rh-lives"></span><div class="rh-prog"><i></i><span class="rh-dest">${THEME_ICON[ICON[st.id]] || ''}</span></div><span class="rh-balls" aria-label="Snowballs">⚪ <b>0</b></span><span class="rh-flakes" aria-label="Snowflakes for the Snow Shop">❄ <b>0</b></span></div>
       <div class="rh-spell" ${spell ? '' : 'hidden'}><small>Spell: <span lang="tr">${esc(spell?.tr || '')}</span></small><div class="rh-slots"></div></div><div class="rh-toast"></div>
       <div class="rh-lines" aria-hidden="true"></div><div class="rh-banner"></div><div class="rh-cine" hidden><small></small><b></b><span class="rh-skip" hidden>Tap to skip</span></div>
       <div class="rh-btns"><button type="button" data-k="left" aria-label="Left">◀</button><button type="button" data-k="duck" aria-label="Duck">▼</button><button type="button" data-k="jump" aria-label="Jump">▲</button><button type="button" data-k="right" aria-label="Right">▶</button></div>`;
     this.spell = spell; this.drawRunHud();
     this.rideTune = hasMusic('sled-' + st.id) ? 'sled-' + st.id : 'sled'; music(this.rideTune); // the ride's tune (the arena's own, if it has one), all the way in
-    this.ui.coach(this.ridesDone === 0 ? `Sled into ${st.title}! Swipe left and right to steer, up to jump, down to duck. Grab the snowballs, and catch the rare golden snowflakes: each one is a ❄ for the Snow Shop!` : `Sled into ${st.title}! Catch the golden snowflakes for the Snow Shop!`, 6);
+    if (this.ui.guided?.('sled') !== false) this.ui.coach(`Sled into ${st.title}! Catch the purple snowflakes for the Snow Shop!`, 4);
+    this.ui.guide?.('sled', { spell: !!spell }); // the first ride: how to steer, jump, duck (the ride waits)
   }
   // a place on the way: no bars, its name card (seen, not read aloud)
   cinema(e) {
@@ -263,7 +264,7 @@ export class StageRunner {
       const gender = (k + (this.rng() < 0.5 ? 0 : 1)) % 2 ? 'girl' : 'boy', names = KID_NAMES[gender].filter(n => !taken.has(n)), name = names[Math.floor(this.rng() * names.length)]; taken.add(name);
       this.sim.addRecruitSpot({ id: 'k' + k, role, name, look: makeLook(gender, this.rng), x: at[0], z: at[1] });
     });
-    setTimeout(() => { if (this.phase === 'camp') this.ui.coach('Neighbourhood kids want to join your team! Walk up to each one and answer their question. A right answer first time and they join (and you get a ❄).', 6); }, 1600 + (this.introWait || 0)); // after the arrival
+    setTimeout(() => { if (this.phase !== 'camp') return; if (this.ui.guided?.('camp') === false) this.ui.guide('camp'); else this.ui.coach('Walk up to each kid and answer their question. Right first time and they join!', 5); }, 1600 + (this.introWait || 0)); // after the arrival: the first time, Mr. Saymaz shows how
   }
   updateCamp(dt) {
     this.tCamp += dt;
@@ -288,6 +289,7 @@ export class StageRunner {
     if (this.mode !== 'outpost' || !this.plan) { next(); return; }
     this.phase = 'build'; this.buildKind = kind; this.buildNext = next; this.tBuild = 0; this.flow.stageHold = true; this.ui.seizeButton?.(false);
     this.ui.build?.open(this.buildInfo());
+    setTimeout(() => { if (this.phase === 'build') this.ui.guide?.('shop'); }, 700); // the first Snow Shop
     if (this.pendingRival) { this.newRival(this.pendingRival); this.pendingRival = null; } // who you will meet in the fight
   }
   buildInfo() { return { kind: this.buildKind, flakes: this.arm.flakes, boosts: this.arm.boosts, next: this.arm.next, left: Math.max(0, Math.ceil(this.plan.build - this.tBuild)) }; }
@@ -309,6 +311,7 @@ export class StageRunner {
   beginFight() {
     this.phase = 'fight'; this.tFight = 0; this.flow.stageHold = true; this.spawnWave(0);
     const z = this.zone; this.ui.coach(`The rival team holds ${z.label}! Freeze ${this.plan.open.goal} rivals to break their line. They keep coming back, so keep throwing!`, 5);
+    setTimeout(() => { if (this.phase === 'fight') this.ui.guide?.('fight'); }, 400); // the first fight: move, throw, super
   }
   // the opening round and the strike-back: snowmen keep coming; word snowmen walk out in a tidy row
   updateExtras(dt) {
@@ -366,6 +369,7 @@ export class StageRunner {
     this.phase = 'strike'; this.flow.stageHold = true; this.tStrike = 0; this.strikeLeft = this.plan ? this.plan.strike.seconds : 20; this.trickleT = 0;
     this.ui.banner('THEY STRIKE BACK!', 'lose', 1.6); this.ui.play('whoosh');
     this.ui.coach(`Part 1 is done! Now hold the circle for ${Math.round(this.strikeLeft)} seconds. Freeze anyone who steps in.`, 5);
+    setTimeout(() => { if (this.phase === 'strike') this.ui.guide?.('strike'); }, 900);
     this.spawnWave(1);
   }
   updateStrike(dt) {
@@ -414,6 +418,7 @@ export class StageRunner {
     if (this.captain) { const c = this.captain; c.maxWarmth = c.warmth = Math.round(c.maxWarmth * S.captainWarmth * S.tired ** (this.showTries || 0)); /* a little weaker on each try, so nobody is stuck */ c.duel = { id: this.match.player.id, others: S.others }; this.capWarm = c.warmth; this.capCalm = 0; }
     this.ui.banner('FINAL SHOWDOWN!', 'lose', 1.8); this.ui.play('whoosh');
     this.ui.coach(`The rival captain wants ${z.label} back! Only your snowballs can freeze the captain: your team keeps the others busy. You have ${S.seconds} seconds, and the captain warms up fast, so keep hitting. Your boosts help!`, 7);
+    setTimeout(() => { if (this.phase === 'showdown') this.ui.guide?.('showdown'); }, 1200);
   }
   updateShowdown(dt) {
     const S = this.plan.showdown, c = this.captain; this.tShow += dt;

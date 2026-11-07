@@ -87,7 +87,7 @@ export class TaskCard {
     if (session) {
       this.root.classList.add('world'); session.clearStep();
       const ctx = this.sceneCtx(step, body, theme); ctx.world = session; ctx.worldColor = this.worldColor;
-      const end = ws(ctx); this.sceneEnd = typeof end === 'function' ? end : null; this.startTimer(step); this.world.tour(); return;
+      const end = ws(ctx); this.sceneEnd = typeof end === 'function' ? end : null; this.startTimer(step); this.world.tour(); this.onScene?.(theme, step); return;
     }
     this.leaveWorld();
     const scene = sceneFor(step.kind, theme);
