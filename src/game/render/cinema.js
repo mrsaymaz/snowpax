@@ -730,7 +730,7 @@ const taksim = vista({
   wide: [at(-6, 11, 18), at(0, 2, -1)],
   extra: life(k => {
     k.bed(rel(-3.4, 4.6), 1.6, 0.7); k.bed(rel(3.4, 4.6), 1.6, 0.7); k.cat(up(rel(3.0, 4.6), 0.3), -0.5, '#f2ede4');
-    k.pigeons(rel(-2.5, 7.5), 14); k.pigeons(rel(4.5, 6), 9); // the square's pigeons
+    k.pigeons(rel(-7, 4.5), 12); k.pigeons(rel(6.5, 2.5), 9); // the square's pigeons, off to the sides
     k.steam(up(rel(8.5, 3.5), 1.3), 0.4); k.steam(up(rel(8.5, -1.5), 1.3), 0.4);
     k.lights([rel(-16, 1.5), rel(-12, 0), rel(-8.5, 1.5)], { y: 3.2 }); k.flag(rel(6.8, -3.4), '#2d6fb5', 4.2); k.flag(rel(-6.8, -3.4), '#2d6fb5', 4.2);
     k.bed(rel(-9, 5.5), 2.4, 0.8, ['#ffffff', '#e2406a']); k.bed(rel(9, 6), 2.4, 0.8); k.cat(up(tw(12, 18), 0.55), 0.3, '#3b3b44');
