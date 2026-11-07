@@ -569,7 +569,7 @@ async function startGame(myTeam, kit, pace) {
         play('freeze', { near: e.id === player.id ? 1 : near });
         if (!reduceMotion) fx.emit(e.x, 0.2, e.z, 34, '#ffffff', 4.5, 0.8, 1.3);
         if (v) { score[v.side === 'home' ? 'rival' : 'home']++; if (!stages) feed(`<b style="color:${CONFIG.teams[by?.team || v.team].dark}">${by ? name(by) : 'Someone'}</b> froze <b style="color:${CONFIG.teams[v.team].dark}">${name(v) === 'You' ? 'you' : name(v)}</b> ❄`); }
-        if (e.id === player.id) { $('#frozen').hidden = false; coach('Brrr! You are a snowman. Shake it off and you are back at Our School.', 3.5); }
+        if (e.id === player.id) $('#frozen').hidden = false; // the screen says it: no coach bubble on top
       }
       if (e.type === 'respawn' && e.id === player.id) $('#frozen').hidden = true;
       if (e.type === 'noThrowZone' && e.id === player.id) coach('Quiet zone: no snowballs near the mosque.', 3);
@@ -677,7 +677,8 @@ async function startGame(myTeam, kit, pace) {
     const p = Math.round(Math.abs(z.progress) * 100);
     const fbar = stages?.fightBar(), ftext = stages?.fightText();
     $('#zone-bar .home').style.width = (fbar != null ? Math.round(fbar * 100) : z.progress > 0 ? p : 0) + '%'; $('#zone-bar .rival').style.width = (fbar == null && z.progress < 0 ? p : 0) + '%';
-    $('#zone-label').textContent = `${z.label}: ` + (ftext && stages.zone === z ? ftext : stages?.phase === 'fight' && stages.zone === z ? (z.battlefield ? 'beat the rival team!' : 'clear the snowmen!') : z.showdown ? (z.owner === 'home' ? 'giant snowball!' : `banners ${stages?.bannersUp || 0} of 5`) : flow?.busy && flow.zone === z ? (flow.mode === 'defend' ? 'answer to refill snowballs' : `answer to seize ${p}%`) : flow?.waveZone === z ? 'defend it!' : z.owner === 'home' ? 'yours!' : z.owner === 'rival' ? 'rivals hold it' : z.contested ? 'contested!' : z.home ? `seizing… ${p}%` : z.rival ? `rivals seizing… ${p}%` : `${Math.round(Math.hypot(z.x - player.x, z.z - player.z))} steps away`);
+    const zt = (ftext && stages.zone === z ? ftext : stages?.phase === 'fight' && stages.zone === z ? (z.battlefield ? 'beat the rival team!' : 'clear the snowmen!') : z.showdown ? (z.owner === 'home' ? 'giant snowball!' : `banners ${stages?.bannersUp || 0} of 5`) : flow?.busy && flow.zone === z ? (flow.mode === 'defend' ? 'answer to refill snowballs' : `answer to seize ${p}%`) : flow?.waveZone === z ? 'defend it!' : z.owner === 'home' ? 'yours!' : z.owner === 'rival' ? 'rivals hold it' : z.contested ? 'contested!' : z.home ? `seizing… ${p}%` : z.rival ? `rivals seizing… ${p}%` : `${Math.round(Math.hypot(z.x - player.x, z.z - player.z))} steps away`);
+    $('#zone-label').textContent = stages ? zt.charAt(0).toUpperCase() + zt.slice(1) : `${z.label}: ${zt}`; // in a stage there is one place: no need to name it (it wrapped to three lines on a phone)
     drawMini();
     $('#zone').classList.toggle('contested', !!z.contested);
     $('#score .h').textContent = score.home; $('#score .r').textContent = score.rival;

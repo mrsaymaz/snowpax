@@ -758,3 +758,25 @@ body.intro #banner, body.intro #seizebtn, body.intro #feed, body.intro #hunt, bo
     0 4px 0 var(--ink), 2px 4px 0 var(--ink), -2px 4px 0 var(--ink), 0 6px 0 var(--ink); }
 .fx-num, .rh-toast { text-shadow: 1.5px 0 0 var(--ink), -1.5px 0 0 var(--ink), 0 1.5px 0 var(--ink), 0 -1.5px 0 var(--ink),
     1px 1px 0 var(--ink), -1px 1px 0 var(--ink), 1px -1px 0 var(--ink), -1px -1px 0 var(--ink), 0 3px 0 var(--ink), 1.5px 3px 0 var(--ink), -1.5px 3px 0 var(--ink); }
+/* ---------- the fight's HUD on a portrait phone: nothing on top of anything else ----------
+   top row: mini-map | score and the objective on one line | pause; under the map the Map button
+   and the hearts side by side; down the right the shop's ❄ and the flakes; Mr. Saymaz in a slim
+   strip under the top row (three lines at most), hidden while you are frozen (the screen says it) */
+@media (orientation: portrait) and (max-width: 600px) {
+  #topbar { width: calc(100vw - 196px); max-width: 240px; }
+  #zone { padding: 2px 8px 4px; } #zone-label { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #zone-bar { height: 6px; margin-top: 2px; }
+  #stars { top: calc(max(6px, env(safe-area-inset-top)) + 50px); right: max(8px, env(safe-area-inset-right)); font-size: 14px; padding: 3px 10px; }
+  #flakes { top: calc(max(6px, env(safe-area-inset-top)) + 84px); font-size: 14px; padding: 3px 10px; }
+  #lives { top: calc(max(6px, env(safe-area-inset-top)) + 86px); left: calc(max(8px, env(safe-area-inset-left)) + 52px); padding: 1px 8px; } #lives i { font-size: 16px; }
+  #coach, #minimap:not([hidden]) ~ #coach { left: 50%; transform: translateX(-50%); top: calc(max(6px, env(safe-area-inset-top)) + 126px); width: max-content; max-width: calc(100vw - 24px);
+    font-size: 12px; line-height: 1.25; padding: 4px 10px; border-width: 2px; border-radius: 12px; box-shadow: 0 2px 0 var(--ink); background: rgba(255, 255, 255, 0.94);
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+  #coach[hidden] { display: none; }
+  #coach b { display: inline; font-size: 11px; margin-right: 5px; } #coach b::after { content: ':'; }
+  body:has(#coach:not([hidden])) #hunt { top: calc(max(6px, env(safe-area-inset-top)) + 186px); }
+  #hunt { top: calc(max(6px, env(safe-area-inset-top)) + 126px); }
+}
+#hud:has(#frozen:not([hidden])) #coach { display: none; }
+#frozen { -webkit-text-stroke: 0; font-family: 'Fredoka', system-ui, sans-serif; font-weight: 700;
+  text-shadow: 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 2px 0 var(--ink), 0 -2px 0 var(--ink), 1.5px 1.5px 0 var(--ink), -1.5px 1.5px 0 var(--ink), 1.5px -1.5px 0 var(--ink), -1.5px -1.5px 0 var(--ink), 0 4px 0 var(--ink); }
