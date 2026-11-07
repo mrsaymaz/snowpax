@@ -528,9 +528,9 @@ function polish(g, L, hH, world, hood) {
     for (let k = 0; k < 5; k++) { const m = new Mesh(new PlaneGeometry(3 + R() * 4, 60), new MeshBasicMaterial({ map: shaft, color: warm, transparent: true, opacity: 0.12 + R() * 0.08, depthWrite: false, blending: AdditiveBlending, side: DoubleSide, fog: false })); m.position.set(sx + (R() - 0.5) * 30, 18, sz + (R() - 0.5) * 10); m.rotation.z = Math.atan2(-dir.x, dir.y) * 0.9 + (R() - 0.5) * 0.15; m.lookAt(m.position.x, m.position.y, m.position.z + 1); m.rotation.z += -dir.x * 0.6; m.renderOrder = 2; g.add(m); ticks.push(t => { m.material.opacity = (0.1 + 0.06 * Math.sin(t * 0.8 + k)); }); }
   }
   // the landmark lit up: floodlights at dusk (Istanbul lights its monuments), a warm bounce by day
-  { const fl = new PointLight(dusk > 0.3 ? '#ffd29a' : warm, dusk > 0.3 ? 30 + dusk * 30 : 10, 14, 1.4); fl.position.set(PLACE.x, 1.2, PLACE.z + 4.5); g.add(fl);
-    if (dusk > 0.3) { const up = new PointLight('#ffe2b0', 18 * dusk, 12, 1.6); up.position.set(PLACE.x, 0.4, PLACE.z + 2.2); g.add(up);
-      const halo = new Sprite(new SpriteMaterial({ map: glowTex(), color: '#ffd9a0', transparent: true, opacity: 0.22 * dusk, depthWrite: false, blending: AdditiveBlending })); halo.position.set(PLACE.x, 2.6, PLACE.z); halo.scale.setScalar(9); g.add(halo); } }
+  { const fl = new PointLight(dusk > 0.3 ? '#ffd29a' : warm, dusk > 0.3 ? 4 + dusk * 5 : 2.5, 11, 1.8); fl.position.set(PLACE.x, 1.2, PLACE.z + 4.5); g.add(fl);
+    if (dusk > 0.3) { const up = new PointLight('#ffe2b0', 3 * dusk, 8, 2); up.position.set(PLACE.x, 0.4, PLACE.z + 2.2); g.add(up);
+      const halo = new Sprite(new SpriteMaterial({ map: glowTex(), color: '#ffd9a0', transparent: true, opacity: 0.1 * dusk, depthWrite: false, blending: AdditiveBlending })); halo.position.set(PLACE.x, 2.6, PLACE.z); halo.scale.setScalar(9); g.add(halo); } }
   return t => { for (const f of ticks) f(t); };
 }
 
