@@ -948,3 +948,5 @@ body.guiding #coach { display: none !important; }
 @media (orientation: landscape) { .guide.spot-left .gd-card { right: auto; left: max(12px, env(safe-area-inset-left)); } .guide.spot-left .gd-card::before { right: -16px; transform: rotate(-135deg); } }
 .guide .gd-man { transition: left 0.35s, right 0.35s, bottom 0.35s, height 0.35s; }
 .guide.spot-wide .gd-man { bottom: var(--lift, 0px); height: min(30vh, 320px); }
+#pause-menu { z-index: 60; } /* above a task scene's labels */
+body.guiding #wt-layer { opacity: 0.35; } /* a task scene's words step back while Mr. Saymaz talks */

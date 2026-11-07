@@ -37,7 +37,7 @@ export function makeGuide({ save, writeSave, sound = () => {} }) {
   const queue = [];
 
   const place = sel => { // the spotlight on a button (a soft round hole in the dim, with a pulsing ring)
-    const spot = $('.gd-spot'), t = sel && document.querySelector(sel), r = t && t.offsetParent !== null ? t.getBoundingClientRect() : null;
+    const spot = $('.gd-spot'), t = sel && document.querySelector(sel), r = t && t.getClientRects().length ? t.getBoundingClientRect() : null; // (fixed elements have no offsetParent)
     if (!r || !r.width) { spot.hidden = true; el.classList.remove('spotting', 'spot-low', 'spot-left', 'spot-wide'); return; }
     const pad = 8; Object.assign(spot.style, { left: `${r.left - pad}px`, top: `${r.top - pad}px`, width: `${r.width + pad * 2}px`, height: `${r.height + pad * 2}px` });
     spot.hidden = false; el.classList.add('spotting');
