@@ -11,7 +11,7 @@
 // right first time or not; a miss shows the right one glowing and the task goes on.
 import {
   Mesh, Group, MeshLambertMaterial, MeshStandardMaterial, MeshBasicMaterial, BoxGeometry, CylinderGeometry, ConeGeometry, SphereGeometry, TorusGeometry,
-  PlaneGeometry, CircleGeometry, Vector3, Color,
+  PlaneGeometry, CircleGeometry, Vector3, Color, CanvasTexture, SRGBColorSpace,
 } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { stage, mounds, bunting, row, actor } from './stationkit.js';
@@ -29,6 +29,29 @@ function bulbs(P, { x0, x1, y, z, sag = 0.45, n = 18, z1 = z }) {
   return t => list.forEach((m, k) => m.scale.setScalar(0.8 + 0.35 * Math.max(0, Math.sin(t * 3 + k * 1.7))));
 }
 const lamp = (P, x, z, h = 3.0) => { add(P, new CylinderGeometry(0.06, 0.08, h, 8), L('#2b3556'), x, h / 2, z); add(P, new BoxGeometry(0.34, 0.44, 0.34), B('#ffe3a0'), x, h + 0.2, z); add(P, new ConeGeometry(0.3, 0.22, 4), L('#2b3556'), x, h + 0.53, z, Math.PI / 4); };
+// a row of tall old apartment buildings, shoulder to shoulder: painted fronts with tall windows (lit in
+// the evening), shopfronts with awnings on the street, cornices under snow
+const fronts = new Map();
+function frontTex(col, floors, bays, seed) {
+  const key = `${col}|${floors}|${bays}|${seed % 5}`; if (fronts.has(key)) return fronts.get(key);
+  const c = document.createElement('canvas'), W2 = bays * 40, H2 = 70 + floors * 52; c.width = W2; c.height = H2; const g = c.getContext('2d'), base = new Color(col);
+  let k = seed * 9973 + floors * 31 + bays; const R = () => (k = (k * 16807) % 2147483647) / 2147483647;
+  g.fillStyle = base.getStyle(); g.fillRect(0, 0, W2, H2); g.fillStyle = base.clone().multiplyScalar(0.82).getStyle(); g.fillRect(0, H2 - 70, W2, 70);
+  for (let f = 0; f < floors; f++) { g.fillStyle = base.clone().multiplyScalar(0.9).getStyle(); g.fillRect(0, H2 - 70 - f * 52 - 4, W2, 3); for (let b = 0; b < bays; b++) { const x = b * 40 + 11, y = H2 - 70 - (f + 1) * 52 + 10; g.fillStyle = base.clone().multiplyScalar(0.72).getStyle(); g.fillRect(x - 3, y - 3, 24, 40); g.fillStyle = R() < 0.65 ? '#ffd98a' : '#4f5672'; g.fillRect(x, y, 18, 34); g.fillStyle = base.clone().multiplyScalar(0.68).getStyle(); g.fillRect(x + 8, y, 2, 34); } }
+  for (let x = 8; x < W2 - 30; x += 80) { const w = Math.min(64, W2 - x - 8), cc = ['#c8443c', '#2d6fb5', '#3f9b5a', '#e8a10a'][Math.floor(R() * 4)]; g.fillStyle = '#ffd98a'; g.fillRect(x, H2 - 52, w, 40); for (let s2 = 0; s2 < w; s2 += 12) { g.fillStyle = (s2 / 12) % 2 ? '#fff6ea' : cc; g.fillRect(x + s2, H2 - 64, 12, 12); } }
+  const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; fronts.set(key, t); return t;
+}
+function facades(P, x0, x1, z, { h = [5.5, 7.5], d = 3, ry = 0, seed = 1, cols = ['#e9dcc4', '#e3c9a8', '#d9cfc2', '#efd9c2', '#e8cfc4', '#dcd2e2', '#f1e4cc'] } = {}) {
+  const grp = new Group(); grp.rotation.y = ry; P.add(grp); let x = x0, k = seed;
+  while (x < x1 - 1) {
+    const w = Math.min(x1 - x, 3.2 + ((k * 37) % 5) * 0.5), hh = h[0] + ((k * 53) % 7) / 6 * (h[1] - h[0]), col = cols[k % cols.length], floors = Math.max(3, Math.round((hh - 1.3) / 1.05)), bays = Math.max(2, Math.round(w / 1.0));
+    const body = new Mesh(new BoxGeometry(w - 0.05, hh, d), L(col)); body.position.set(x + w / 2, hh / 2, z - d / 2); body.castShadow = body.receiveShadow = true; grp.add(body);
+    const f = new Mesh(new PlaneGeometry(w - 0.05, hh), new MeshBasicMaterial({ map: frontTex(col, floors, bays, k) })); f.position.set(x + w / 2, hh / 2, z + 0.01); grp.add(f);
+    const cor = new Mesh(new BoxGeometry(w + 0.1, 0.22, d + 0.2), L('#f6f8ff')); cor.position.set(x + w / 2, hh + 0.1, z - d / 2); grp.add(cor);
+    x += w; k++;
+  }
+  return grp;
+}
 // a little shopfront: pastel wall, a lit window full of goods, a striped awning under snow
 function shop(P, x, z, { wall, aw, goods, w = 3.2 }) {
   add(P, new BoxGeometry(w, 3.0, 2.0), L(wall), x, 1.5, z); add(P, new BoxGeometry(w + 0.2, 0.25, 2.2), L('#f6f8ff'), x, 3.1, z);
@@ -42,7 +65,7 @@ function shop(P, x, z, { wall, aw, goods, w = 3.2 }) {
 // door the queues wait behind brass posts and red ropes, a sign over each line. Pick a word, then
 // its line: a visitor carrying it walks up and joins the queue.
 export function galataStation(s, { color = '#f5b616' } = {}) {
-  const K = stage(s, { ground: '#e8e2ec', top: '#7f8fd6', mid: '#f6d8c0', bottom: '#ffe6cf', fog: '#f0dccf', sun: '#ffd2a0' }), { P, snowM } = K;
+  const K = stage(s, { backdrop: 'city', ground: '#e8e2ec', top: '#7f8fd6', mid: '#f6d8c0', bottom: '#ffe6cf', fog: '#f0dccf', sun: '#ffd2a0' }), { P, snowM } = K;
   const stone = L('#d9cfc3'), stoneD = L('#b8ab9c'), slate = L('#5d5f86'), glow = B('#ffd27a'), dark = B('#3d4363');
   const tz = -7.5;
   add(P, new CylinderGeometry(2.3, 2.5, 1.0, 28), stoneD, 0, 0.5, tz); add(P, new CylinderGeometry(1.85, 2.05, 8.6, 28), stone, 0, 5.3, tz);
@@ -54,6 +77,8 @@ export function galataStation(s, { color = '#f5b616' } = {}) {
   shop(P, -6.2, -4.6, { wall: '#f1d9b5', aw: ['#c8443c', '#fff6ea'], goods: ['#d99a4a', '#e8b86a', '#c98a3a'] }); // the bakery
   shop(P, 6.2, -4.6, { wall: '#f2c9d2', aw: ['#3f9b5a', '#fff6ea'], goods: ['#e8c24a', '#7a4a2a', '#f6f0e4', '#e2406a'] }); // the dessert shop
   sign(P, 'Galata Tower', 3.0, 0, 3.3, tz + 2.2);
+  facades(P, -24, -2.6, -9.6, { h: [6, 8], seed: 3 }); facades(P, 2.6, 24, -9.6, { h: [6, 8], seed: 7 }); // the tall old buildings round the little square
+  facades(P, -24, -8.2, -3.5, { h: [5, 7], seed: 11 }); facades(P, 8.2, 24, -3.5, { h: [5, 7], seed: 13 });
   for (const x of [-3.6, 3.6]) lamp(P, x, -3.2);
   mounds(P, [[-8.5, 1.5, 1.1], [8.6, 1.8, 1.2]], snowM);
   const tw = bulbs(P, { x0: -7.8, x1: 7.8, y: 4.0, z: -3.0, n: 24 });
@@ -132,7 +157,7 @@ export function galataSort(ctx) {
 // old school gate on the right. The red tram waits at the end of the rails; couple its cars in
 // order. A finished tram rides off up the avenue with a ding, and the next one is built.
 export function istiklalStation(s, { color = '#f5b616' } = {}) {
-  const K = stage(s, { ground: '#e4e0ec', top: '#5f62b8', mid: '#e8c0d0', bottom: '#f7d6c8', fog: '#e9cfd4', sun: '#ffc09a' }), { P, snowM } = K;
+  const K = stage(s, { backdrop: 'city', ground: '#e4e0ec', top: '#5f62b8', mid: '#e8c0d0', bottom: '#f7d6c8', fog: '#e9cfd4', sun: '#ffc09a' }), { P, snowM } = K;
   const cream = L('#efe2c8'), creamD = L('#cdbd9e'), glass = B('#ffd98a'), iron = L('#2b2f45'), red = L('#c8302e');
   // the Flower Passage: three storeys of cream stone, the tall arched glass entrance
   add(P, new BoxGeometry(8, 6.4, 2), cream, -5.2, 3.2, -6.5); add(P, new BoxGeometry(8.3, 0.35, 2.3), creamD, -5.2, 6.5, -6.4); add(P, new BoxGeometry(8.2, 0.24, 2.2), snowM, -5.2, 6.8, -6.4);
@@ -140,6 +165,8 @@ export function istiklalStation(s, { color = '#f5b616' } = {}) {
   for (const wx of [-7.9, -6.6, -3.8, -2.5]) for (const wy of [1.6, 3.6, 5.3]) add(P, new PlaneGeometry(0.7, 1.0), glass, wx, wy, -5.49);
   for (const wy of [4.0, 5.3]) add(P, new PlaneGeometry(0.9, 1.0), glass, -5.2, wy, -5.49);
   sign(P, 'İstiklal Avenue', 3.2, -5.2, 0.55, -5.4);
+  facades(P, -26, -9.2, -5.5, { h: [6.2, 7.8], seed: 2 }); facades(P, 8.8, 26, -5.5, { h: [6.2, 7.8], seed: 5 }); // the avenue's grand fronts on and on
+  facades(P, -1.2, 1.7, -6.2, { h: [6.6, 6.6], seed: 9 });
   // the old school gate: stone piers, an iron gate with gilded tips, the school behind its railings (no crest, no name)
   add(P, new BoxGeometry(7, 3.4, 2.4), L('#e9dfcc'), 5.2, 1.7, -8.2); add(P, new BoxGeometry(7.2, 0.3, 2.6), snowM, 5.2, 3.5, -8.2); for (let k = 0; k < 6; k++) add(P, new PlaneGeometry(0.6, 0.9), glass, 2.6 + k * 1.05, 2.0, -6.99);
   for (const sx of [3.6, 6.8]) { add(P, new BoxGeometry(0.7, 3.2, 0.7), creamD, sx, 1.6, -5.4); add(P, new SphereGeometry(0.34, 12, 10), creamD, sx, 3.5, -5.4); }
@@ -178,7 +205,7 @@ export const istiklalOrder = castleWorldOrder, istiklalSpell = castleWorldSpell;
 // hotel tower, the park's snowy trees. City buses wait at the stop, each with its route sign lit:
 // hear the word, wave down the bus that shows it. It flashes its lights, honks and pulls away.
 export function taksimStation(s, { color = '#f5b616' } = {}) {
-  const K = stage(s, { ground: '#dedcec', top: '#3f4aa0', mid: '#a9a6dc', bottom: '#d9c8e6', fog: '#c8bedc', sun: '#c8b8ff' }), { P, snowM } = K;
+  const K = stage(s, { backdrop: 'city', ground: '#dedcec', top: '#3f4aa0', mid: '#a9a6dc', bottom: '#d9c8e6', fog: '#c8bedc', sun: '#c8b8ff' }), { P, snowM } = K;
   const frame = L('#e8ecf4'), glassF = B('#9fb8dc');
   // the opera house: glass and steel, the red sphere of the hall behind the glass
   add(P, new BoxGeometry(14, 3.6, 3), L('#d6d9e2'), -1, 1.8, -8.5); add(P, new BoxGeometry(14.4, 0.4, 3.4), frame, -1, 3.8, -8.5); add(P, new BoxGeometry(14.2, 0.24, 3.2), snowM, -1, 4.1, -8.5);
@@ -193,6 +220,7 @@ export function taksimStation(s, { color = '#f5b616' } = {}) {
   add(P, new BoxGeometry(3.4, 0.1, 1.2), L('#2b3556'), 6.2, 2.4, -3.6); add(P, new PlaneGeometry(3.2, 2.2), new MeshBasicMaterial({ color: '#cfe0f6', transparent: true, opacity: 0.35 }), 6.2, 1.2, -4.15); for (const sx of [4.6, 7.8]) add(P, new BoxGeometry(0.08, 2.4, 0.08), L('#2b3556'), sx, 1.2, -3.1);
   add(P, new CylinderGeometry(0.05, 0.05, 2.8, 6), L('#2b3556'), 4.0, 1.4, -2.8); add(P, new CircleGeometry(0.34, 18), B('#2d6fb5'), 4.0, 2.9, -2.77);
   sign(P, 'Taksim Square', 3.0, -1, 4.6, -6.9);
+  facades(P, -28, -12, -9.5, { h: [5.5, 8], seed: 4 }); facades(P, 10, 28, -13, { h: [6, 9], seed: 8 }); // city blocks round the square
   for (const x of [-4.2, 2.6]) lamp(P, x, -3.4);
   mounds(P, [[-8.8, 2.6, 1.0], [9.0, 2.4, 1.1]], snowM);
   const A = actor(s, P, { at: [-3.6, 0, 4.6], face: Math.PI - 0.5, scale: 0.75 });
@@ -240,7 +268,7 @@ export function taksimListen(ctx) {
 // the big plane tree, the antique shop's lit window. The neighbourhood's cats sit about, each with a
 // word on its collar tag: tap a cat, then its partner; the two pad over and curl up together.
 export function cihangirStation(s, { color = '#f5b616' } = {}) {
-  const K = stage(s, { ground: '#e0dcea', top: '#363f92', mid: '#a49ad0', bottom: '#d6c2dc', fog: '#bfb2d4', sun: '#d8b8f0' }), { P, snowM } = K;
+  const K = stage(s, { backdrop: 'city', ground: '#e0dcea', top: '#363f92', mid: '#a49ad0', bottom: '#d6c2dc', fog: '#bfb2d4', sun: '#d8b8f0' }), { P, snowM } = K;
   const glass = B('#ffd98a'), cols = ['#e7b9a6', '#f2d48a', '#a9c6dd', '#c9b3d9', '#bfe0c6'];
   [[-8.2, -7.4, 6.4], [-4.4, -8.0, 7.6], [-0.4, -8.6, 8.4], [3.6, -8.0, 7.2], [7.6, -7.2, 6.0]].forEach(([x, z, h], k) => {
     const wall = L(cols[k]); add(P, new BoxGeometry(3.6, h, 2.4), wall, x, h / 2, z); add(P, new BoxGeometry(3.8, 0.3, 2.6), snowM, x, h + 0.15, z);
@@ -250,6 +278,7 @@ export function cihangirStation(s, { color = '#f5b616' } = {}) {
   add(P, new CylinderGeometry(0.36, 0.5, 4.2, 9), L('#9a8c84'), -5.6, 2.1, -3.4); for (const [ox, oy, oz, r] of [[0, 4.9, 0, 1.7], [1.2, 4.5, 0.4, 1.2], [-1.1, 4.6, -0.2, 1.3]]) add(P, new SphereGeometry(r, 12, 10), L('#eef2fb'), -5.6 + ox, oy, -3.4 + oz); // the plane tree
   for (const [x, z, c] of [[-7.6, -1.4, '#c8443c'], [6.8, -2.2, '#3f9b5a']]) { add(P, new CylinderGeometry(0.5, 0.5, 0.06, 14), L('#f2ece2'), x, 0.8, z); add(P, new CylinderGeometry(0.04, 0.05, 0.8, 6), L('#2b2f45'), x, 0.4, z); add(P, new CylinderGeometry(0.03, 0.03, 2.2, 6), L('#2b2f45'), x, 1.6, z); add(P, new ConeGeometry(1.3, 0.6, 8), L(c), x, 2.6, z); add(P, new ConeGeometry(1.2, 0.42, 8), snowM, x, 2.8, z); }
   add(P, new PlaneGeometry(2.2, 1.3), glass, 4.6, 1.1, -4.39); sign(P, 'Cihangir', 2.6, 0.2, 0.6, -6.6);
+  facades(P, -26, -10.2, -6.5, { h: [6, 8], seed: 6, cols: ['#e7b9a6', '#f2d48a', '#a9c6dd', '#c9b3d9', '#bfe0c6', '#f1e4cc'] }); facades(P, 9.6, 26, -6.5, { h: [6, 8], seed: 12, cols: ['#e7b9a6', '#f2d48a', '#a9c6dd', '#c9b3d9', '#bfe0c6', '#f1e4cc'] });
   for (const x of [-3.0, 2.8]) lamp(P, x, -4.6);
   const tw = bulbs(P, { x0: -9, x1: 9, y: 4.4, z: -4.2, n: 26 });
   mounds(P, [[-8.8, 2.8, 1.0], [8.8, 2.6, 1.1]], snowM);
@@ -319,7 +348,7 @@ export function cihangirMatch(ctx) {
 // faces along the promenade railing: snowball the right one and it glows, while the tower's clock
 // hands spin round and its bell chimes; a wrong one gets a splat of snow.
 export function tophaneStation(s, { color = '#f5b616' } = {}) {
-  const K = stage(s, { ground: '#d6d4e6', top: '#262c74', mid: '#6f6aac', bottom: '#a99ac4', fog: '#8f88bc', sun: '#b8c4ff' }), { P, snowM } = K;
+  const K = stage(s, { backdrop: 'city', ground: '#d6d4e6', top: '#262c74', mid: '#6f6aac', bottom: '#a99ac4', fog: '#8f88bc', sun: '#b8c4ff' }), { P, snowM } = K;
   const stone = L('#e6ddcf'), stoneD = L('#c2b6a2'), marble = L('#f4f1ea'), lead = L('#7d8296'), glass = B('#ffd98a');
   // the water and the far shore's lights
   const sea = add(P, new PlaneGeometry(60, 14), new MeshStandardMaterial({ color: '#4a4f86', roughness: 0.15, metalness: 0.3 }), 0, 0.02, -15); sea.rotation.x = -Math.PI / 2;
@@ -344,6 +373,7 @@ export function tophaneStation(s, { color = '#f5b616' } = {}) {
   // the quay railing the clock faces hang on
   add(P, new BoxGeometry(20, 0.08, 0.08), L('#2b2f45'), 0, 1.0, -2.4); for (let k = 0; k <= 20; k++) add(P, new BoxGeometry(0.06, 1.0, 0.06), L('#2b2f45'), -10 + k, 0.5, -2.4);
   sign(P, 'Tophane', 2.4, -2.4, 0.5, -4.3);
+  { const tm = new Group(); tm.position.set(13, 0, -6.2); P.add(tm); const b2 = new Mesh(new BoxGeometry(12, 2.0, 3), L('#d9dde6')); b2.position.y = 1.0; tm.add(b2); const gl = new Mesh(new PlaneGeometry(11.4, 1.4), B('#ffe2a8')); gl.position.set(0, 0.9, 1.51); tm.add(gl); const rf = new Mesh(new BoxGeometry(12.4, 0.16, 3.4), L('#e6efe8')); rf.position.y = 2.08; tm.add(rf); } // the cruise port's terminal with its planted roof
   for (const x of [-7, 8.6]) lamp(P, x, -1.6);
   const tw = bulbs(P, { x0: -10, x1: 10, y: 3.6, z: -2.6, n: 28, sag: 0.3 });
   const A = actor(s, P, { at: [-3.4, 0, 3.8], face: Math.PI - 0.5, scale: 0.75 });

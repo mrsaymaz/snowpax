@@ -31,10 +31,10 @@ const rng = seed => { let s = seed * 7919 + 13; return () => ((s = (s * 16807) %
 // back and the sides (or the frozen sea, at the Pier); the side towards the track stays open snow
 // with a few trees, so the camera can look in.
 const W = 46, H = 34, CX = 23, CZ = 15, PLACE = { x: 0, z: -9 }; // the landmark's middle in the scene's frame
-function neighbourhood({ landmark, seed = 1, sea = 0, plazaR = 5, trees = 'TvxyT', props = [], tiles = [], flag = '#c8443c' }) {
+function neighbourhood({ landmark, seed = 1, sea = 0, plazaR = 5, trees = 'TvxyT', props = [], tiles = [], flag = '#c8443c', urban = false }) {
   const g = Array.from({ length: H }, () => Array(W).fill('.')), R = rng(seed), lms = [];
   const set = (i, j, c) => { if (i >= 0 && j >= 0 && i < W && j < H) g[j][i] = c; };
-  const tree = () => trees[Math.floor(R() * trees.length)];
+  const tree = () => (urban ? '.' : trees[Math.floor(R() * trees.length)]); // the city: streets and buildings, no woods
   for (let j = 0; j < sea; j++) for (let i = 0; i < W; i++) set(i, j, 'W'); // the frozen Golden Horn
   if (!sea) for (let i = 0; i < W; i++) { set(i, 0, R() < 0.55 ? 'R' : tree()); set(i, 1, i % 7 === 3 ? tree() : 'H'); set(i, 2, i % 7 === 3 ? '.' : 'H'); set(i, 3, i % 7 === 3 ? '_' : '_'); }
   for (let j = Math.max(4, sea); j < H - 13; j++) for (const [o, d] of [[0, 1], [W - 1, -1]]) { set(o, j, R() < 0.5 ? 'R' : tree()); set(o + d, j, j % 6 === 2 ? tree() : 'H'); set(o + 2 * d, j, j % 6 === 2 ? '.' : 'H'); set(o + 3 * d, j, '_'); }
@@ -93,7 +93,7 @@ function terrainFn(seed, sea) {
     return Math.max(0, rise * hills * (0.55 + 0.45 * smooth(60, 160, r)) * byTrack) - 0.06;
   };
 }
-function townscape(g, L, { seed = 3, sea = false }) {
+function townscape(g, L, { seed = 3, sea = false, urban = false }) {
   const hH = terrainFn(seed, sea), R = rng(seed + 101), hor = new Color(L.fog || L.horizon), far = k => Math.min(0.6, Math.max(0, (k - 45) / 260)); // how much haze at a distance
   // the land: a heightfield, snow white, a little bluer in the hollows and on the ice
   const N = 140, S = 460, geo = new PlaneGeometry(S, S, N, N); geo.rotateX(-Math.PI / 2);
@@ -113,14 +113,15 @@ function townscape(g, L, { seed = 3, sea = false }) {
   const roof = new ConeGeometry(0.76, 0.42, 4, 1); roof.rotateY(Math.PI / 4); roof.translate(0, 1.21, 0);
   { const rp = roof.attributes.position, rc = []; for (let v = 0; v < rp.count; v++) { const top = rp.getY(v) > 1.25; const k = top ? new Color('#fbfcff') : new Color(R() < 0.5 ? '#b9614e' : '#7a6f9e'); rc.push(k.r, k.g, k.b); } roof.setAttribute('color', new Float32BufferAttribute(rc, 3)); }
   const win = new PlaneGeometry(0.16, 0.2); win.translate(0, 0, 0.505);
-  const PAST = ['#ecd2b4', '#e2c0cc', '#c9d8ea', '#ece2c4', '#d3e4d2', '#f2d6bd', '#d8cfe8', '#f4e7d6'];
+  const PAST = urban ? ['#e9dcc4', '#e3c9a8', '#d9cfc2', '#efd9c2', '#d6c7b8', '#e8cfc4', '#cfc9c4', '#f1e4cc'] : ['#ecd2b4', '#e2c0cc', '#c9d8ea', '#ece2c4', '#d3e4d2', '#f2d6bd', '#d8cfe8', '#f4e7d6']; // the city's stone, ochre and cream
   const homes = [];
-  for (let gi = -230; gi < 230; gi += 5.2) for (let gj = -230; gj < 230; gj += 5.2) {
+  const step = urban ? 4.4 : 5.2;
+  for (let gi = -230; gi < 230; gi += step) for (let gj = -230; gj < 230; gj += step) {
     const x = PLACE.x + gi + (R() - 0.5) * 3.2, z = PLACE.z + gj + (R() - 0.5) * 3.2, r = Math.hypot(x - PLACE.x, z - PLACE.z);
-    if (r < 42 || r > 205 || !free(x, z)) continue;
+    if (r < (urban ? 30 : 42) || r > 205 || !free(x, z)) continue;
     const dens = 0.55 + 0.45 * Math.sin((x - PLACE.x) / 37 + seed) * Math.cos((z - PLACE.z) / 29 - seed); // neighbourhoods and gaps between them
-    if (R() > dens * (r < 70 ? 0.55 : 0.9)) continue;
-    homes.push({ x, z, y: hH(x, z), w: 3.4 + R() * 2.8, h: 3 + R() * (r > 120 ? 5 : 3.5), d: 3.6 + R() * 1.6, ry: Math.atan2(PLACE.x - x, PLACE.z - z) + (R() - 0.5) * 0.5, c: PAST[Math.floor(R() * PAST.length)], r });
+    if (!urban && R() > dens * (r < 70 ? 0.55 : 0.9)) continue; if (urban && R() > 0.85) continue;
+    homes.push({ x, z, y: hH(x, z), w: urban ? 3.8 + R() * 2 : 3.4 + R() * 2.8, h: urban ? 6 + R() * (r > 120 ? 9 : 6) : 3 + R() * (r > 120 ? 5 : 3.5), d: 3.6 + R() * 1.6, ry: Math.atan2(PLACE.x - x, PLACE.z - z) + (R() - 0.5) * 0.5, c: PAST[Math.floor(R() * PAST.length)], r });
   }
   const bodies = new InstancedMesh(body, new MeshLambertMaterial({ color: '#ffffff' }), homes.length), roofs = new InstancedMesh(roof, new MeshLambertMaterial({ vertexColors: true }), homes.length), o = new Object3D(), bc = new Color();
   const wins = [], lit = 0.18 + (L.dusk || 0) * 0.7;
@@ -137,6 +138,7 @@ function townscape(g, L, { seed = 3, sea = false }) {
   for (let k = 0; k < 900; k++) {
     const grove = Math.floor(R() * 40), ga = (grove / 40) * 6.28 * 1.7 + seed, gr = 40 + (grove % 9) * 19, cx = PLACE.x + Math.sin(ga) * gr, cz = PLACE.z - Math.abs(Math.cos(ga)) * gr - 6;
     const x = cx + (R() - 0.5) * 16, z = cz + (R() - 0.5) * 12, r = Math.hypot(x - PLACE.x, z - PLACE.z); if (r < 38 || !free(x, z)) continue;
+    if (urban && grove % 5 !== 0) continue; // the city: only a few cypresses
     lists[grove % 5 === 0 ? 1 : grove % 3 === 0 ? 2 : 0].push({ x, z, y: hH(x, z), s: 0.9 + R() * 0.9, r });
   }
   kinds.forEach(([gm, cc], k) => { const L2 = lists[k]; if (!L2.length) return; const im = new InstancedMesh(gm, new MeshLambertMaterial({ color: '#ffffff' }), L2.length); L2.forEach((q, n) => { o.position.set(q.x, q.y - 0.2, q.z); o.rotation.set(0, R() * 6, 0); o.scale.set(q.s, q.s * (k === 1 ? 1.4 : 1), q.s); o.updateMatrix(); im.setMatrixAt(n, o.matrix); im.setColorAt(n, new Color(cc).lerp(hor, far(q.r))); }); im.instanceColor.needsUpdate = true; g.add(im); });
@@ -174,7 +176,7 @@ function skyline(g, L, hH, items = []) {
     },
     // the old city's ridge across the water: a great domed silhouette on the hilltop with its four
     // minarets, smaller domes along the slope, houses packed below (scenery, seen from afar)
-    ridge({ a, r, s = 1, n = 3, span = 0.5 }) {
+    ridge({ a, r, s = 1, n = 3, span = 0.5, houses = true }) {
       const stone = M('#ece4d6', r, 0.55), lead = M('#8790ab', r, 0.5);
       for (let k = 0; k < n; k++) {
         const big = k === Math.floor(n / 2), q = a + (n === 1 ? 0 : (k / (n - 1) - 0.5) * span), rr = r + (big ? 8 : (k % 2) * 10), [x, y, z] = where(q, rr), T = root(x, y - 0.8, z, s * (big ? 1.25 : 0.8));
@@ -183,6 +185,7 @@ function skyline(g, L, hH, items = []) {
         put(new CylinderGeometry(6.6, 7.2, 3, 20), stone, 0, 9.5, 0, T); const d = put(new SphereGeometry(6.8, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), lead, 0, 11, 0, T); d.scale.y = 0.9; put(new CylinderGeometry(0.15, 0.15, 2.5, 6), lead, 0, 18.5, 0, T);
         const mh = big ? 30 : 24; for (const [mx, mz] of big ? [[-11, -11], [11, -11], [-11, 11], [11, 11]] : [[-11, 10], [11, 10]]) minaret(T, mx, mz, mh, stone, lead);
       }
+      if (!houses) return;
       // the packed old houses on the slopes below, warm with lamps at dusk
       const box = new BoxGeometry(1, 1, 1), im = new InstancedMesh(box, new MeshLambertMaterial({ color: '#ffffff' }), 90), o = new Object3D(), cols = ['#efdcc4', '#e6cbb8', '#d9d2e6', '#f1e3c8', '#e3c4b4'];
       for (let k = 0; k < 90; k++) { const q = a + (R() - 0.5) * (span + 0.35), rr = r - 14 + R() * 26, [x, y, z] = where(q, rr), h = 4 + R() * 6; o.position.set(x, y + h / 2 - 0.5, z); o.rotation.set(0, R() * 0.6, 0); o.scale.set(5 + R() * 4, h, 5); o.updateMatrix(); im.setMatrixAt(k, o.matrix); im.setColorAt(k, haze(cols[k % 5], rr, 0.5)); }
@@ -247,6 +250,31 @@ function skyline(g, L, hH, items = []) {
     },
   };
   for (const it of items) build[it.kind]?.(it);
+}
+// a painted front for an apartment building: floors of tall windows with stone frames, shutters,
+// shopfronts with awnings on the ground floor; a matching glow map lights the windows at night
+const facadeCache = new Map();
+function facadeTex(col, floors, bays, seed, lit) {
+  const key = `${col}|${floors}|${bays}|${seed % 6}|${lit}`; if (facadeCache.has(key)) return facadeCache.get(key);
+  const W2 = bays * 40, H2 = 70 + floors * 52, R2 = rng(seed * 13 + floors * 7 + bays), base = new Color(col);
+  const mk = draw => { const c = document.createElement('canvas'); c.width = W2; c.height = H2; draw(c.getContext('2d')); const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; return t; };
+  const lits = Array.from({ length: floors * bays }, () => R2() < lit), shops = Array.from({ length: Math.ceil(bays / 2) }, () => ['#c8443c', '#2d6fb5', '#3f9b5a', '#e8a10a', '#7a1f1f'][Math.floor(R2() * 5)]);
+  const tex = mk(g => {
+    g.fillStyle = base.getStyle(); g.fillRect(0, 0, W2, H2);
+    g.fillStyle = base.clone().multiplyScalar(0.82).getStyle(); g.fillRect(0, H2 - 70, W2, 70); for (let y = H2 - 64; y < H2; y += 12) g.fillRect(0, y, W2, 2); // the stone ground floor
+    for (let f = 0; f < floors; f++) { g.fillStyle = base.clone().multiplyScalar(0.9).getStyle(); g.fillRect(0, H2 - 70 - f * 52 - 4, W2, 3); } // the floor lines
+    for (let f = 0; f < floors; f++) for (let b = 0; b < bays; b++) {
+      const x = b * 40 + 11, y = H2 - 70 - (f + 1) * 52 + 10; g.fillStyle = base.clone().multiplyScalar(0.75).getStyle(); g.fillRect(x - 3, y - 3, 24, 40); // the stone frame
+      g.fillStyle = lits[f * bays + b] ? '#ffd98a' : '#4f5672'; g.fillRect(x, y, 18, 34); g.fillStyle = base.clone().multiplyScalar(0.7).getStyle(); g.fillRect(x + 8, y, 2, 34); g.fillRect(x, y + 14, 18, 2);
+      if (f === floors - 1 || (f + b) % 3 === 0) { g.fillStyle = base.clone().multiplyScalar(0.65).getStyle(); g.fillRect(x - 3, y + 36, 24, 3); } // a little balcony ledge
+    }
+    shops.forEach((c2, k) => { const x = k * 80 + 8, w = Math.min(64, W2 - x - 8); if (w < 20) return; g.fillStyle = '#ffd98a'; g.fillRect(x, H2 - 52, w, 40); g.fillStyle = '#3a3346'; g.fillRect(x, H2 - 14, w, 4); for (let s2 = 0; s2 < w; s2 += 12) { g.fillStyle = (s2 / 12) % 2 ? '#fff6ea' : c2; g.fillRect(x + s2, H2 - 64, 12, 12); } });
+    g.fillStyle = base.clone().multiplyScalar(0.8).getStyle(); g.fillRect(0, 0, W2, 6);
+  });
+  tex.userData.glow = mk(g => { g.fillStyle = '#000'; g.fillRect(0, 0, W2, H2); g.fillStyle = '#8a6a30';
+    for (let f = 0; f < floors; f++) for (let b = 0; b < bays; b++) if (lits[f * bays + b]) g.fillRect(b * 40 + 11, H2 - 70 - (f + 1) * 52 + 10, 18, 34);
+    shops.forEach((c2, k) => { const x = k * 80 + 8, w = Math.min(64, W2 - x - 8); if (w >= 20) g.fillRect(x, H2 - 52, w, 40); }); });
+  facadeCache.set(key, tex); return tex;
 }
 let glowT0 = null;
 const glowTex = () => glowT0 || (glowT0 = tex(64, 64, (x, S) => { const gr = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, S, S); }));
@@ -375,6 +403,47 @@ function lifeKit(g) {
       if (kind === 'fort') { for (const sx of [-0.5, 0.5]) { add(new CylinderGeometry(0.22, 0.24, 0.9, 10), stone, sx, 0.63, -0.2, 0, q); add(new ConeGeometry(0.26, 0.35, 10), slate, sx, 1.25, -0.2, 0, q); } add(new BoxGeometry(1.0, 0.5, 0.15), stone, 0, 0.43, -0.2, 0, q); }
       return q;
     },
+    // a tall old apartment building of Beyoğlu: shopfronts on the street, four or five floors of tall
+    // windows (lit in the evening), a bay window jutting out, a cornice under snow, a low tiled roof
+    block([x, z], { w = 3, h = 3.8, d = 3, ry = 0, col = '#e9dcc4', bay = true, lit = 0.6, seed = 1 } = {}) {
+      const q = grp(x, z, ry), body = Lm(col), tex = facadeTex(col, Math.max(3, Math.round((h - 0.9) / 0.72)), Math.max(2, Math.round(w / 0.7)), seed, lit);
+      add(new BoxGeometry(w, h, d), body, 0, h / 2, 0, 0, q);
+      const front = new Mesh(new PlaneGeometry(w, h), new MeshLambertMaterial({ map: tex, emissive: new Color('#ffffff'), emissiveMap: tex.userData.glow, emissiveIntensity: 0.9 })); front.position.set(0, h / 2, d / 2 + 0.01); q.add(front);
+      add(new BoxGeometry(w + 0.16, 0.16, d + 0.16), Lm(new Color(col).multiplyScalar(0.85).getStyle()), 0, h + 0.04, 0, 0, q); add(new BoxGeometry(w + 0.12, 0.1, d + 0.12), snow, 0, h + 0.16, 0, 0, q);
+      const roof = add(new ConeGeometry(Math.max(w, d) * 0.62, 0.7, 4), Lm('#a65a44'), 0, h + 0.5, 0, 0, q); roof.rotation.y = Math.PI / 4; roof.scale.set(w / Math.max(w, d), 1, d / Math.max(w, d)); const rs = add(new ConeGeometry(Math.max(w, d) * 0.5, 0.5, 4), snow, 0, h + 0.62, 0, 0, q); rs.rotation.y = Math.PI / 4; rs.scale.copy(roof.scale);
+      if (bay && h > 3) { const bw = Math.min(1.2, w * 0.4), bh = h - 1.9; add(new BoxGeometry(bw, bh, 0.4), body, 0, 1.2 + bh / 2, d / 2 + 0.2, 0, q); for (const fy of [0.35, 0.65]) { const lw = new Mesh(new PlaneGeometry(bw * 0.7, 0.32), Bm(R() < lit ? '#ffd98a' : '#5a6078')); lw.position.set(0, 1.2 + bh * fy, d / 2 + 0.41); q.add(lw); } add(new BoxGeometry(bw + 0.08, 0.06, 0.48), snow, 0, 1.2 + bh + 0.03, d / 2 + 0.2, 0, q); }
+      return q;
+    },
+    // a row of buildings shoulder to shoulder from a to b, their fronts facing `face` (a unit [x, z])
+    row([ax, az], [bx, bz], face, { h = [3.2, 4.4], d = 3, w = [2.4, 3.6], lit = 0.6, cols = ['#e9dcc4', '#e3c9a8', '#d9cfc2', '#efd9c2', '#e8cfc4', '#dcd2e2', '#f1e4cc', '#cfd8e2'] } = {}) {
+      const L2 = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L2, uz = (bz - az) / L2, ry = Math.atan2(face[0], face[1]); let u = 0, k = 0;
+      while (u < L2 - 1) { const w2 = Math.min(L2 - u, w[0] + R() * (w[1] - w[0])), cx = ax + ux * (u + w2 / 2) - face[0] * d / 2, cz = az + uz * (u + w2 / 2) - face[1] * d / 2; kit.block([cx, cz], { w: w2 - 0.04, h: h[0] + R() * (h[1] - h[0]), d, ry, col: cols[Math.floor(R() * cols.length)], bay: R() < 0.6, lit, seed: k++ }); u += w2; }
+    },
+    // the cruise port's long low terminal: a glass front lit along the quay, a planted roof under snow
+    terminal([ax, az], [bx, bz], face) {
+      const L2 = Math.hypot(bx - ax, bz - az), cx = (ax + bx) / 2 - face[0] * 1.6, cz = (az + bz) / 2 - face[1] * 1.6, q = grp(cx, cz, Math.atan2(face[0], face[1]));
+      add(new BoxGeometry(L2, 1.7, 3.2), Lm('#d9dde6'), 0, 0.85, 0, 0, q); add(new PlaneGeometry(L2 - 0.4, 1.2), Bm('#ffe2a8'), 0, 0.75, 1.61, 0, q); for (let k = 0; k < L2 / 1.2; k++) add(new BoxGeometry(0.06, 1.3, 0.06), Lm('#8a93a8'), -L2 / 2 + 0.3 + k * 1.2, 0.8, 1.63, 0, q);
+      add(new BoxGeometry(L2 + 0.4, 0.14, 3.6), Lm('#b8bfcc'), 0, 1.76, 0.1, 0, q); add(new BoxGeometry(L2 + 0.2, 0.14, 3.4), Lm('#e6efe8'), 0, 1.88, 0.1, 0, q); // the planted roof, white with snow
+      for (let k = 0; k < L2 / 2.4; k++) add(new SphereGeometry(0.35, 8, 6), Lm('#3f6a52'), -L2 / 2 + 1 + k * 2.4, 2.05, 0.4 - (k % 2) * 1.0, 0, q);
+    },
+    // a big white cruise ship moored along the quay, decks of lit cabins
+    ship([x, z], len = 24, ry = 0) {
+      const q = grp(x, z, ry); add(new BoxGeometry(len, 2.4, 3.4), Lm('#f6f6f8'), 0, 0.9, 0, 0, q); add(new BoxGeometry(len * 0.8, 1.6, 3.0), Lm('#eef0f4'), 0.5, 2.9, 0, 0, q); add(new BoxGeometry(len * 0.55, 1.2, 2.6), Lm('#f6f6f8'), 1, 4.3, 0, 0, q); add(new BoxGeometry(1.6, 1.4, 1.6), Lm('#2d6fb5'), len * 0.2, 5.6, 0, 0, q);
+      add(new BoxGeometry(len, 0.5, 3.42), Lm('#2d3b63'), 0, -0.05, 0, 0, q);
+      for (const [y, n, l] of [[0.8, len * 1.4, len], [1.6, len * 1.4, len], [2.9, len * 1.1, len * 0.8], [4.3, len * 0.8, len * 0.55]]) for (let k = 0; k < n; k++) { const m = new Mesh(new PlaneGeometry(0.22, 0.24), Bm(R() < 0.75 ? '#ffd98a' : '#8fa3c8')); m.position.set(-l / 2 + 0.3 + k * (l - 0.6) / n + (y > 2 ? 0.5 : 0), y, 1.72 - (y > 4 ? 0.4 : y > 2 ? 0.2 : 0)); q.add(m); }
+    },
+    // the new modern art museum on the water: a long box clad in pale metal fins, a wide flat roof floating over it
+    museum([x, z], ry = 0) {
+      const q = grp(x, z, ry); add(new BoxGeometry(7, 2.6, 4), Lm('#c9ced8'), 0, 1.3, 0, 0, q); add(new PlaneGeometry(6.6, 1.0), Bm('#bcd4f2'), 0, 0.6, 2.01, 0, q);
+      for (let k = 0; k < 12; k++) add(new BoxGeometry(7.05, 0.04, 0.06), Lm('#e6ebf2'), 0, 1.25 + k * 0.11, 2.03, 0, q);
+      add(new BoxGeometry(8.4, 0.24, 5.2), Lm('#dfe3ea'), 0, 2.95, 0.2, 0, q); add(new BoxGeometry(8.2, 0.16, 5.0), snow, 0, 3.12, 0.2, 0, q); for (const sx of [-3.9, 3.9]) add(new CylinderGeometry(0.06, 0.06, 2.9, 6), Lm('#9aa3b6'), sx, 1.45, 2.4, 0, q);
+    },
+    // the old water-house of Taksim: a low octagonal stone building with a lead roof
+    maksem([x, z]) {
+      const q = grp(x, z); add(new CylinderGeometry(1.6, 1.7, 2.0, 8), Lm('#e2d6c2'), 0, 1.0, 0, 0, q); add(new CylinderGeometry(1.75, 1.75, 0.2, 8), Lm('#c2b6a2'), 0, 2.05, 0, 0, q);
+      const rf = add(new ConeGeometry(1.75, 0.9, 8), Lm('#7d8296'), 0, 2.6, 0, 0, q); add(new ConeGeometry(1.5, 0.5, 8), snow, 0, 2.55, 0, 0, q);
+      for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2 + Math.PI / 8; add(new PlaneGeometry(0.5, 0.8), Bm(k % 2 ? '#cfc2ac' : '#ffd98a'), Math.sin(a) * 1.63, 1.0, Math.cos(a) * 1.63, a, q); }
+    },
     // a flock of city pigeons pecking at the snow, now and then one flutters up and lands again
     pigeons([x, z], n = 9) {
       const grey = Lm('#b4b9cc'), dark = Lm('#7a8098'), birds = [];
@@ -418,7 +487,7 @@ function vista({ hood, light, shots, wide, far = [], extra = null }) {
   return ({ camera = null } = {}) => {
     const g = new Group(), world = neighbourhood(hood); g.add(world.group);
     world.group.traverse(o => { if (o.isMesh && !o.material?.transparent) o.castShadow = o.receiveShadow = true; });
-    sky(g, { ...light, seed: hood.seed }); const hH = townscape(g, light, { seed: hood.seed, sea: !!hood.sea }); skyline(g, light, hH, far);
+    sky(g, { ...light, seed: hood.seed }); const hH = townscape(g, light, { seed: hood.seed, sea: !!hood.sea, urban: !!hood.urban }); skyline(g, light, hH, far);
     const flyGulls = gulls(g), snowing = snowfall(g), more = extra?.(g) || null;
     world.setDusk?.(light.dusk || 0);
     const focus = new Vector3();
@@ -673,54 +742,59 @@ const miniaturk = vista({
 
 
 // ---------- Arena 3: Downtown, an evening loop through Beyoğlu ----------
-// Galata Tower (golden late afternoon): the tower above the rooftops, bakeries and dessert shops at
-// its foot, the queues at its door; across the water the old city's domes.
+// The city itself: tall old apartment buildings shoulder to shoulder along the streets and round the
+// squares (block, row in the life kit), a dense town of taller houses on the hills, almost no trees.
+// Galata Tower (golden late afternoon): the tower in its small cobbled square, closed in by tall old
+// apartment buildings with cafés and dessert shops; across the Golden Horn, the old city's domes.
 const galataTower = vista({
-  hood: { landmark: 'galata-tower', seed: 111, flag: '#c8443c', trees: 'TvTx', plazaR: 5, tiles: [['l', 17, 19], ['l', 28, 19], ['l', 15, 11], ['l', 30, 11], ['b', 13, 18], ['b', 32, 18]], props: [
-    { type: 'stall', kind: 'simit', i: CX - 10, j: CZ + 2, w: 2, h: 1 }, { type: 'stall', kind: 'chestnut', i: CX + 7, j: CZ + 2, w: 2, h: 1 }] },
+  hood: { landmark: 'galata-tower', seed: 111, flag: '#c8443c', urban: true, plazaR: 5, tiles: [['l', 17, 19], ['l', 28, 19]], props: [] },
   light: { sun: '#ffd8a0', intensity: 2.1, sky: '#f6e6d6', ground: '#a693bc', dir: [-0.7, 0.3, -0.6], top: '#6f8fd6', horizon: '#f8d9b8', far: '#b6a7c4', fog: '#f0d8c4', sunSize: 85, dusk: 0.3 },
   shots: [
     move(0, 2.6, [at(0.5, 1.4, 15), at(0, 3.6, 0)], [at(0.3, 2.2, 10), at(0, 4.4, -0.7)]), // up the lane, the eye climbing the tower
     orbit(2.6, 5.0, { r: [10, 9], a: [0.8, -0.6], y: [2.5, 5.2], look: [at(0, 4.2, -0.7), at(0, 5.2, -0.7)] }), // round the tower and up to its cap
-    move(5.0, 7.2, [at(-3, 7, 9), at(0, 4, -1)], [at(-7, 15, 18), at(0, 2.5, -2)]), // over the rooftops
+    move(5.0, 7.2, [at(-3, 7, 9), at(0, 4, -1)], [at(-7, 15, 18), at(0, 2.5, -2)]), // over the rooftops to the water
   ],
   wide: [at(-6, 11, 18), at(0, 3, -1)],
   extra: life(k => {
+    k.row(rel(-6.4, 4), rel(-6.4, -7.5), [1, 0], { h: [3.6, 4.6] }); k.row(rel(6.4, -7.5), rel(6.4, 4), [-1, 0], { h: [3.6, 4.6] }); // the square closed in by tall old buildings
+    k.row(rel(-14, -7.2), rel(14, -7.2), [0, 1], { h: [3.0, 3.8] }); // behind the tower, lower, so the tower rises clear
+    k.row(rel(-20, 5), rel(-6.6, 5), [0, 1], { h: [3.4, 4.6] }); k.row(rel(6.6, 5), rel(20, 5), [0, 1], { h: [3.4, 4.6] }); // the streets running off either side
     k.bed(rel(-3.4, 4.0), 1.6, 0.7); k.bed(rel(3.4, 4.0), 1.6, 0.7); k.cat(up(rel(3.0, 4.0), 0.3), -0.5, '#e09a4a'); // close by the landmark, in view even on a phone
-    k.cafe(rel(-9.5, -1.0), '#c8443c'); k.cafe(rel(-12, 0.6), '#f2f2f2'); k.cafe(rel(10, -0.6), '#3f9b5a'); k.cafe(rel(12.5, 1.0), '#f2c9d2'); // the dessert shops' tables
-    k.lights([rel(-14, -3), rel(-10, -4.2), rel(-6.5, -3)], { y: 2.9 }); k.lights([rel(6.5, -3), rel(10, -4.2), rel(14, -3)], { y: 2.9 });
-    k.steam(up(rel(-9.5, 2.5), 1.3), 0.45); k.steam(up(rel(7.5, 2.5), 1.3), 0.45);
-    k.pigeons(rel(-6, 7), 7); k.cat(up(tw(13, 18), 0.55), 0.3, '#3b3b44'); k.flag(rel(-6.4, -3.2), '#c8443c', 3.6); k.flag(rel(6.4, -3.2), '#c8443c', 3.6);
+    k.cafe(rel(-4.8, 1.2), '#c8443c'); k.cafe(rel(4.8, 1.0), '#3f9b5a'); k.cafe(rel(-4.6, -2.4), '#f2f2f2'); k.cafe(rel(4.8, -2.6), '#f2c9d2'); // the café and dessert-shop tables in the square
+    for (const z of [-4.5, -1, 2.5]) k.lights([rel(-6.4, z), rel(0, z + 0.4), rel(6.4, z)], { y: 3.3, sag: 0.3 }); // lights strung across the square
+    k.pigeons(rel(-1.5, 6.5), 8); k.cat(up(rel(-5.6, 3.2), 0), 0.6, '#3b3b44'); k.cat(up(rel(5.8, -0.6), 0), -0.8, '#f2ede4');
   }),
-  far: [{ kind: 'ridge', a: -0.12, r: 205, s: 1.5, n: 3, span: 0.6 }, { kind: 'towers', a: 0.85, r: 260, n: 5, span: 0.15 }], // across the Golden Horn: the old city's domes
+  far: [{ kind: 'ridge', a: -0.12, r: 205, s: 1.5, n: 3, span: 0.6 }, { kind: 'bridge', type: 'galata', r: 120, a0: -0.6, a1: 0.4 }], // down across the Golden Horn: Galata Bridge, the old city's domes
 });
-// İstiklal Avenue (dusk, the festive lights on): the red tram on its rails, the Flower Passage and the
-// old school gate, strings of lights across the street; Galata Tower at the far end.
+// İstiklal Avenue (dusk, the festive lights on): the long avenue lined with grand old façades, the red
+// tram on its rails down the middle, the Flower Passage and the old school gate among the buildings,
+// strings of lights from one side to the other.
 const istiklal = vista({
-  hood: { landmark: 'istiklal', seed: 121, flag: '#c8302e', trees: 'TTvT', plazaR: 5, tiles: [['l', 17, 19], ['l', 28, 19], ...[24, 28].flatMap(j => [['b', 14, j], ['b', 32, j]]), ...[28, 31].flatMap(j => [['l', 15, j], ['l', 31, j]])], props: [
-    { type: 'stall', kind: 'corn', i: CX - 10, j: CZ + 2, w: 2, h: 1 }, { type: 'stall', kind: 'simit', i: CX + 7, j: CZ + 2, w: 2, h: 1 },
-    { type: 'plane-tree', i: CX - 12, j: CZ + 6, w: 2, h: 2 }, { type: 'plane-tree', i: CX + 10, j: CZ + 6, w: 2, h: 2 }] },
+  hood: { landmark: 'istiklal', seed: 121, flag: '#c8302e', urban: true, plazaR: 5, tiles: [['l', 17, 19], ['l', 28, 19]], props: [] },
   light: { sun: '#ffb98a', intensity: 1.7, sky: '#e8d0e0', ground: '#8f80b8', dir: [-0.6, 0.2, -0.75], top: '#5f62b8', horizon: '#f5bfae', far: '#9a8ab6', fog: '#e9c4c0', sunDisc: '#ffb070', sunSize: 80, dusk: 0.75 },
   shots: [
-    move(0, 2.6, [at(-1.5, 1.5, 15), at(0, 1.8, 0.5)], [at(-1, 2.1, 9.5), at(0, 1.6, 0.5)]), // down the avenue to the tram
-    orbit(2.6, 5.0, { r: [9.5, 8.5], a: [-0.7, 0.7], y: [2.2, 3.4], look: [at(0, 1.6, 0), at(0, 2.2, -0.5)] }), // along the tram, the passage and the gate behind
-    move(5.0, 7.2, [at(3, 6, 9), at(0, 2, -1)], [at(7, 14, 18), at(0, 1.4, -3)]), // up over the lights
+    move(0, 2.6, [at(-1.5, 1.5, 15), at(0, 1.8, 0.5)], [at(-1, 2.1, 9.5), at(0, 1.6, 0.5)]), // down to the avenue and the tram
+    orbit(2.6, 5.0, { r: [9.5, 8.5], a: [-0.7, 0.7], y: [2.2, 3.4], look: [at(0, 1.6, 0), at(0, 2.2, -0.5)] }), // along the tram, the façades behind
+    move(5.0, 7.2, [at(3, 6, 9), at(0, 2, -1)], [at(7, 14, 18), at(0, 1.4, -3)]), // up over the lights and the rooftops
   ],
   wide: [at(5, 10, 16), at(0, 2, -1)],
   extra: life(k => {
+    k.row(rel(-30, -2.6), rel(-2.6, -2.6), [0, 1], { h: [3.8, 4.8], lit: 0.75 }); k.row(rel(2.6, -2.6), rel(30, -2.6), [0, 1], { h: [3.8, 4.8], lit: 0.75 }); // the far side of the avenue, one grand front after another
+    k.row(rel(-30, 6.2), rel(-8.5, 6.2), [0, -1], { h: [3.8, 4.6], lit: 0.75 }); k.row(rel(8.5, 6.2), rel(30, 6.2), [0, -1], { h: [3.8, 4.6], lit: 0.75 }); // the near side, beyond the camera's way in
+    for (const x of [-16, -11, -6, 6, 11, 16]) k.lights([rel(x, -2.6), rel(x + 0.6, 1.8), rel(x, 6.2)], { y: 4.2, sag: 0.3 }); // the festive lights from one side of the avenue to the other
+    k.lights([rel(-5.5, -2.6), rel(0, -2.6), rel(5.5, -2.6)], { y: 4.4, sag: 0.4 });
     k.bed(rel(-3.4, 4.2), 1.6, 0.7); k.bed(rel(3.4, 4.2), 1.6, 0.7); k.cat(up(rel(3.0, 4.2), 0.3), -0.5, '#e09a4a');
-    for (const z of [-3, 0.5, 3.5]) k.lights([rel(-9, z - 0.6), rel(-4.5, z + 0.3), rel(0, z - 0.2), rel(4.5, z + 0.3), rel(9, z - 0.6)], { y: 4.0, sag: 0.25 }); // the avenue's festive lights
-    k.cafe(rel(-11.5, 0.5), '#c8302e'); k.cafe(rel(11.5, 0.8), '#f2f2f2'); k.steam(up(rel(-9.5, 2.5), 1.3), 0.4); k.steam(up(rel(7.5, 2.5), 1.3), 0.4);
-    k.flag(rel(-6.5, -2.6), '#c8302e', 3.6); k.flag(rel(6.5, -2.6), '#c8302e', 3.6); k.cat(up(tw(14, 24), 0.55), 0.3, '#3b3b44'); k.pigeons(rel(-7, 8), 6);
+    k.flag(rel(-6.5, -1.6), '#c8302e', 3.2); k.flag(rel(6.5, -1.6), '#c8302e', 3.2); k.pigeons(rel(-6, 3), 6); k.cat(up(rel(7.5, 3.8), 0), -0.4, '#3b3b44');
   }),
-  far: [{ kind: 'galata', a: 0.22, r: 160, s: 1.3 }, { kind: 'ridge', a: -0.35, r: 230, s: 1.2, n: 2, span: 0.3 }], // Galata Tower at the far end of the avenue
+  far: [{ kind: 'galata', a: 0.22, r: 160, s: 1.3 }], // Galata Tower beyond the rooftops at the avenue's end
 });
-// Taksim Square (blue hour): the opera house's glass front with its red sphere, the tall hotel tower,
-// the park's snowy trees, a red and white city bus, pigeons on the square; the city's towers beyond.
+// Taksim Square (blue hour): the wide paved square, the opera house's glass front with its red sphere,
+// the tall hotel tower, the park's snowy trees on one side, the old octagonal water-house, city blocks
+// all round; the city's towers far off.
 const taksim = vista({
-  hood: { landmark: 'taksim', seed: 131, flag: '#2d6fb5', trees: 'TTTv', plazaR: 6, tiles: [['l', 16, 20], ['l', 30, 20], ['b', 12, 18], ['b', 12, 22], ['b', 34, 18], ['l', 14, 11], ['l', 32, 11]], props: [
-    ...[[CX - 13, CZ + 3], [CX - 13, CZ - 2], [CX - 10, CZ + 7], [CX - 15, CZ + 7]].map(([i, j]) => ({ type: 'plane-tree', i, j, w: 2, h: 2 })), // the park
-    { type: 'stall', kind: 'simit', i: CX + 8, j: CZ + 3, w: 2, h: 1 }, { type: 'stall', kind: 'corn', i: CX + 8, j: CZ - 2, w: 2, h: 1 }] },
+  hood: { landmark: 'taksim', seed: 131, flag: '#2d6fb5', urban: true, plazaR: 7, tiles: [['l', 15, 21], ['l', 31, 21], ['l', 15, 9], ['l', 31, 9], ['b', 12, 18], ['b', 12, 22]], props: [
+    ...[[CX - 13, CZ + 3], [CX - 13, CZ - 2], [CX - 10, CZ + 7], [CX - 15, CZ + 7], [CX - 16, CZ - 1], [CX - 11, CZ - 6]].map(([i, j]) => ({ type: 'plane-tree', i, j, w: 2, h: 2 })), // the park
+    { type: 'stall', kind: 'simit', i: CX + 8, j: CZ + 4, w: 2, h: 1 }] },
   light: { sun: '#c8b8ff', intensity: 1.45, sky: '#c8c4ec', ground: '#6f6aa8', dir: [-0.5, 0.22, -0.8], top: '#3f4aa0', horizon: '#c9b0d8', far: '#8580b0', fog: '#bfb0d6', sunDisc: '#ffa898', sunSize: 70, dusk: 0.95 },
   shots: [
     move(0, 2.6, [at(0.5, 1.5, 16), at(0, 2.0, -0.5)], [at(0.3, 2.3, 10.5), at(0, 2.2, -1)]), // across the square to the opera house
@@ -729,41 +803,44 @@ const taksim = vista({
   ],
   wide: [at(-6, 11, 18), at(0, 2, -1)],
   extra: life(k => {
+    k.row(rel(4, -9.5), rel(24, -9.5), [0, 1], { h: [3.8, 5.2], lit: 0.8 }); k.row(rel(12, -1), rel(12, -9.4), [-1, 0], { h: [3.6, 4.8], lit: 0.8 }); // city blocks round the square
+    k.row(rel(-26, -12), rel(-8, -12), [0, 1], { h: [3.6, 5.0], lit: 0.8 }); k.row(rel(14, 6), rel(26, 6), [0, 1], { h: [3.6, 4.6], lit: 0.8 });
+    k.maksem(rel(8.6, -4.2)); // the old octagonal water-house where the avenue begins
     k.bed(rel(-3.4, 4.6), 1.6, 0.7); k.bed(rel(3.4, 4.6), 1.6, 0.7); k.cat(up(rel(3.0, 4.6), 0.3), -0.5, '#f2ede4');
     k.pigeons(rel(-7, 4.5), 12); k.pigeons(rel(6.5, 2.5), 9); // the square's pigeons, off to the sides
-    k.steam(up(rel(8.5, 3.5), 1.3), 0.4); k.steam(up(rel(8.5, -1.5), 1.3), 0.4);
-    k.lights([rel(-16, 1.5), rel(-12, 0), rel(-8.5, 1.5)], { y: 3.2 }); k.flag(rel(6.8, -3.4), '#2d6fb5', 4.2); k.flag(rel(-6.8, -3.4), '#2d6fb5', 4.2);
-    k.bed(rel(-9, 5.5), 2.4, 0.8, ['#ffffff', '#e2406a']); k.bed(rel(9, 6), 2.4, 0.8); k.cat(up(tw(12, 18), 0.55), 0.3, '#3b3b44');
+    k.steam(up(rel(8.5, 4.5), 1.3), 0.4); k.flag(rel(6.8, -3.4), '#2d6fb5', 4.2); k.flag(rel(-6.8, -3.4), '#2d6fb5', 4.2);
+    k.lights([rel(-16, 1.5), rel(-12, 0), rel(-8.5, 1.5)], { y: 3.2 }); k.cat(up(tw(12, 18), 0.55), 0.3, '#3b3b44');
   }),
   far: [{ kind: 'towers', a: 0.18, r: 270, n: 8, span: 0.4, s: 0.7 }], // the city's tall towers far off to the north
 });
-// Cihangir (evening, the café lamps lit): pastel houses on the steep slope, the café tables under the big
-// plane tree, an antique shop, cats everywhere; below, the Bosphorus, the Maiden's Tower, the great bridge lit.
+// Cihangir (evening, the café lamps lit): the little square among tall pastel apartment buildings on the
+// steep slope, café tables under the big plane tree, cats everywhere; below the rooftops, the Bosphorus,
+// the Maiden's Tower, the Asian shore and the great bridge lit up.
 const cihangir = vista({
-  hood: { landmark: 'cihangir', seed: 141, flag: '#e8a10a', sea: 9, trees: 'TvyT', plazaR: 5, tiles: [['l', 17, 19], ['l', 28, 19], ['b', 13, 17], ['b', 32, 17], ['b', 13, 21], ['l', 14, 12], ['l', 31, 12]], props: [
-    { type: 'stall', kind: 'cay', i: CX - 10, j: CZ + 2, w: 2, h: 1 }, { type: 'plane-tree', i: CX + 9, j: CZ + 5, w: 2, h: 2 }] },
+  hood: { landmark: 'cihangir', seed: 141, flag: '#e8a10a', sea: 9, urban: true, plazaR: 5, tiles: [['l', 17, 19], ['l', 28, 19]], props: [
+    { type: 'plane-tree', i: CX + 8, j: CZ + 4, w: 2, h: 2 }] },
   light: { sun: '#b8a8f0', intensity: 1.35, sky: '#b8b4e4', ground: '#666098', dir: [0.5, 0.2, -0.8], top: '#363f92', horizon: '#b9a2cf', far: '#7c76a8', fog: '#b2a6cc', sunDisc: '#e8b0c8', sunSize: 60, dusk: 1.0 },
   shots: [
     move(0, 2.6, [at(-0.8, 1.3, 14), at(0, 1.4, -0.5)], [at(-0.4, 1.9, 8.5), at(0, 1.6, -0.5)]), // low among the café tables and the cats
-    orbit(2.6, 5.0, { r: [9, 8], a: [-0.8, 0.6], y: [2.0, 3.0], look: [at(0, 1.4, -0.5), at(0, 1.9, -0.8)] }), // round the square, the houses up the slope
-    move(5.0, 7.2, [at(2, 5, 7), at(0, 1.2, -6)], [at(5, 12, 15), at(0, 0.8, -22)]), // out over the roofs to the Bosphorus
+    orbit(2.6, 5.0, { r: [9, 8], a: [-0.8, 0.6], y: [2.0, 3.0], look: [at(0, 1.4, -0.5), at(0, 1.9, -0.8)] }), // round the square, the buildings up the slope
+    move(5.0, 7.2, [at(2, 5, 7), at(0, 1.2, -6)], [at(5, 12, 15), at(0, 0.8, -22)]), // out over the rooftops to the Bosphorus
   ],
   wide: [at(4, 9, 15), at(0, 1.5, -4)],
   extra: life(k => {
+    k.row(rel(-6.6, 4.5), rel(-6.6, -4), [1, 0], { h: [3.8, 4.8], lit: 0.85, cols: ['#e7b9a6', '#f2d48a', '#a9c6dd', '#c9b3d9', '#bfe0c6', '#f1e4cc'] }); k.row(rel(6.6, -4), rel(6.6, 4.5), [-1, 0], { h: [3.8, 4.8], lit: 0.85, cols: ['#e7b9a6', '#f2d48a', '#a9c6dd', '#c9b3d9', '#bfe0c6', '#f1e4cc'] }); // tall pastel buildings round the square
+    k.row(rel(-22, -5), rel(-6.8, -5), [0, 1], { h: [2.2, 3.0], lit: 0.85 }); k.row(rel(6.8, -5), rel(22, -5), [0, 1], { h: [2.2, 3.0], lit: 0.85 }); // lower down the slope: rooftops stepping down to the water
     k.bed(rel(-3.4, 4.0), 1.6, 0.7); k.bed(rel(3.4, 4.0), 1.6, 0.7); k.cat(up(rel(3.0, 4.0), 0.3), -0.5, '#e09a4a');
-    for (const [x, z, c, ry] of [[-6.2, 5.2, '#3b3b44', 0.6], [6.4, 5.6, '#f2ede4', -0.4], [-9.6, 2.4, '#e09a4a', 1.2], [9.2, 2.2, '#9a9aa6', -0.9], [-4.8, 7.5, '#e8c9a0', 0.2], [5.2, 8.2, '#e09a4a', -0.3]]) k.cat(up(rel(x, z), 0), ry, c); // Cihangir's famous cats
-    k.cat(up(tw(13, 17), 0.55), 0.3, '#3b3b44'); k.cat(up(tw(32, 17), 0.55), -0.3, '#f2ede4');
-    k.cafe(rel(-10, 0.2), '#e8a10a'); k.cafe(rel(-12.5, 1.6), '#c8443c'); k.cafe(rel(10.5, -0.4), '#3f9b5a'); k.steam(up(rel(-9.5, 2.5), 1.3), 0.4);
-    k.lights([rel(-14, -2), rel(-10, -3.2), rel(-6.5, -2)], { y: 2.8 }); k.lights([rel(6.5, -2), rel(10, -3.2), rel(14, -2)], { y: 2.8 });
-    k.quay(-19, -6.2, -6.6, { bollards: 2 }); k.quay(6.2, 19, -6.6, { bollards: 2 });
+    for (const [x, z, c, ry] of [[-5.2, 5.6, '#3b3b44', 0.6], [5.4, 6.0, '#f2ede4', -0.4], [-5.8, 1.4, '#e09a4a', 1.2], [5.6, 0.8, '#9a9aa6', -0.9], [-3.8, 7.5, '#e8c9a0', 0.2], [4.2, 8.2, '#e09a4a', -0.3]]) k.cat(up(rel(x, z), 0), ry, c); // Cihangir's famous cats
+    k.cafe(rel(-4.8, 1.8), '#e8a10a'); k.cafe(rel(4.6, 2.2), '#c8443c'); k.cafe(rel(-4.8, -2.0), '#3f9b5a'); k.steam(up(rel(-4.7, 1.9), 0.8), 0.25);
+    for (const z of [-3, 0.5, 3.5]) k.lights([rel(-6.6, z), rel(0, z + 0.4), rel(6.6, z)], { y: 3.4, sag: 0.3 });
   }),
-  far: [{ kind: 'maiden', a: -0.1, r: 112, s: 0.9 }, { kind: 'suspension', r: 175, a0: -0.95, a1: -0.45 }, { kind: 'ridge', a: 0.45, r: 175, s: 1.0, n: 2, span: 0.35 }], // the Bosphorus: the Maiden's Tower, the great bridge, the far shore
+  far: [{ kind: 'maiden', a: -0.1, r: 112, s: 0.9 }, { kind: 'suspension', r: 175, a0: -0.95, a1: -0.45 }, { kind: 'ridge', a: 0.5, r: 175, s: 1.2, n: 3, span: 0.35 }], // the Bosphorus: the Maiden's Tower, the great bridge, the old city's domes and palace point to the right
 });
-// Tophane (night by the water): the clock tower and the marble fountain on the promenade, the art museum
-// and a cruise ship at the quay; across the dark water the Maiden's Tower, the great bridge lit up.
+// Tophane (night by the water): the clock tower and the marble fountain on the cruise port's promenade,
+// the long low terminals with their planted roofs, a cruise ship at the quay, the new art museum on the
+// water; the mosque beside the square on the land side (scenery only); across, the Asian shore's lights.
 const tophane = vista({
-  hood: { landmark: 'tophane', seed: 151, flag: '#2d6fb5', sea: 10, trees: 'xTx', plazaR: 5, tiles: [...[5, 8, 11, 34, 37, 40].map(i => ['l', i, 10]), ...[6, 9, 12, 35, 38].map(i => ['b', i, 11]), ['l', 17, 19], ['l', 28, 19]], props: [
-    { type: 'ferry', i: CX - 12, j: 3, w: 5, h: 2, along: 'x' }, { type: 'pier', i: CX + 8, j: 5, w: 2, h: 3, along: 'z' }, { type: 'stall', kind: 'fish', i: CX - 10, j: CZ + 2, w: 2, h: 1 }] },
+  hood: { landmark: 'tophane', seed: 151, flag: '#2d6fb5', sea: 10, urban: true, plazaR: 5, tiles: [['l', 17, 19], ['l', 28, 19], ['l', 12, 12], ['l', 33, 12]], props: [] },
   light: { sun: '#9aa8f0', intensity: 1.15, sky: '#9a9ad8', ground: '#55508c', dir: [0.4, 0.3, -0.8], top: '#262c74', horizon: '#8f88c0', far: '#6a669c', fog: '#8f88bc', sunDisc: '#f4f0ff', sunSize: 45, dusk: 1.0 },
   shots: [
     move(0, 2.6, [at(-8, 1.6, 13), at(0, 2.2, -0.5)], [at(-5, 2.4, 9), at(0.3, 2.6, -0.5)]), // along the promenade to the clock tower
@@ -772,13 +849,15 @@ const tophane = vista({
   ],
   wide: [at(4, 10, 16), at(0, 1.5, -6)],
   extra: life(k => {
+    k.terminal(rel(7, -3.6), rel(26, -3.6), [0, 1]); k.terminal(rel(-26, -3.6), rel(-15, -3.6), [0, 1]); // the cruise port's terminals along the quay
+    k.ship(rel(17, -8.6), 22); k.museum(rel(-9.5, -5.6)); // a cruise ship at the quay; the art museum on the water
+    k.row(rel(-30, 9), rel(-12, 9), [0, -1], { h: [3.6, 4.8], lit: 0.85 }); k.row(rel(12, 9), rel(30, 9), [0, -1], { h: [3.6, 4.8], lit: 0.85 }); // the old town rising behind the promenade
+    k.quay(-4.6, 4.6, -5.4, { rods: 4, bollards: 2 }); // fishermen's rods off the promenade
+    k.lights([rel(-6.5, -4.8), rel(0, -4.8), rel(6.5, -4.8)], { y: 2.4 });
     k.bed(rel(-3.4, 4.0), 1.6, 0.7); k.bed(rel(3.4, 4.0), 1.6, 0.7); k.cat(up(rel(3.0, 4.0), 0.3), -0.5, '#e09a4a');
-    k.quay(-19, -6, -5.4, { rods: 5, bollards: 3 }); k.quay(6, 19, -5.4, { rods: 5, bollards: 3 }); // fishermen's rods along the quay
-    k.lights([rel(-18, -4.8), rel(-12, -4.8), rel(-6.5, -4.8)], { y: 2.4 }); k.lights([rel(6.5, -4.8), rel(12, -4.8), rel(18, -4.8)], { y: 2.4 });
-    k.cafe(rel(-11, 1.5), '#2d6fb5'); k.cafe(rel(11.5, 1.8), '#f2f2f2'); k.boat(rel(-14, -9.5), 0.5, '#c8443c'); k.boat(rel(14, -10), -0.4, '#3d6fb0');
-    k.flag(rel(-6, -3.4), '#2d6fb5', 3.6); k.flag(rel(6, -3.4), '#2d6fb5', 3.6); k.cat(up(tw(35, 11), 0.55), -0.3, '#3b3b44');
+    k.flag(rel(-6, -2.6), '#2d6fb5', 3.6); k.flag(rel(6, -2.6), '#2d6fb5', 3.6); k.boat(rel(-4, -10), 0.5, '#c8443c');
   }),
-  far: [{ kind: 'ridge', a: -1.0, r: 52, s: 0.55, n: 1, span: 0 }, { kind: 'maiden', a: 0.2, r: 110, s: 0.9 }, { kind: 'suspension', r: 172, a0: -0.92, a1: -0.42 }, { kind: 'ridge', a: 0.62, r: 170, s: 1.2, n: 3, span: 0.4 }], // the mosque beside the square (scenery), the Maiden's Tower, the great bridge, the old city's domes to the right
+  far: [{ kind: 'ridge', a: -1.75, r: 13.5, s: 0.32, n: 1, span: 0, houses: false }, { kind: 'maiden', a: 0.2, r: 110, s: 0.9 }, { kind: 'suspension', r: 172, a0: -0.92, a1: -0.42 }, { kind: 'ridge', a: 0.62, r: 170, s: 1.2, n: 3, span: 0.4 }], // the mosque beside the square (scenery), the Maiden's Tower, the great bridge, the old city's domes and palace point
 });
 
 // The scenes, by place; each one's welcome is read aloud with its name card.

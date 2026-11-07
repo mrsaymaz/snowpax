@@ -27,6 +27,30 @@ function paintBackdrop() {
   });
   return backdropTex;
 }
+// the city's painted distance (Downtown): rows of tall apartment buildings with lit windows climbing
+// away in layers of haze, the old city's domes and minarets far off, a round tower on a hill
+let cityTex = null;
+function paintCity() {
+  if (cityTex) return cityTex;
+  cityTex = canvasTex(2048, 512, (g, W, H) => {
+    const rnd = (k => () => (k = (k * 16807) % 2147483647) / 2147483647)(11);
+    // the far skyline: domes and minarets, very faint
+    g.fillStyle = 'rgba(150, 160, 205, 0.55)';
+    for (const [x, w, h] of [[260, 130, 60], [720, 100, 46], [1380, 150, 66], [1820, 110, 52]]) { g.fillRect(x - w / 2, 300 - h, w, h + 60); g.beginPath(); g.arc(x, 300 - h, w * 0.3, Math.PI, 0); g.fill(); for (const m of [-1, 1]) g.fillRect(x + m * w * 0.6 - 3, 300 - h - 60, 6, h + 60); }
+    g.fillRect(1040, 190, 34, 130); g.beginPath(); g.moveTo(1032, 192); g.lineTo(1057, 140); g.lineTo(1082, 192); g.fill(); // a round tower with its pointed cap
+    // three layers of buildings, nearer ones darker and with lit windows
+    for (const [base, hMin, hMax, col, winA] of [[330, 40, 90, 'rgba(170, 170, 210, 0.85)', 0.25], [370, 50, 110, 'rgba(150, 146, 190, 0.92)', 0.55], [410, 60, 130, 'rgba(126, 118, 166, 0.98)', 0.85]]) {
+      for (let x = 0; x < W;) {
+        const w = 30 + rnd() * 50, h = hMin + rnd() * (hMax - hMin); g.fillStyle = col; g.fillRect(x, base - h, w, h + 200);
+        g.fillStyle = 'rgba(230, 228, 246, 0.9)'; g.fillRect(x - 2, base - h - 3, w + 4, 4); // snow on the cornice
+        for (let y = base - h + 8; y < base - 6; y += 12) for (let wx = x + 5; wx < x + w - 6; wx += 9) if (rnd() < winA) { g.fillStyle = rnd() < 0.7 ? 'rgba(255, 214, 140, 0.95)' : 'rgba(90, 96, 130, 0.9)'; g.fillRect(wx, y, 4, 6); }
+        x += w + rnd() * 3;
+      }
+    }
+    const fade = g.createLinearGradient(0, 400, 0, H); fade.addColorStop(0, 'rgba(232,230,246,0)'); fade.addColorStop(1, '#e8e6f6'); g.fillStyle = fade; g.fillRect(0, 400, W, H - 400);
+  });
+  return cityTex;
+}
 let groundTex = null;
 function paintGround() {
   if (groundTex) return groundTex;
@@ -42,7 +66,7 @@ function paintGround() {
 export function canvasTex(w, h, draw, repeat = null) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; if (repeat) { t.wrapS = t.wrapT = RepeatWrapping; t.repeat.set(...repeat); } return t; }
 
 // sky, fog, light, ground and falling snow; returns { P, snowM, tick, ticks, burst, snowball }
-export function stage(s, { top = '#7fb6ea', mid = '#cfe6fb', bottom = '#f4f9ff', ground = '#e4ecf8', fog = '#e6f1fc', sun = '#fff3df', snow = true } = {}) {
+export function stage(s, { top = '#7fb6ea', mid = '#cfe6fb', bottom = '#f4f9ff', ground = '#e4ecf8', fog = '#e6f1fc', sun = '#fff3df', snow = true, backdrop = 'hills' } = {}) {
   const P = s.persist, scene = s.scene, ticks = [];
   scene.background = canvasTex(4, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, top); gr.addColorStop(0.55, mid); gr.addColorStop(1, bottom); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
   scene.fog = new Fog(fog, 20, 52);
@@ -51,7 +75,7 @@ export function stage(s, { top = '#7fb6ea', mid = '#cfe6fb', bottom = '#f4f9ff',
   const d = new DirectionalLight(sun === '#fff3df' ? '#ffe7c4' : sun, 2.35); d.position.set(6, 8.5, 6.5); d.castShadow = true; d.shadow.mapSize.set(1024, 1024); Object.assign(d.shadow.camera, { left: -9, right: 9, top: 9, bottom: -4, near: 1, far: 32 }); d.shadow.bias = -0.0005; P.add(d);
   const snowM = new MeshLambertMaterial({ color: '#f6f9ff' });
   const g = new Mesh(new PlaneGeometry(80, 50), new MeshLambertMaterial({ color: ground, map: paintGround() })); g.rotation.x = -Math.PI / 2; g.receiveShadow = true; P.add(g);
-  const back = new Mesh(new CylinderGeometry(30, 30, 14, 48, 1, true, Math.PI * 0.5, Math.PI), new MeshBasicMaterial({ map: paintBackdrop(), transparent: true, side: BackSide, fog: false, depthWrite: false }));
+  const back = new Mesh(new CylinderGeometry(30, 30, 14, 48, 1, true, Math.PI * 0.5, Math.PI), new MeshBasicMaterial({ map: backdrop === 'city' ? paintCity() : paintBackdrop(), transparent: true, side: BackSide, fog: false, depthWrite: false }));
   back.position.set(0, 6.2, 4); back.renderOrder = -1; P.add(back); // the painted distance
   if (snow) {
     const N = 240, pos = new Float32Array(N * 3); for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - 0.5) * 22; pos[i * 3 + 1] = Math.random() * 9; pos[i * 3 + 2] = (Math.random() - 0.5) * 14 - 1; }
