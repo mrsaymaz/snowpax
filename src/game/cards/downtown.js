@@ -388,10 +388,10 @@ export function tophaneChoice(ctx) {
   const els = st.options.map((o, i) => s.label(esc(o), { cls: 'wt-opt', onTap: () => pick(i) }));
   // each word sits beside its clock face, never on it: portrait, a column of faces with the words to
   // their right; landscape, a row of faces on posts with the words under them
-  const r = T ? 0.4 : 0.55, gap = 0.16, lw = els.map(el => s.measure(el).w / s.pxPerMeter() + 0.12);
-  const ws = els.map(el => sized(s, el, 1.4, 0.3)), colW = 2 * r + gap + Math.max(...lw), xs = T ? st.options.map(() => -colW / 2 + r) : row(ws.map(w => Math.max(w, 1.5)), 0.4);
+  const r = T ? 0.47 : 0.55, gap = 0.16, lw = els.map(el => s.measure(el).w / s.pxPerMeter() + 0.12);
+  const ws = els.map(el => sized(s, el, 1.4, 0.3)), colW = 2 * r + gap + Math.max(...lw), xs = T ? st.options.map(() => -colW / 2 + r + 0.6) : row(ws.map(w => Math.max(w, 1.5)), 0.4);
   const dials = st.options.map((o, i) => { // a round clock face on an iron post by the railing
-    const g = new Group(); g.position.set(xs[i], T ? 3.3 - i * 0.92 : 2.1, -2.0); s.step.add(g);
+    const g = new Group(); g.position.set(xs[i], T ? 3.45 - i * 1.06 : 2.1, -2.0); s.step.add(g);
     const face = new Mesh(new CircleGeometry(r, 28), new MeshStandardMaterial({ color: '#fff8e6', emissive: new Color('#ffe6b0'), emissiveIntensity: 0.45 })); g.add(face);
     const rim = new Mesh(new TorusGeometry(r, 0.06, 6, 28), new MeshStandardMaterial({ color: '#d9a640', roughness: 0.35, metalness: 0.6 })); g.add(rim);
     if (!T) { const post = new Mesh(new CylinderGeometry(0.04, 0.05, 2.1 - r, 6), L('#2b2f45')); post.position.y = -(2.1 - r) / 2 - r; g.add(post); }
