@@ -166,7 +166,7 @@ export function istiklalStation(s, { color = '#f5b616' } = {}) {
       const cars = s.persist.children.filter(o => !known.has(o)); for (const c of cars) { known.add(c); leaving.push({ m: c, t: 0, x0: c.position.x }); }
       set.top = set.base; s.sound?.('chime');
     },
-    tick: dt => { t += dt; K.tick(dt); A?.tick(dt); if (!s.reduceMotion) tw.forEach(f => f(t)); for (const q of [...leaving]) { q.t += dt; const k = Math.max(0, q.t - 0.6); q.m.position.x = q.x0 + k * k * 4; if (q.t > 3) { s.persist.remove(q.m); leaving.splice(leaving.indexOf(q), 1); } } },
+    tick: dt => { t += dt; K.tick(dt); A?.tick(dt); if (!s.reduceMotion) tw.forEach(f => f(t)); for (const q of [...leaving]) { q.t += dt; const k = Math.max(0, q.t - 0.25); q.m.position.x = q.x0 + k * k * 9; if (q.t > 1.9) { s.persist.remove(q.m); leaving.splice(leaving.indexOf(q), 1); } } },
     K, A, colors: [color, '#ffffff', '#ffd166', '#c8302e'],
   };
   return set;

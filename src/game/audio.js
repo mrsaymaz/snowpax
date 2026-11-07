@@ -145,7 +145,7 @@ const TRACKS = {
     const bar = Math.floor(k / 12) % 4, inBar = k % 12;
     if (inBar === 0) synth(t, hz(GALATA_BASS[bar]), sp * 3, { gain: 0.1, attack: 0.004, release: 0.2, dest });
     if (inBar === 4 || inBar === 8) for (const n of GALATA_CH[bar]) synth(t, hz(n), sp * 1.5, { gain: 0.016, attack: 0.004, release: 0.12, dest });
-    for (const [, n, len] of at(GALATA, k)) { bellAt(t, hz(n + 12), 0.05, 0.4 + len * 0.1, dest); bellAt(t, hz(n), 0.015, 0.5, dest); }
+    for (const [, n, len] of at(GALATA, k)) { bellAt(t, hz(n + 12), 0.065, 0.4 + len * 0.1, dest); bellAt(t, hz(n), 0.015, 0.5, dest); }
   } },
   istiklal: { bpm: 104, steps: 48, loop: false, step(k, t, sp, dest) {
     if (k === 0 || k === 2) bellAt(t, hz(88), 0.06, 0.5, dest); // the tram's bell: ding-ding
@@ -167,14 +167,14 @@ const TRACKS = {
     if (k === 46) { const ac = dest.context, o = ac.createOscillator(), e = ac.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(700, t); o.frequency.linearRampToValueAtTime(1000, t + 0.12); o.frequency.linearRampToValueAtTime(600, t + 0.4); e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(0.03, t + 0.05); e.gain.linearRampToValueAtTime(0, t + 0.42); o.connect(e); e.connect(dest); o.start(t); o.stop(t + 0.45); } // meow
   } },
   tophane: { bpm: 96, steps: 48, loop: false, step(k, t, sp, dest) {
-    for (const [at0, n] of TOPHANE_CHIME) if (at0 === k) bellAt(t, hz(n), 0.05, 1.2, dest); // the clock tower's chimes
+    for (const [at0, n] of TOPHANE_CHIME) if (at0 === k) bellAt(t, hz(n), 0.075, 1.2, dest); // the clock tower's chimes
     if (k % 6 === 3) hit(t, { f0: 480, f1: 240, dur: 0.6, gain: 0.035, type: 'lowpass', dest }); // the water lapping
-    if (k === 16) for (const n of [50, 57, 62]) synth(t, hz(n), sp * 32, { gain: 0.016, attack: 0.6, release: 0.8, cutoff: 900, dest });
-    for (const [, n, len] of at(TOPHANE, k)) synth(t, hz(n), sp * len * 0.9, { type: 'square', gain: 0.03, attack: 0.06, release: 0.2, cutoff: 1000, dest });
+    if (k === 16) for (const n of [50, 57, 62]) synth(t, hz(n), sp * 32, { gain: 0.022, attack: 0.6, release: 0.8, cutoff: 900, dest });
+    for (const [, n, len] of at(TOPHANE, k)) synth(t, hz(n), sp * len * 0.9, { type: 'square', gain: 0.045, attack: 0.06, release: 0.2, cutoff: 1000, dest });
   } },
   'sled-downtown': { bpm: 140, steps: 128, loop: true, step(k, t, sp, dest) {
     if (k % 2 === 0) hit(t, { f0: 7000, f1: 9000, dur: 0.05, gain: k % 4 === 0 ? 0.045 : 0.025, type: 'highpass', dest }); // sleigh bells
-    if (k % 8 === 4) hit(t, { f0: 1800, f1: 1200, dur: 0.07, gain: 0.05, dest }); // a snap on two and four
+    if (k % 8 === 4) hit(t, { f0: 1800, f1: 1200, dur: 0.07, gain: 0.032, dest }); // a snap on two and four
     if (k % 4 === 0) synth(t, hz(DT_WALK[(k / 4) % DT_WALK.length]), sp * 3.4, { gain: 0.1, attack: 0.004, release: 0.12, dest });
     for (const [at0, n, len] of DT_RIDE) if (at0 === k) synth(t, hz(n), sp * len * 0.9, { type: 'square', gain: 0.035, attack: 0.02, release: 0.1, cutoff: 1900, dest });
     if (k % 32 === 0) for (const n of [[65, 69, 72], [65, 70, 74], [64, 67, 72], [65, 69, 72]][(k / 32) % 4]) synth(t, hz(n), sp * 28, { gain: 0.016, attack: 0.1, release: 0.3, cutoff: 1600, dest });
