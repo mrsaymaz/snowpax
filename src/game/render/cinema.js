@@ -14,10 +14,11 @@
 import {
   Group, Mesh, MeshBasicMaterial, MeshLambertMaterial, SphereGeometry, CircleGeometry, PlaneGeometry, BoxGeometry, ConeGeometry, CylinderGeometry,
   BufferGeometry, Float32BufferAttribute, Points, PointsMaterial, Sprite, SpriteMaterial, CanvasTexture, SRGBColorSpace, AdditiveBlending, BackSide,
-  DoubleSide, Color, Vector3, InstancedMesh, Object3D, TorusGeometry, LineSegments, LineBasicMaterial, Line, PointLight,
+  DoubleSide, Color, Vector3, InstancedMesh, Object3D, TorusGeometry, LineSegments, LineBasicMaterial, Line, Matrix4,
 } from 'three';
 import { buildTileArena } from '../tilemap.mjs';
 import { buildVillage } from './village.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export const TRACK_Z = 14, SCENE_SECONDS = 7.2;
 const ease = t => t * t * (3 - 2 * t);
@@ -53,6 +54,7 @@ function neighbourhood({ landmark, seed = 1, sea = 0, plazaR = 5, trees = 'TvxyT
   set(W - 1, H - 1, 'h'); set(0, H - 1, 'r'); // the arena format wants a home and a camp; hidden in the corners
   const def = { id: 'cine', name: '', kind: 'tiles', world: true, tile: 15, w: W, h: H, rows: g.map(r => r.join('')), outposts: [], schoolyard: null, landmarks: lms, scenery: [], hills: [], sledRuns: [], pickups: [], signposts: [] };
   const world = buildVillage(buildTileArena(def), { look: 'v2', quality: 'medium' });
+  for (const l of world.group.children.filter(o => o.isPointLight)) world.group.remove(l); // the ride keeps a fixed set of lights (a light coming or going recompiles every shader: a stutter)
   world.group.position.set(PLACE.x, 0, PLACE.z + (H / 2 - CZ)); // the landmark's middle at PLACE
   world.group.traverse(o => { if (o.isMesh && o.geometry?.type === 'PlaneGeometry' && o.geometry.parameters.width === 1.1) o.material.color.set(flag); }); // the landmark's flag in the place's colour
   return world;
@@ -283,7 +285,7 @@ function gulls(g, n = 7, seed = 5) {
   const R = rng(seed), m = new MeshLambertMaterial({ color: '#f7f8fc', side: DoubleSide }), list = [];
   for (let k = 0; k < n; k++) {
     const b = new Group(), wing = s => { const geo = new BufferGeometry(); geo.setAttribute('position', new Float32BufferAttribute([0, 0, 0.12, 0, 0, -0.12, s * 0.75, 0.05, -0.05], 3)); geo.computeVertexNormals(); return new Mesh(geo, m); };
-    const L = wing(1), Rw = wing(-1); b.add(L, Rw); const body = new Mesh(new SphereGeometry(0.1, 8, 6), m); body.scale.set(0.8, 0.7, 2); b.add(body); b.scale.setScalar(1.6); g.add(b);
+    const L = wing(1), Rw = wing(-1); b.add(L, Rw); b.userData.live = true; const body = new Mesh(new SphereGeometry(0.1, 8, 6), m); body.scale.set(0.8, 0.7, 2); b.add(body); b.scale.setScalar(1.6); g.add(b);
     list.push({ b, L, Rw, r: 10 + R() * 14, y: 9 + R() * 8, a: R() * 6.28, s: (0.12 + R() * 0.1) * (R() < 0.5 ? -1 : 1), ph: R() * 6 });
   }
   return t => { for (const q of list) { const a = q.a + t * q.s; q.b.position.set(PLACE.x + Math.sin(a) * q.r, q.y + Math.sin(t * 0.7 + q.ph) * 0.6, PLACE.z + Math.cos(a) * q.r * 0.7); q.b.rotation.y = a + (q.s > 0 ? Math.PI / 2 : -Math.PI / 2); const f = Math.sin(t * 7 + q.ph) * 0.6; q.L.rotation.z = f; q.Rw.rotation.z = -f; } };
@@ -326,13 +328,14 @@ function lifeKit(g, light = {}) {
     },
     // a string of warm bulbs hung between posts, twinkling
     lights(points, { y = 2.6, sag = 0.35, cols = ['#ffd27a', '#ffe9b0', '#ffb36a'] } = {}) {
-      const bulbs = [], gm = new SphereGeometry(0.07, 6, 4), wire = [];
+      const gm = new SphereGeometry(0.07, 6, 4), wire = [], mats = cols.map(c => new MeshBasicMaterial({ color: c })), base = cols.map(c => new Color(c)), halo = [];
       for (let k = 0; k < points.length - 1; k++) {
         const [x0, z0] = points[k], [x1, z1] = points[k + 1], n = Math.max(4, Math.round(Math.hypot(x1 - x0, z1 - z0) / 0.6));
-        for (let u = 0; u <= n; u++) { const f = u / n, px = x0 + (x1 - x0) * f, pz = z0 + (z1 - z0) * f, py = y - Math.sin(f * Math.PI) * sag; wire.push(px, py, pz); if (u < n) { const b = new Mesh(gm, new MeshBasicMaterial({ color: cols[(k + u) % cols.length] })); b.position.set(px, py - 0.06, pz); g.add(b); bulbs.push(b); if ((light.dusk || 0) > 0.3 && u % 2 === 0) { const h = new Sprite(new SpriteMaterial({ map: glowTex(), color: cols[(k + u) % cols.length], transparent: true, opacity: 0.35 * light.dusk, depthWrite: false, blending: AdditiveBlending })); h.position.copy(b.position); h.scale.setScalar(0.7); g.add(h); } } }
+        for (let u = 0; u <= n; u++) { const f = u / n, px = x0 + (x1 - x0) * f, pz = z0 + (z1 - z0) * f, py = y - Math.sin(f * Math.PI) * sag; wire.push(px, py, pz); if (u < n) { const b = new Mesh(gm, mats[(k + u) % cols.length]); b.position.set(px, py - 0.06, pz); g.add(b); if (u % 2 === 0) halo.push(px, py - 0.06, pz); } }
       }
       const geo = new BufferGeometry(); geo.setAttribute('position', new Float32BufferAttribute(wire, 3)); const line = new Line(geo, new LineBasicMaterial({ color: '#3a3346' })); g.add(line);
-      ticks.push(tt => bulbs.forEach((b, k) => b.scale.setScalar(0.85 + 0.3 * Math.max(0, Math.sin(tt * 3 + k * 1.7)))));
+      if ((light.dusk || 0) > 0.3 && halo.length) { const hg = new BufferGeometry(); hg.setAttribute('position', new Float32BufferAttribute(halo, 3)); g.add(new Points(hg, new PointsMaterial({ map: glowTex(), color: '#ffd9a0', size: 0.7, transparent: true, opacity: 0.35 * light.dusk, depthWrite: false, blending: AdditiveBlending }))); } // the glow round the bulbs: one cloud, one draw
+      ticks.push(tt => mats.forEach((m, k) => m.color.copy(base[k]).multiplyScalar(0.8 + 0.35 * Math.max(0, Math.sin(tt * 3 + k * 2.1))))); // the bulbs twinkle in turns
     },
     // an Istanbul street cat, sitting, its tail swishing
     cat([x, y, z], ry = 0, col = '#e09a4a') {
@@ -340,7 +343,7 @@ function lifeKit(g, light = {}) {
       const body = add(new SphereGeometry(0.16, 10, 8), fur, 0, 0.16, 0, 0, q); body.scale.set(0.85, 1.15, 1.05);
       add(new SphereGeometry(0.075, 8, 6), w, 0, 0.2, 0.12, 0, q); add(new SphereGeometry(0.11, 10, 8), fur, 0, 0.36, 0.05, 0, q);
       for (const sd of [-1, 1]) { const e = add(new ConeGeometry(0.045, 0.09, 4), fur, sd * 0.06, 0.47, 0.05, 0, q); e.rotation.z = -sd * 0.25; add(new SphereGeometry(0.016, 6, 4), Bm('#2a2a2a'), sd * 0.04, 0.38, 0.15, 0, q); }
-      const tail = new Group(); tail.position.set(0, 0.06, -0.15); q.add(tail); const tl = add(new CylinderGeometry(0.022, 0.03, 0.32, 6), fur, 0, 0.15, -0.04, 0, tail); tl.rotation.x = -0.5;
+      const tail = new Group(); tail.position.set(0, 0.06, -0.15); tail.userData.live = true; q.add(tail); const tl = add(new CylinderGeometry(0.022, 0.03, 0.32, 6), fur, 0, 0.15, -0.04, 0, tail); tl.rotation.x = -0.5;
       const ph = R() * 6; ticks.push(tt => { tail.rotation.z = Math.sin(tt * 1.8 + ph) * 0.45; });
     },
     // a quay: an iron railing along the water, bollards, fishing rods leaning out with their buckets
@@ -383,13 +386,13 @@ function lifeKit(g, light = {}) {
     // a round garden fountain with a little jet of water
     fountain([x, z]) {
       add(new CylinderGeometry(1.0, 1.1, 0.45, 18), Lm('#e9e2d6'), x, 0.22, z); add(new CylinderGeometry(0.88, 0.88, 0.05, 18), Lm('#a9d6ff'), x, 0.43, z); add(new CylinderGeometry(0.12, 0.18, 0.8, 10), Lm('#e9e2d6'), x, 0.7, z);
-      const jet = add(new ConeGeometry(0.08, 0.5, 8), new MeshBasicMaterial({ color: '#dff1ff', transparent: true, opacity: 0.7 }), x, 1.35, z); ticks.push(tt => { jet.scale.y = 0.85 + 0.25 * Math.sin(tt * 5); });
+      const jet = add(new ConeGeometry(0.08, 0.5, 8), new MeshBasicMaterial({ color: '#dff1ff', transparent: true, opacity: 0.7 }), x, 1.35, z); jet.userData.live = true; ticks.push(tt => { jet.scale.y = 0.85 + 0.25 * Math.sin(tt * 5); });
     },
     // a rowing boat frozen into the ice
     boat([x, z], ry = 0, col = '#3d6fb0') { const q = grp(x, z, ry); const b = add(new SphereGeometry(1, 12, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), Lm(col), 0, 0.3, 0, 0, q); b.scale.set(0.5, 0.35, 1.3); add(new BoxGeometry(0.9, 0.04, 2.3), snow, 0, 0.31, 0, 0, q); add(new BoxGeometry(0.9, 0.06, 0.18), wood, 0, 0.34, 0.2, 0, q); },
     // a flag pole with a flag waving
     flag([x, z], col = '#c8443c', h = 3.2) {
-      add(new CylinderGeometry(0.04, 0.05, h, 6), Lm('#e8e8ef'), x, h / 2, z); const geo = new PlaneGeometry(0.9, 0.55, 8, 1), base = geo.attributes.position.array.slice(); const f = add(geo, new MeshLambertMaterial({ color: col, side: DoubleSide }), x + 0.45, h - 0.35, z);
+      add(new CylinderGeometry(0.04, 0.05, h, 6), Lm('#e8e8ef'), x, h / 2, z); const geo = new PlaneGeometry(0.9, 0.55, 8, 1), base = geo.attributes.position.array.slice(); const f = add(geo, new MeshLambertMaterial({ color: col, side: DoubleSide }), x + 0.45, h - 0.35, z); f.userData.live = true;
       const ph = R() * 6; ticks.push(tt => { const a = geo.attributes.position.array; for (let k = 0; k < a.length; k += 3) { const u = (base[k] + 0.45) / 0.9; a[k + 2] = Math.sin(tt * 4 + u * 4 + ph) * 0.12 * u; } geo.attributes.position.needsUpdate = true; });
       return f;
     },
@@ -449,7 +452,7 @@ function lifeKit(g, light = {}) {
     pigeons([x, z], n = 9) {
       const grey = Lm('#b4b9cc'), dark = Lm('#7a8098'), birds = [];
       for (let k = 0; k < n; k++) {
-        const q = grp(x + (R() - 0.5) * 2.6, z + (R() - 0.5) * 1.8, R() * 6.28); q.scale.setScalar(1.35); const body = add(new SphereGeometry(0.11, 8, 6), grey, 0, 0.11, 0, 0, q); body.scale.set(0.8, 0.8, 1.3);
+        const q = grp(x + (R() - 0.5) * 2.6, z + (R() - 0.5) * 1.8, R() * 6.28); q.scale.setScalar(1.35); q.userData.live = true; const body = add(new SphereGeometry(0.11, 8, 6), grey, 0, 0.11, 0, 0, q); body.scale.set(0.8, 0.8, 1.3);
         const head = new Group(); head.position.set(0, 0.17, 0.11); q.add(head); add(new SphereGeometry(0.055, 8, 6), dark, 0, 0, 0.02, 0, head); add(new ConeGeometry(0.015, 0.05, 4), Lm('#e8a10a'), 0, -0.01, 0.08, 0, head).rotation.x = Math.PI / 2;
         add(new BoxGeometry(0.1, 0.02, 0.12), dark, 0, 0.12, -0.14, 0, q);
         birds.push({ q, head, ph: R() * 6, hop: R() * 7, x0: q.position.x, z0: q.position.z });
@@ -459,7 +462,7 @@ function lifeKit(g, light = {}) {
     // a see-saw in the park, rocking
     seesaw([x, z], ry = 0) {
       const q = grp(x, z, ry); add(new BoxGeometry(0.3, 0.45, 0.3), Lm('#c8443c'), 0, 0.22, 0, 0, q);
-      const arm = new Group(); arm.position.y = 0.48; q.add(arm); add(new BoxGeometry(2.6, 0.08, 0.32), Lm('#e8a10a'), 0, 0, 0, 0, arm); add(new BoxGeometry(2.5, 0.05, 0.3), snow, 0, 0.06, 0, 0, arm);
+      const arm = new Group(); arm.position.y = 0.48; arm.userData.live = true; q.add(arm); add(new BoxGeometry(2.6, 0.08, 0.32), Lm('#e8a10a'), 0, 0, 0, 0, arm); add(new BoxGeometry(2.5, 0.05, 0.3), snow, 0, 0.06, 0, 0, arm);
       for (const sd of [-1, 1]) add(new BoxGeometry(0.05, 0.3, 0.3), iron, sd * 1.05, 0.18, 0, 0, arm);
       ticks.push(tt => { arm.rotation.z = Math.sin(tt * 1.4) * 0.22; });
     },
@@ -474,7 +477,7 @@ function lifeKit(g, light = {}) {
     pennants(points, { y = 2.8, cols = ['#c8443c', '#f6c14e', '#2d6fb5', '#3f9b5a', '#ffffff'] } = {}) {
       const tri = new BufferGeometry(); tri.setAttribute('position', new Float32BufferAttribute([-0.13, 0, 0, 0.13, 0, 0, 0, -0.3, 0], 3)); tri.computeVertexNormals(); const flags = [];
       for (let k = 0; k < points.length - 1; k++) { const [x0, z0] = points[k], [x1, z1] = points[k + 1], n = Math.max(4, Math.round(Math.hypot(x1 - x0, z1 - z0) / 0.45)), ry = Math.atan2(-(z1 - z0), x1 - x0);
-        for (let u = 0; u < n; u++) { const f = (u + 0.5) / n, m = new Mesh(tri, new MeshLambertMaterial({ color: cols[(k + u) % cols.length], side: DoubleSide })); m.position.set(x0 + (x1 - x0) * f, y - Math.sin(f * Math.PI) * 0.3, z0 + (z1 - z0) * f); m.rotation.y = ry; g.add(m); flags.push(m); } }
+        for (let u = 0; u < n; u++) { const f = (u + 0.5) / n, m = new Mesh(tri, new MeshLambertMaterial({ color: cols[(k + u) % cols.length], side: DoubleSide })); m.position.set(x0 + (x1 - x0) * f, y - Math.sin(f * Math.PI) * 0.3, z0 + (z1 - z0) * f); m.rotation.y = ry; m.userData.live = true; g.add(m); flags.push(m); } }
       ticks.push(tt => flags.forEach((m, k) => { m.rotation.x = Math.sin(tt * 3.5 + k) * 0.35; }));
     },
   };
@@ -504,8 +507,8 @@ function polish(g, L, hH, world, hood) {
     ticks.push(t => { st.material.opacity = (dusk - 0.5) * 1.3 * (0.85 + 0.15 * Math.sin(t * 2.3)); });
   }
   // chimney smoke drifting up from houses round about
-  { const homes = (hH.homes || []).filter(q => q.r > 32 && q.r < 90 && q.z < PLACE.z + 2).sort(() => R() - 0.5).slice(0, 9), puff = glowTex(), list = [];
-    for (const q of homes) for (let k = 0; k < 6; k++) { const sp = new Sprite(new SpriteMaterial({ map: puff, color: new Color('#e9e6f2').lerp(new Color(L.fog || L.horizon), 0.3), transparent: true, opacity: 0, depthWrite: false })); g.add(sp); list.push({ sp, x: q.x + (R() - 0.5) * q.w * 0.5, y: q.y + q.h + 0.8, z: q.z, ph: k / 6 + R() * 0.1 }); }
+  { const homes = (hH.homes || []).filter(q => q.r > 32 && q.r < 90 && q.z < PLACE.z + 2).sort(() => R() - 0.5).slice(0, 6), puff = glowTex(), list = [];
+    for (const q of homes) for (let k = 0; k < 4; k++) { const sp = new Sprite(new SpriteMaterial({ map: puff, color: new Color('#e9e6f2').lerp(new Color(L.fog || L.horizon), 0.3), transparent: true, opacity: 0, depthWrite: false })); g.add(sp); list.push({ sp, x: q.x + (R() - 0.5) * q.w * 0.5, y: q.y + q.h + 0.8, z: q.z, ph: k / 6 + R() * 0.1 }); }
     ticks.push(t => { for (const u of list) { const f = (t * 0.12 + u.ph) % 1; u.sp.position.set(u.x + f * 3.5, u.y + f * 7, u.z - f * 1.2); u.sp.scale.setScalar(1.4 + f * 4); u.sp.material.opacity = 0.42 * Math.sin(f * Math.PI); } }); }
   // soft drifts banked round the square, the front left open for the camera
   { const snowM = new MeshLambertMaterial({ color: '#f4f6fe' }), r0 = (hood.plazaR || 5) + 1.2;
@@ -525,13 +528,38 @@ function polish(g, L, hH, world, hood) {
   if (dir.y < 0.4 && dusk < 0.85) {
     const shaft = tex(64, 256, (x, w, h) => { const gr = x.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,240,210,0)'); gr.addColorStop(0.35, 'rgba(255,230,190,0.55)'); gr.addColorStop(1, 'rgba(255,220,180,0)'); x.fillStyle = gr; x.fillRect(0, 0, w, h); const hg = x.createLinearGradient(0, 0, w, 0); hg.addColorStop(0, 'rgba(0,0,0,1)'); hg.addColorStop(0.5, 'rgba(0,0,0,0)'); hg.addColorStop(1, 'rgba(0,0,0,1)'); x.globalCompositeOperation = 'destination-out'; x.fillStyle = hg; x.fillRect(0, 0, w, h); });
     const sx = PLACE.x + dir.x * 40, sz = PLACE.z + dir.z * 40;
-    for (let k = 0; k < 5; k++) { const m = new Mesh(new PlaneGeometry(3 + R() * 4, 60), new MeshBasicMaterial({ map: shaft, color: warm, transparent: true, opacity: 0.12 + R() * 0.08, depthWrite: false, blending: AdditiveBlending, side: DoubleSide, fog: false })); m.position.set(sx + (R() - 0.5) * 30, 18, sz + (R() - 0.5) * 10); m.rotation.z = Math.atan2(-dir.x, dir.y) * 0.9 + (R() - 0.5) * 0.15; m.lookAt(m.position.x, m.position.y, m.position.z + 1); m.rotation.z += -dir.x * 0.6; m.renderOrder = 2; g.add(m); ticks.push(t => { m.material.opacity = (0.1 + 0.06 * Math.sin(t * 0.8 + k)); }); }
+    for (let k = 0; k < 5; k++) { const m = new Mesh(new PlaneGeometry(3 + R() * 4, 60), new MeshBasicMaterial({ map: shaft, color: warm, transparent: true, opacity: 0.12 + R() * 0.08, depthWrite: false, blending: AdditiveBlending, side: DoubleSide, fog: false })); m.position.set(sx + (R() - 0.5) * 30, 18, sz + (R() - 0.5) * 10); m.rotation.z = Math.atan2(-dir.x, dir.y) * 0.9 + (R() - 0.5) * 0.15; m.lookAt(m.position.x, m.position.y, m.position.z + 1); m.rotation.z += -dir.x * 0.6; m.renderOrder = 2; m.userData.live = true; g.add(m); ticks.push(t => { m.material.opacity = (0.1 + 0.06 * Math.sin(t * 0.8 + k)); }); }
   }
   // the landmark lit up: floodlights at dusk (Istanbul lights its monuments), a warm bounce by day
-  { const fl = new PointLight(dusk > 0.3 ? '#ffd29a' : warm, dusk > 0.3 ? 4 + dusk * 5 : 2.5, 11, 1.8); fl.position.set(PLACE.x, 1.2, PLACE.z + 4.5); g.add(fl);
-    if (dusk > 0.3) { const up = new PointLight('#ffe2b0', 3 * dusk, 8, 2); up.position.set(PLACE.x, 0.4, PLACE.z + 2.2); g.add(up);
+  { g.userData.lamps = [{ color: dusk > 0.3 ? '#ffd29a' : '#' + warm.getHexString(), intensity: dusk > 0.3 ? 4 + dusk * 5 : 2.5, distance: 11, decay: 1.8, pos: [PLACE.x, 1.2, PLACE.z + 4.5] }]; // the ride's two lamps take these (sledrun.js)
+    if (dusk > 0.3) { g.userData.lamps.push({ color: '#ffe2b0', intensity: 3 * dusk, distance: 8, decay: 2, pos: [PLACE.x, 0.4, PLACE.z + 2.2] });
       const halo = new Sprite(new SpriteMaterial({ map: glowTex(), color: '#ffd9a0', transparent: true, opacity: 0.1 * dusk, depthWrite: false, blending: AdditiveBlending })); halo.position.set(PLACE.x, 2.6, PLACE.z); halo.scale.setScalar(9); g.add(halo); } }
   return t => { for (const f of ticks) f(t); };
+}
+
+// ---------- one draw per material: the view's still things merged ----------
+// A view is made of a thousand small pieces; a phone pays for each one it draws. Everything that
+// does not move (and is not the village, already merged by its own kit) is merged into one mesh per
+// look (material and shadow settings), so a view costs a few hundred draws, not a thousand.
+function batch(g, keep) {
+  g.updateMatrixWorld(true);
+  const inv = new Matrix4().copy(g.matrixWorld).invert(), buckets = new Map(), m4 = new Matrix4();
+  const still = o => { for (let q = o; q && q !== g; q = q.parent) if (q.userData.live || q === keep) return false; return true; };
+  g.traverse(o => {
+    if (!o.isMesh || o.isInstancedMesh || !o.visible || Array.isArray(o.material) || !still(o)) return;
+    const m = o.material, geo = o.geometry, attrs = Object.keys(geo.attributes).sort().join(',');
+    const key = [m.type, m.color?.getHex(), m.emissive?.getHex(), m.emissiveIntensity, m.map?.uuid, m.emissiveMap?.uuid, m.transparent, m.opacity, m.side, m.fog, m.blending, m.depthWrite, m.vertexColors, m.sizeAttenuation, o.castShadow, o.receiveShadow, o.renderOrder, attrs, !!geo.index, geo.morphAttributes && Object.keys(geo.morphAttributes).length].join('|');
+    let b = buckets.get(key); if (!b) buckets.set(key, b = { m, cast: o.castShadow, recv: o.receiveShadow, ro: o.renderOrder, list: [] });
+    b.list.push(o);
+  });
+  for (const b of buckets.values()) {
+    if (b.list.length < 2) continue;
+    const geos = b.list.map(o => o.geometry.clone().applyMatrix4(m4.multiplyMatrices(inv, o.matrixWorld)));
+    let merged = null; try { merged = mergeGeometries(geos, false); } catch { merged = null; }
+    if (!merged) continue;
+    const mesh = new Mesh(merged, b.m); mesh.castShadow = b.cast; mesh.receiveShadow = b.recv; mesh.renderOrder = b.ro; mesh.frustumCulled = false; g.add(mesh);
+    for (const o of b.list) o.parent.remove(o);
+  }
 }
 
 // ---------- a scene: the neighbourhood, the layer over it, the light and the shots ----------
@@ -541,11 +569,12 @@ function vista({ hood, light, shots, wide, far = [], extra = null }) {
     world.group.traverse(o => { if (o.isMesh && !o.material?.transparent) o.castShadow = o.receiveShadow = true; });
     sky(g, { ...light, seed: hood.seed }); const hH = townscape(g, light, { seed: hood.seed, sea: !!hood.sea, urban: !!hood.urban }); skyline(g, light, hH, far);
     const flyGulls = gulls(g), snowing = snowfall(g), more = extra?.(g, light) || null, shine = polish(g, light, hH, world, hood);
+    batch(g, world.group); // one draw per look (the village keeps its own)
     world.setDusk?.(light.dusk || 0);
     const focus = new Vector3();
     return {
-      group: g, duration: SCENE_SECONDS, shots, wide, light,
-      tick(t, dt) { focus.set(PLACE.x, 0, PLACE.z).applyMatrix4(g.matrixWorld); world.tick?.(dt, focus, false, camera); flyGulls(t); snowing(dt); more?.(t, dt); shine(t); },
+      group: g, duration: SCENE_SECONDS, shots, wide, light, camera, lamps: g.userData.lamps || [],
+      tick(t, dt) { focus.set(PLACE.x, 0, PLACE.z).applyMatrix4(g.matrixWorld); world.tick?.(dt, focus, false, this.camera); flyGulls(t); snowing(dt); more?.(t, dt); shine(t); },
       dispose() { g.traverse(o => { if (o.isMesh || o.isSprite || o.isPoints) o.geometry?.dispose?.(); }); }, // geometry only: the village's materials are shared with the game's
     };
   };

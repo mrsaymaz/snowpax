@@ -8,7 +8,7 @@
 // scenery and ends at the next outpost. The track winds: it turns left and right, banks into the
 // curves and rolls over gentle hills (the lane rules stay the same, in the track's own frame).
 import {
-  Scene, PerspectiveCamera, HemisphereLight, DirectionalLight, Fog, Color, Group, Mesh, MeshLambertMaterial, MeshBasicMaterial, Object3D,
+  Scene, PerspectiveCamera, HemisphereLight, DirectionalLight, PointLight, Fog, Color, Group, Mesh, MeshLambertMaterial, MeshBasicMaterial, Object3D,
   BoxGeometry, SphereGeometry, CylinderGeometry, ConeGeometry, PlaneGeometry, TorusGeometry, CapsuleGeometry, BufferAttribute, CanvasTexture,
   SRGBColorSpace, RepeatWrapping, Sprite, SpriteMaterial, InstancedMesh, AdditiveBlending, Vector3, Float32BufferAttribute, BufferGeometry,
 } from 'three';
@@ -98,7 +98,8 @@ export class SledRun {
   // spell: {en, tr} or null; lives: Lives
   // cinema: the places the ride passes, in task order ([{ id, title, task, part }]); the ones with a
   // scene in render/cinema.js get a clear, straight stretch where the camera turns to them
-  constructor({ theme = 'boulevard', seconds = 50, pace = 'relaxed', team = 'hufflepuff', kit = 'thrower', look = null, words = [], spell = null, lives, rng = Math.random, first = false, reduceMotion = false, cinema = [], on = {} }) {
+  constructor({ theme = 'boulevard', seconds = 50, pace = 'relaxed', team = 'hufflepuff', kit = 'thrower', look = null, words = [], spell = null, lives, rng = Math.random, first = false, reduceMotion = false, cinema = [], views = null, on = {} }) {
+    this.views = views; // the places' scenes, built ahead (stagerun.js builds them while the map is shown)
     Object.assign(this, { theme, seconds, pace, words, spell, lives, rng, first, reduceMotion, on });
     const T = this.T = THEMES[theme] || THEMES.boulevard;
     this.vmax = pace === 'challenge' ? 12.5 : 10.2; this.v = 6; this.dist = 0;
@@ -116,6 +117,12 @@ export class SledRun {
     const scene = this.scene = new Scene(); scene.background = new Color(T.fog); scene.fog = new Fog(T.fog, 18, 60);
     const hemi = this.hemi = new HemisphereLight('#e4e8ff', '#8a7fc0', 1.25); scene.add(hemi);
     const sun = this.sun = new DirectionalLight('#fff0dc', 1.9); sun.position.set(-6, 12, 4); scene.add(sun, sun.target);
+    // The lights never change during the ride (a light, or a shadow, switched on or off makes the GPU
+    // recompile every shader: a stutter). The sun always casts shadows, but on the ride its shadow
+    // camera looks at nothing and is not redrawn, so it costs nothing; two lamps wait at zero for the
+    // places' scenes, which only move them and turn them up.
+    sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); sun.shadow.bias = -0.0006; this.shadowOff();
+    this.lamps = [0, 1].map(() => { const l = new PointLight('#ffd29a', 0, 10, 1.8); l.position.set(0, -50, 0); scene.add(l); return l; });
     this.camera = new PerspectiveCamera(58, 1, 0.3, 120);
     this.mats = { vc: new MeshLambertMaterial({ vertexColors: true }) };
     // the track: snow ground with three trodden lanes, banks either side
@@ -135,6 +142,7 @@ export class SledRun {
 
     this.plan();
     this.scenery();
+    this.stock();
     for (const q of this.slots) { try { this.prepare(q); } catch (err) { console.warn('scene', q.id, err); q.played = true; } } // the places' scenes are built now, before the ride starts (no stutter while steering); one that fails is skipped
   }
 
@@ -308,8 +316,10 @@ export class SledRun {
 
   // ---------- the places on the way: a cinematic scene beside a clear stretch ----------
   // a place's scene, beside its clear stretch (hidden until the sled is near)
+  // the sun's shadow on the ride: a camera that sees nothing, drawn once, then left alone
+  shadowOff() { const sh = this.sun.shadow; Object.assign(sh.camera, { left: -1, right: 1, top: 1, bottom: -1, near: 5000, far: 5001 }); sh.camera.updateProjectionMatrix(); sh.autoUpdate = false; sh.needsUpdate = true; }
   prepare(q) {
-    const sc = q.scene = CINEMA[q.id].build({ camera: this.camera }), mid = q.a + q.lead + (this.vmax * 0.6 * q.dur) / 2, th = this.heading(mid);
+    const sc = q.scene = this.views?.get(q.id) || CINEMA[q.id].build({ camera: this.camera }); sc.camera = this.camera; const mid = q.a + q.lead + (this.vmax * 0.6 * q.dur) / 2, th = this.heading(mid);
     this.at(mid, -TRACK_Z, 0, sc.group.position); sc.group.rotation.y = Math.PI / 2 - th; this.scene.add(sc.group); sc.group.updateMatrixWorld(true);
     sc.tick(0, 0); sc.group.visible = false;
   }
@@ -331,12 +341,13 @@ export class SledRun {
   lightFor(sc) {
     const sun = this.sun, hemi = this.hemi, sceneT = this.scene, cam = this.camera;
     if (!this.light0) this.light0 = { col: sun.color.clone(), int: sun.intensity, pos: sun.position.clone(), sky: hemi.color.clone(), gr: hemi.groundColor.clone(), bg: sceneT.background.clone(), fog: sceneT.fog.color.clone(), near: sceneT.fog.near, far: sceneT.fog.far, cfar: cam.far };
-    if (!sc) { const L0 = this.light0; sun.color.copy(L0.col); sun.intensity = L0.int; sun.position.copy(L0.pos); sun.target.position.set(0, 0, 0); hemi.color.copy(L0.sky); hemi.groundColor.copy(L0.gr); sceneT.background.copy(L0.bg); sceneT.fog.color.copy(L0.fog); sceneT.fog.near = L0.near; sceneT.fog.far = L0.far; cam.far = L0.cfar; cam.updateProjectionMatrix(); sun.castShadow = false; return; }
+    if (!sc) { const L0 = this.light0; sun.color.copy(L0.col); sun.intensity = L0.int; sun.position.copy(L0.pos); sun.target.position.set(0, 0, 0); hemi.color.copy(L0.sky); hemi.groundColor.copy(L0.gr); sceneT.background.copy(L0.bg); sceneT.fog.color.copy(L0.fog); sceneT.fog.near = L0.near; sceneT.fog.far = L0.far; cam.far = L0.cfar; cam.updateProjectionMatrix(); this.shadowOff(); for (const l of this.lamps) { l.intensity = 0; l.position.set(0, -50, 0); } return; }
     const c = sc.group.position.clone().add(new Vector3(0, 0, -9).applyAxisAngle(new Vector3(0, 1, 0), sc.group.rotation.y)), d = new Vector3(...sc.light.dir).applyAxisAngle(new Vector3(0, 1, 0), sc.group.rotation.y).normalize();
     sun.color.set(sc.light.sun); sun.intensity = sc.light.intensity; hemi.color.set(sc.light.sky); if (sc.light.ground) hemi.groundColor.set(sc.light.ground);
     sceneT.background.set(sc.light.horizon); sceneT.fog.color.set(sc.light.fog || sc.light.horizon); sceneT.fog.near = 80; sceneT.fog.far = 360; cam.far = 700; cam.updateProjectionMatrix(); // a long view, hazing into the scene's sky
     sun.target.position.copy(c); sun.position.copy(c).addScaledVector(d, 30);
-    sun.castShadow = true; Object.assign(sun.shadow.camera, { left: -20, right: 20, top: 20, bottom: -20, near: 1, far: 80 }); sun.shadow.camera.updateProjectionMatrix(); sun.shadow.mapSize.set(1024, 1024); sun.shadow.bias = -0.0006;
+    Object.assign(sun.shadow.camera, { left: -20, right: 20, top: 20, bottom: -20, near: 1, far: 80 }); sun.shadow.camera.updateProjectionMatrix(); sun.shadow.autoUpdate = true;
+    this.lamps.forEach((l, k) => { const L = sc.lamps?.[k]; if (!L) { l.intensity = 0; return; } l.color.set(L.color); l.intensity = L.intensity; l.distance = L.distance; l.decay = L.decay; l.position.copy(sc.group.localToWorld(new Vector3(...L.pos))); }); // the place's floodlights
   }
 
   collect(it) {
@@ -375,8 +386,8 @@ export class SledRun {
       if (it.done && (it.kind === 'ball' || it.kind === 'word' || it.kind === 'letter')) { if (it.m) { it.m.visible = false; it.m = null; } if (it.tag) it.tag.visible = false; continue; }
       if (!it.m) {
         if (it.kind === 'ball') it.m = this.ballMesh();
-        else if (it.kind === 'word') { it.m = this.flakeMesh(true); it.tag = this.wordTag(it.word.en); }
-        else if (it.kind === 'letter') it.m = this.letterMesh(it.ch);
+        else if (it.kind === 'word') { it.m = this.flakeMesh(true); it.tag = it.tag || this.wordTag(it.word.en); it.tag.visible = true; } // its tag made ahead (stock)
+        else if (it.kind === 'letter') { it.m = it.pre || this.letterMesh(it.ch); it.m.visible = true; }
         else it.m = this.mesh(it.kind);
       }
       const x = it.full ? 0 : LANES[it.lane];
@@ -420,6 +431,14 @@ export class SledRun {
     const m = new Mesh(this.geo.flake, this.flakeMat);
     const halo = new Sprite(new SpriteMaterial({ map: this.halo, blending: AdditiveBlending, depthWrite: false, transparent: true })); halo.scale.setScalar(big ? 1.4 : 0.9); m.add(halo);
     this.scene.add(m); list.push(m); return m;
+  }
+  // everything the ride will show, made now (hidden) rather than the moment it comes into view: one of
+  // each obstacle, the snowball and the snowflake, each word snowflake's tag, each spelling letter
+  stock() {
+    const hide = m => { m.visible = false; return m; };
+    for (const kind of new Set(this.items.map(it => it.kind))) if (!['ball', 'word', 'letter'].includes(kind)) hide(this.mesh(kind));
+    hide(this.ballMesh()); hide(this.flakeMesh(true));
+    for (const it of this.items) { if (it.kind === 'word') it.tag = hide(this.wordTag(it.word.en)); if (it.kind === 'letter') it.pre = hide(this.letterMesh(it.ch)); }
   }
   // a snowball to pick up (the common thing on the track)
   ballMesh() {

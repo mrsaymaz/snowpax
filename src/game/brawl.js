@@ -1,7 +1,7 @@
 // SnowPax: 3-vs-3 snowball brawl across snowed-in Kasımpaşa. Seize the five landmark outposts by
 // answering English tasks from the chosen unit while your teammates guard you (outpostflow.js).
 // ?arena=schoolyard runs the small feel-test arena instead.
-import { WebGLRenderer, Scene, PerspectiveCamera, HemisphereLight, DirectionalLight, Color, Vector3, Vector2, Raycaster, Plane, PCFSoftShadowMap, Fog } from 'three';
+import { WebGLRenderer, WebGLRenderTarget, Scene, PerspectiveCamera, HemisphereLight, DirectionalLight, Color, Vector3, Vector2, Raycaster, Plane, PCFSoftShadowMap, Fog } from 'three';
 import { CONFIG, TEAM_IDS } from '../config.js';
 import { emblemSVG } from '../emblems.js';
 import { loadSave, writeSave } from '../save.mjs';
@@ -199,6 +199,24 @@ async function startGame(myTeam, kit, pace) {
   const off = new Vector3(0, 17.6, 16.0); let zoom = 1, shake = 0;
   const focus = new Vector3(player.x, 0, player.z - 1.2);
   let stages = null; // set below once the HUD exists
+  // ---------- a ride made ready before it starts ----------
+  // Every shader the ride and its places' scenes need is compiled, and every shape and picture is
+  // handed to the GPU once (a draw into a tiny target, with nothing culled), so none of that happens
+  // mid-ride on a phone (it is what made the ride stutter as a place came near).
+  async function warmRide(sled) {
+    const groups = sled.slots.map(q => q.scene?.group).filter(Boolean), first = sled.slots.find(q => q.scene)?.scene;
+    const vis = groups.map(g => g.visible), culled = [];
+    groups.forEach(g => { g.visible = true; });
+    const hidden = []; sled.scene.traverse(o => { if (o.frustumCulled) { culled.push(o); o.frustumCulled = false; } if (!o.visible && !groups.includes(o)) { hidden.push(o); o.visible = true; } }); // the ride's things made ahead are hidden till they are needed: shown for this one draw
+    if (first) sled.lightFor(first); // a place's light: the sun's shadow drawn, the lamps on
+    try {
+      if (renderer.compileAsync) await renderer.compileAsync(sled.scene, sled.camera); else renderer.compile(sled.scene, sled.camera);
+      const rt = new WebGLRenderTarget(8, 8), was = renderer.getRenderTarget(); renderer.setRenderTarget(rt); renderer.render(sled.scene, sled.camera); renderer.setRenderTarget(was); rt.dispose();
+    } finally {
+      culled.forEach(o => { o.frustumCulled = true; }); hidden.forEach(o => { o.visible = false; }); groups.forEach((g, k) => { g.visible = vis[k]; }); sled.lightFor(null);
+    }
+  }
+
   // ---------- the finale of the ride in: arriving at the carousel ----------
   // The camera comes in high over the real field, sweeps low round the carousel as it turns (its
   // landmarks pass the camera in task order, the rival team in front of it), then drops behind
@@ -288,7 +306,7 @@ async function startGame(myTeam, kit, pace) {
   const fireworks = z => { if (reduceMotion) return; for (const col of [myCol, '#ffffff', '#ffd166', '#7cc4f0']) fx.emit(z.x, 3.5, z.z, 40, col, 6, 1.4, 1.2); };
   stages = flow ? new StageRunner({
     match, flow, unit, unitProgress, save, writeSave, pace, rng, team: myTeam, kit, reduceMotion,
-    ui: { banner: (...a) => banner(...a), coach: (...a) => coach(...a), play, intro: (z, o) => startIntro(z, o),
+    ui: { warm: sled => warmRide(sled), banner: (...a) => banner(...a), coach: (...a) => coach(...a), play, intro: (z, o) => startIntro(z, o),
       snapCamera: () => { focus.set(player.x, 0, player.z - 1.2); camShift = 0; },
       showWall: cells => showWall(cells), onGone: list => { dropSnowmen(list); dropGoneKids(); }, recruited: (c, R) => fx.number(c.x, c.z, `${c.name} · ${R.name}`, 'word'), rebuildWorld: z => rebuildWorld(z), markRival: z => world.setOwner(z.id, rivCol), fireworks,
       seizeButton: on => { $('#seizebtn').hidden = !on; },

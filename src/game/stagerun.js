@@ -12,6 +12,7 @@ import { flakeWords } from './visit.mjs';
 import { FIGHT_PLANS, WordHunt, Armoury, ROLES, KID_NAMES, SHOP } from './fights.mjs';
 import { makeLook } from './looks.mjs';
 import { SledRun } from './sledrun.js';
+import { CINEMA } from './render/cinema.js';
 import { THEME_ICON } from './taskcard.js';
 import { speech } from './speech.js';
 import { music, stopMusic, duckMusic, hasMusic } from './audio.js';
@@ -44,6 +45,7 @@ export class StageRunner {
   // ---------- the stage map ----------
   showMap() {
     this.mode = 'map'; document.body.classList.remove('sledding'); $('#hud').hidden = true;
+    setTimeout(() => { if (this.mode === 'map') this.prepareRide(nextStage(this.up) || STAGES[0]); }, 400); // the next ride gets ready while the map is up
     const st = stageState(this.up), next = nextStage(this.up), run = this.up.arenas[0].run, acc = run?.total ? Math.round(run.firstTry / run.total * 100) : null;
     const nodes = STAGES.map((s, i) => {
       const open = isUnlocked(this.up, s.id), done = st[s.id]?.done, cls = done ? 'done' : open ? 'open' : 'locked';
@@ -63,13 +65,13 @@ export class StageRunner {
     this.cur = stage; this.lives.reset(); this.t0 = performance.now(); this.runFlakes = 0; this.runBalls = 0;
     this.ride();
   }
-  ride() {
-    const st = this.cur, words = flakeWords(this.unit, st.ride.flakes || 5, this.up.missed, this.rng);
+  // the ride for a stage: its track, its things and its places' scenes (not started)
+  makeRide(st, views = null) {
+    const words = flakeWords(this.unit, st.ride.flakes || 5, this.up.missed, this.rng);
     const spellPool = this.unit.words.filter(w => /^[a-z]{3,7}$/i.test(w.en)), spell = st.ride.spell && spellPool.length ? spellPool[Math.floor(this.rng() * spellPool.length)] : null;
-    this.sled?.dispose();
     // the places on the way, in the order their tasks are played: a scene where the camera turns to each
     const cinema = (st.parts || []).flatMap((fams, p) => fams.map(f => ({ id: st.places?.[f]?.id || PLACE_ID[f], title: st.places?.[f]?.title || PLACE_OF[f], task: FAMILY_NAME[f], part: p + 1 })));
-    this.sled = new SledRun({ theme: st.ride.theme, seconds: st.ride.seconds, pace: this.pace, team: this.team, kit: this.kit, look: this.match.player.look, words, spell, lives: this.lives, rng: this.rng, first: this.ridesDone === 0, reduceMotion: this.reduceMotion, cinema,
+    const sled = new SledRun({ theme: st.ride.theme, seconds: st.ride.seconds, pace: this.pace, team: this.team, kit: this.kit, look: this.match.player.look, words, spell, views, lives: this.lives, rng: this.rng, first: this.ridesDone === 0, reduceMotion: this.reduceMotion, cinema,
       on: {
         cinema: e => this.cinema(e),
         crash: lost => { this.ui.play('hit'); const left = this.lives.lose(); this.drawRunHud(); this.toast(lost ? `Ouch! −${lost} snowballs` : 'Ouch!'); if (!left) this.outOfLives(); },
@@ -80,6 +82,33 @@ export class StageRunner {
         progress: p => { const bar = $('#runhud .rh-prog i'); if (bar) bar.style.width = Math.round(p * 100) + '%'; },
         done: r => { this.runFlakes = r.flakes; this.runBalls = r.snowballs; this.ridesDone++; setTimeout(() => this.arrive(), 700); },
       } });
+    return sled;
+  }
+  // Get a stage's ride ready ahead (while the map is shown): its places' scenes are built one per
+  // frame (the map stays smooth), then the GPU compiles every shader and takes every shape and
+  // picture once (ui.warm), so the ride and its scenes never stutter on a phone.
+  prepareRide(st) {
+    if (this.next?.id === st.id) return this.next.promise;
+    const old = this.next; if (old) { old.cancel = true; old.promise.then(s2 => s2?.dispose()); }
+    const next = this.next = { id: st.id, cancel: false };
+    const frame = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+    next.promise = (async () => {
+      const ids = [...new Set((st.parts || []).flat().map(f => st.places?.[f]?.id || PLACE_ID[f]).filter(id => CINEMA[id]))], views = new Map();
+      for (const id of ids) { await frame(); if (next.cancel) return null; try { views.set(id, CINEMA[id].build({})); } catch (err) { console.warn('scene', id, err); } }
+      await frame(); if (next.cancel) return null;
+      const sled = this.makeRide(st, views);
+      await frame(); if (next.cancel) { sled.dispose(); return null; }
+      try { await this.ui.warm?.(sled); } catch (err) { console.warn('warm', err); }
+      next.done = true; return next.cancel ? (sled.dispose(), null) : sled;
+    })();
+    return next.promise;
+  }
+  async ride() {
+    const st = this.cur; this.mode = 'loading';
+    if (this.next?.id !== st.id || !this.next.done) this.ui.coach?.('Getting the sleds ready…');
+    const sled = await this.prepareRide(st); this.next = null;
+    if (this.cur !== st || !sled) { sled?.dispose(); return; }
+    this.sled?.dispose(); this.sled = sled; const spell = sled.spell;
     this.sled.resize(innerWidth, innerHeight);
     this.mode = 'sled'; document.body.classList.add('sledding'); $('#hud').hidden = true; $('#runhud').hidden = false;
     $('#runhud').innerHTML = `<div class="rh-top"><span class="rh-lives"></span><div class="rh-prog"><i></i><span class="rh-dest">${THEME_ICON[ICON[st.id]] || ''}</span></div><span class="rh-balls" aria-label="Snowballs">⚪ <b>0</b></span><span class="rh-flakes" aria-label="Snowflakes for the Snow Shop">❄ <b>0</b></span></div>
