@@ -114,6 +114,7 @@ export class StageRunner {
     this.sled?.dispose(); this.sled = sled; const spell = sled.spell;
     this.sled.resize(innerWidth, innerHeight);
     this.mode = 'sled'; document.body.classList.add('sledding'); $('#hud').hidden = true; $('#runhud').hidden = false;
+    if (sled.first && matchMedia('(pointer: coarse)').matches) setTimeout(() => { if (this.sled === sled) this.rideBanner('SWIPE ← → TO STEER', '', 2.4); }, 1400); // no buttons on a touch screen: the first ride says how
     $('#runhud').innerHTML = `<div class="rh-top"><span class="rh-lives"></span><div class="rh-prog"><i></i><span class="rh-dest">${THEME_ICON[ICON[st.id]] || ''}</span></div><span class="rh-balls" aria-label="Snowballs">⚪ <b>0</b></span><span class="rh-flakes" aria-label="Snowflakes for the Snow Shop">❄ <b>0</b></span></div>
       <div class="rh-spell" ${spell ? '' : 'hidden'}><small>Spell: <span lang="tr">${esc(spell?.tr || '')}</span></small><div class="rh-slots"></div></div><div class="rh-toast"></div>
       <div class="rh-lines" aria-hidden="true"></div><div class="rh-banner"></div><div class="rh-cine" hidden><small></small><b></b><span class="rh-skip" hidden>Tap to skip</span></div>

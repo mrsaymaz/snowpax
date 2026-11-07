@@ -264,7 +264,7 @@ export class SledRun {
     const tools = s => TOOLS[Math.min(TOOLS.length - 1, s)], fresh = s => NEW[Math.min(NEW.length - 1, s)];
     const flakeDue = new Array(nSec).fill(0); for (let k = 0; k < this.words.length; k++) flakeDue[Math.min(nSec - 1, 1 + (k % Math.max(1, nSec - 1)))]++;
     const ball = (d, lane, y = 0.6) => items.push({ kind: 'ball', d, lane, y });
-    const word = (d, lane, y) => { const w = this.words[this.wordK = (this.wordK || 0)]; if (!w) return false; this.wordK++; items.push({ kind: 'word', d, lane, y, word: w }); return true; };
+    const word = (d, lane, y) => { const w = this.words[this.wordK = (this.wordK || 0)]; if (!w || items.some(it => it.kind === 'word' && Math.abs(it.d - d) < 45)) return false; this.wordK++; items.push({ kind: 'word', d, lane, y, word: w }); return true; }; // never two snowflakes close together
     const free = (...ls) => [0, 1, 2].filter(l => !ls.includes(l)), pick = list => list[Math.floor(rng() * list.length)];
     const low = ['car', 'snowman', 'crate'], over = ['line', 'branch', 'awning'];
     for (let s = 0; s < nSec; s++) {
@@ -315,7 +315,8 @@ export class SledRun {
         if (tool === 'ramp') { // a jump ramp in a clear lane, arrows on the snow before it, a big arc of snowballs off it
           const l = pick([0, 1, 2]);
           d += v * 0.4; items.push({ kind: 'arrow', d: d - 9, lane: l }, { kind: 'arrow', d: d - 5.5, lane: l }, { kind: 'ramp', d, lane: l, needs: 'ramp' });
-          for (let k = 0; k < 8; k++) { const u = k / 7, y = 1.6 + Math.sin(u * Math.PI) * 1.5, dd = d + 3 + k * 1.35; if (k === 4 && flakeDue[s] > 0 && word(dd, l, y)) { flakeDue[s]--; continue; } ball(dd, l, y); }
+          const ve = this.vmax * (1 + 0.035 * Math.min(4, s)), air = 10.5 / 11; // the flight at this section's speed (fitted again at take-off)
+          for (let k = 0; k < 8; k++) { const t = air * (0.12 + 0.76 * k / 7), y = 10.5 * t - 11 * t * t + 0.6, dd = d + ve * t; if (k === 4 && flakeDue[s] > 0 && word(dd, l, y)) { flakeDue[s]--; continue; } ball(dd, l, y); }
           d += 13; step('ramp', 1.1); n++; continue;
         }
         if (tool === 'pair') { // two quick things in a row: steer, then duck (or jump)
@@ -329,7 +330,9 @@ export class SledRun {
     }
     // any word snowflake still to place: on top of a high line or an arc, from the last sections back
     let left = this.words.length - (this.wordK || 0);
-    if (left > 0) { const highs = items.filter(it => it.kind === 'ball' && it.y >= 1.8).reverse(); for (let k = 0; k < highs.length && left > 0; k += 7) { const it = highs[k]; it.kind = 'word'; it.word = this.words[this.wordK++]; left--; } }
+    if (left > 0) { // high lines only (not a ramp's arc), each at least 45 m from any other snowflake
+      const highs = items.filter(it => it.kind === 'ball' && it.y === 1.9).reverse();
+      for (const it of highs) { if (left <= 0) break; if (items.some(o => o.kind === 'word' && Math.abs(o.d - it.d) < 45)) continue; it.kind = 'word'; it.word = this.words[this.wordK++]; left--; } }
     items.sort((a, b) => a.d - b.d);
     this.letterCount = this.spell ? this.spell.en.length : 0;
   }
@@ -357,6 +360,17 @@ export class SledRun {
 
   // ---------- input ----------
   move(dir) { if (this.finished || this.cine) return; const was = this.lane; this.lane = Math.max(0, Math.min(2, this.lane + dir)); if (this.lane !== was) this.laneFrom = { lane: was, t: this.time }; }
+  // off a ramp the sled's flight depends on its speed: the arc of snowballs (and the snowflake on it)
+  // after the ramp is fitted to where the sled will really be, so every one of them can be caught
+  fitArc(r) {
+    const v = Math.max(3, this.v), vy = this.vy;
+    for (const it of this.items) {
+      if (it.d <= r.d) continue; if (it.d > r.d + 16) break;
+      if (it.done || it.lane !== r.lane || (it.kind !== 'ball' && it.kind !== 'word') || (it.y || 0) < 1.0) continue;
+      const t = (it.d - this.dist) / v, y = vy * t - 11 * t * t; // g = 22
+      it.y = y > 0.25 ? y + 0.6 : 0.6; // past the landing: on the snow
+    }
+  }
   jump() { if (this.finished || this.cine || this.y > 0.05 || this.duckT > 0.2) return; this.vy = 7.4; this.on.sound?.('dodge'); }
   duck() { if (this.finished || this.cine) return; this.duckT = 0.65; if (this.y > 0.05) this.vy = -9; }
   // a tap in the air: a spin (land it for bonus snowballs)
@@ -416,9 +430,9 @@ export class SledRun {
         continue;
       }
       if (it.kind === 'arrow') { it.done = true; continue; }
-      if (it.kind === 'ball' || it.kind === 'word') { if (Math.abs((it.y || 0.6) - (this.y + 0.6)) > 1.1) continue; it.done = true; this.collect(it); continue; }
+      if (it.kind === 'ball' || it.kind === 'word') { if (Math.abs((it.y || 0.6) - (this.y + 0.6)) > (it.kind === 'word' ? 1.45 : 1.1)) continue; it.done = true; this.collect(it); continue; }
       if (it.kind === 'letter') { it.done = true; this.letter(it); continue; }
-      if (it.kind === 'ramp') { it.done = true; if (this.y < 0.3) { this.vy = 10.5; this.rampAir = true; this.on.sound?.('sled'); if (this.first && !this.hintDone.has('spin')) { this.hintDone.add('spin'); this.on.hint?.('TAP to spin!'); } } continue; }
+      if (it.kind === 'ramp') { it.done = true; if (this.y < 0.3) { this.vy = 10.5; this.rampAir = true; this.fitArc(it); this.on.sound?.('sled'); if (this.first && !this.hintDone.has('spin')) { this.hintDone.add('spin'); this.on.hint?.('TAP to spin!'); } } continue; }
       if (it.needs === 'j' && this.y < (OBST[it.kind].h || 1) * 0.55) { it.done = true; this.crash(); }
       else if (it.needs === 'd' && this.duckT <= 0) { it.done = true; this.crash(); }
       else it.done = true;
