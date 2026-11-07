@@ -25,6 +25,7 @@ export const OUTPOST_THEME = {
   sururi: { theme: 'sururi', name: 'The Snow Castle' },
   kasimpasa: { theme: 'kizilay', name: 'Kasımpaşa' },
   'golden-horn': { theme: 'waterfront', name: 'The Golden Horn' },
+  downtown: { theme: 'kizilay', name: 'Downtown' },
 };
 const FAMILY_NAME = Object.fromEntries(FAMILIES.map(f => [f.id, f.name]));
 const T = CONFIG.timing;

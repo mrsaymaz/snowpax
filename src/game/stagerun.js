@@ -22,7 +22,7 @@ const FIGHT_MAX = 14; // seconds of the opening fight at most
 const FIELD_MAX = 45; // on a battlefield: beat the rival team, or after this long they run back to camp
 const FAMILY_NAME = Object.fromEntries(FAMILIES.map(f => [f.id, f.name]));
 const STAR = n => '★'.repeat(n) + '☆'.repeat(3 - n);
-const ICON = { kasimpasa: 'kizilay', 'golden-horn': 'waterfront' };
+const ICON = { kasimpasa: 'kizilay', 'golden-horn': 'waterfront', downtown: 'tram' };
 
 export class StageRunner {
   constructor({ match, flow, unit, unitProgress, save, writeSave, pace, rng, team, kit, reduceMotion, ui }) {

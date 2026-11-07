@@ -41,6 +41,10 @@ const PLACES = [
   // mouth, the places along its shores; the frozen water itself lies north of the field
   { id: 'golden-horn', family: 'match', label: 'The Golden Horn', landmark: 'golden-horn', back: 6, trees: 'xTxv', stalls: ['fish', 'simit', 'cay', 'chestnut'], sea: true,
     seats: ['karakoy', 'bankalar', 'tersane', 'aynalikavak', 'miniaturk'] },
+  // Arena 3: Downtown (Beyoğlu): the red nostalgic tram running round a ring of track, a street clock
+  // with the DOWNTOWN sign in the middle, the five places as its stops
+  { id: 'downtown', family: 'match', label: 'Downtown', landmark: 'tram', back: 6, trees: 'TvTx', stalls: ['simit', 'chestnut', 'corn', 'cay'],
+    seats: ['galata-tower', 'istiklal', 'taksim', 'cihangir', 'tophane'] },
 ];
 
 // Field layouts: [kind, d0, d1, v0, v1] covers the cells whose centres have d0 ≤ d ≤ d1 (rows
@@ -67,6 +71,15 @@ const ARENAS = {
     ['#', 12.5, 13.5, 2.5, 3.5],                                       // stone bollard blocks
     ['i', 10.5, 11.5, 0.5, 1.5],
     ['z', 9.5, 9.5, 5.5, 6.5], ['#', 6.5, 7.5, 8.5, 8.5], ['B', 4.5, 6.5, 9.5, 10.5], // the rival line
+  ],
+  downtown: [ // the avenue: newspaper kiosks, benches, snowbanks the ploughs left, a parked barricade
+    ['n', 23.5, 23.5, 3.5, 3.5], ['b', 24.5, 24.5, 7.5, 9.5],          // snowmen by the spawn, benches along the pavement
+    ['#', 19.5, 20.5, 1.5, 2.5],                                       // a ploughed snowbank in the middle
+    ['z', 17.5, 17.5, 6.5, 7.5],                                       // newspaper kiosks
+    ['w', 14.5, 14.5, 0.5, 2.5],                                       // a roadworks barricade across the middle
+    ['B', 12.5, 13.5, 8.5, 10.5],                                      // bushes by the park
+    ['i', 9.5, 10.5, 3.5, 5.5],                                        // ice on the tram rails
+    ['z', 16.5, 16.5, 0.5, 0.5], ['#', 6.5, 7.5, 6.5, 7.5], ['b', 5.5, 5.5, 9.5, 10.5], // a kiosk in the middle lane; the rival line
   ],
 };
 

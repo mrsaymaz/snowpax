@@ -17,6 +17,10 @@ export const STAGES = [
   // Arena 2: up the Golden Horn from its mouth; the Final Showdown at Miniatürk, among the models
   { id: 'golden-horn', arena: 2, outpost: 'golden-horn', family: 'match', parts: [['listen', 'sort'], ['build', 'answer', 'match']], fights: 'long', title: 'The Golden Horn', ride: { theme: 'goldenhorn', seconds: 50, spell: true, flakes: 5 }, newRival: 'lobber',
     places: { listen: { id: 'karakoy', title: 'Karaköy Pier' }, sort: { id: 'bankalar', title: 'Bankers Street' }, build: { id: 'tersane', title: 'Tersane İstanbul' }, answer: { id: 'aynalikavak', title: 'Aynalıkavak Pavilion' }, match: { id: 'miniaturk', title: 'Miniatürk' } } },
+  // Arena 3: Downtown, a loop through Beyoğlu: from Galata Tower up İstiklal Avenue to Taksim, down
+  // through Cihangir to Tophane by the water, where the Final Showdown is played
+  { id: 'downtown', arena: 3, outpost: 'downtown', family: 'match', parts: [['sort', 'build'], ['listen', 'match', 'answer']], fights: 'long', title: 'Downtown', ride: { theme: 'downtown', seconds: 50, spell: true, flakes: 5 }, newRival: 'sledder',
+    places: { sort: { id: 'galata-tower', title: 'Galata Tower' }, build: { id: 'istiklal', title: 'İstiklal Avenue' }, listen: { id: 'taksim', title: 'Taksim Square' }, match: { id: 'cihangir', title: 'Cihangir' }, answer: { id: 'tophane', title: 'Tophane' } } },
 ];
 // the place each task family belongs to in Arena 1 (the stages' own `places` say it for each arena)
 export const PLACE_OF = { answer: 'Boulevard Park', sort: 'Archery Ground', match: 'Kızılay Square', build: 'Sururi Park', listen: 'The Pier' };

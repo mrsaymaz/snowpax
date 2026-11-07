@@ -11,13 +11,14 @@ import { makeRng } from '../src/tasks/subtasks.mjs';
 
 const def = JSON.parse(readFileSync(new URL('../public/arenas/arena1.json', import.meta.url), 'utf8'));
 
-test('one stage per arena (Kasımpaşa, the Golden Horn): five places\' task families in two parts (two, then three), each family once, each place with its view on the ride and its seat on the outpost', async () => {
+test('one stage per arena (Kasımpaşa, the Golden Horn, Downtown): five places\' task families in two parts (two, then three), each family once, each place with its view on the ride and its seat on the outpost', async () => {
   const { FAMILY_STATION } = await import('../src/game/fights.mjs');
   const { CINEMA } = await import('../src/game/render/cinema.js').catch(() => ({ CINEMA: null })); // needs a DOM to load the renderer: skipped in node
-  assert.deepEqual(STAGES.map(s => [s.id, s.arena]), [['kasimpasa', 1], ['golden-horn', 2]]);
+  assert.deepEqual(STAGES.map(s => [s.id, s.arena]), [['kasimpasa', 1], ['golden-horn', 2], ['downtown', 3]]);
   assert.deepEqual(STAGES[0].parts, [['answer', 'sort'], ['match', 'build', 'listen']]);
   assert.deepEqual(STAGES[1].parts, [['listen', 'sort'], ['build', 'answer', 'match']]);
   assert.deepEqual(Object.values(STAGES[1].places).map(p => p.title).sort(), ['Aynalıkavak Pavilion', 'Bankers Street', 'Karaköy Pier', 'Miniatürk', 'Tersane İstanbul']);
+  assert.deepEqual(STAGES[2].parts.flat().map(f => STAGES[2].places[f].title), ['Galata Tower', 'İstiklal Avenue', 'Taksim Square', 'Cihangir', 'Tophane'], 'Downtown in its order: a loop from Galata Tower to Tophane');
   for (const st of STAGES) {
     assert.equal(st.outpost, def.outposts.find(o => o.id === st.id).id);
     const all = st.parts.flat(); assert.equal(new Set(all).size, 5);
@@ -26,6 +27,7 @@ test('one stage per arena (Kasımpaşa, the Golden Horn): five places\' task fam
     assert.ok(st.ride && st.ride.flakes >= 4, 'the sled ride in carries the rare word snowflakes');
   }
   const up = newUnitProgress('hufflepuff', makeRng(2)); assert.ok(!isUnlocked(up, 'golden-horn')); finishStage(up, 'kasimpasa', { firstTry: 8, total: 10 }); assert.ok(isUnlocked(up, 'golden-horn'), 'the Golden Horn opens after Kasımpaşa');
+  assert.ok(!isUnlocked(up, 'downtown')); finishStage(up, 'golden-horn', { firstTry: 8, total: 10 }); assert.ok(isUnlocked(up, 'downtown'), 'Downtown opens after the Golden Horn');
 });
 
 test('stages unlock one by one; stars come from first-try accuracy and the best result is kept', () => {
@@ -62,7 +64,7 @@ test('the outpost has the rival team, the strike-back and the Final Showdown wit
 test('every field: the fence closes it all round, both teams can walk from their end to the outpost, the spots the waves use are open', () => {
   const m = createMatch({ arena: buildTileArena(def), myTeam: 'hufflepuff', rivalTeam: 'gryffindor', rng: makeRng(2) });
   const fields = m.sim.zones;
-  assert.equal(fields.length, 2);
+  assert.equal(fields.length, 3);
   for (const z of fields) {
     assert.ok(z.battlefield, `${z.id} is a battlefield`);
     const { back, front, hw } = z.battlefield;

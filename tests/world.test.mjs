@@ -11,11 +11,11 @@ const def = JSON.parse(readFileSync(new URL('../public/arenas/arena1.json', impo
 const fields = () => def.outposts.map(o => ({ id: o.id, i: o.i, j: o.j, ...o.arena }));
 const at = (f, d, v) => def.rows[f.j + d][f.i + v].replace(/[hr]/, 'a'); // the home spawn and rival camp marks are open snow; d rows south of the outpost centre, v columns east (cells d and v start at the centre's corner)
 
-test('one outpost per arena: Kasımpaşa and the Golden Horn, with the home spawn and the rivals\' camp; no real map', () => {
+test('one outpost per arena: Kasımpaşa, the Golden Horn and Downtown, with the home spawn and the rivals\' camp; no real map', () => {
   const a = buildTileArena(def);
   assert.equal(a.world, true);
   const zones = a.places.filter(p => p.kind === 'zone');
-  assert.deepEqual(zones.map(z => [z.id, z.label]), [['kasimpasa', 'Kasımpaşa'], ['golden-horn', 'The Golden Horn']]); assert.ok(zones.every(z => z.battlefield));
+  assert.deepEqual(zones.map(z => [z.id, z.label]), [['kasimpasa', 'Kasımpaşa'], ['golden-horn', 'The Golden Horn'], ['downtown', 'Downtown']]); assert.ok(zones.every(z => z.battlefield));
   assert.ok(a.places.find(p => p.kind === 'base')); assert.ok(a.places.find(p => p.kind === 'rivalBase'));
   assert.equal(a.schoolyard, null, 'no separate Showdown field: the Showdown is the outpost\'s last fight');
   assert.equal(def.credit, undefined, 'no map data, so no map credit');
@@ -36,7 +36,7 @@ test('each field is 22 × 34, mirrored left–right, with open ground and some c
 });
 
 test('each outpost is a round solid core in a plaza at the north end, the five places\' landmarks on it in the order their tasks are played', () => {
-  const want = { kasimpasa: ['carousel', ['treehouse', 'archers-lodge', 'fountain', 'snow-castle', 'admiral']], 'golden-horn': ['golden-horn', ['karakoy', 'bankalar', 'tersane', 'aynalikavak', 'miniaturk']] };
+  const want = { kasimpasa: ['carousel', ['treehouse', 'archers-lodge', 'fountain', 'snow-castle', 'admiral']], 'golden-horn': ['golden-horn', ['karakoy', 'bankalar', 'tersane', 'aynalikavak', 'miniaturk']], downtown: ['tram', ['galata-tower', 'istiklal', 'taksim', 'cihangir', 'tophane']] };
   for (const o of def.outposts) {
   const f = fields().find(q => q.id === o.id);
   const lm = def.landmarks.find(l => l.outpost === o.id && l.centre); assert.equal(lm.type, want[o.id][0]);

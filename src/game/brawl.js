@@ -70,9 +70,10 @@ function startScreen() {
   const showLesson = async () => {
     const grade = +(/^g(\d)/.exec(unitId)?.[1] || 5), n = +(/u(\d+)$/.exec(unitId)?.[1] || 1), card = $('#st-lesson');
     card.querySelector('i').textContent = grade; card.querySelector('small').textContent = `Grade ${grade} · Unit ${n}`;
-    const sts = save.units?.[unitId]?.arenas?.[0]?.stages || {}, stars = (sts.kasimpasa?.stars || 0) + (sts['golden-horn']?.stars || 0), open2 = !!sts.kasimpasa?.done;
-    $('#st-stars').textContent = `★ ${stars} / 6`; $('#st-ar-open').textContent = `${open2 ? 2 : 1} of 3 open`;
-    const c2 = $('#st-ar2'); c2.classList.toggle('locked', !open2); c2.classList.toggle('open', open2); c2.querySelector('small').textContent = open2 ? (sts['golden-horn']?.done ? `Arena 2 · ${'★'.repeat(sts['golden-horn'].stars)}` : 'Arena 2 · Ready') : '🔒 Win Kasımpaşa first';
+    const sts = save.units?.[unitId]?.arenas?.[0]?.stages || {}, stars = ['kasimpasa', 'golden-horn', 'downtown'].reduce((n, id) => n + (sts[id]?.stars || 0), 0), open2 = !!sts.kasimpasa?.done, open3 = open2 && !!sts['golden-horn']?.done;
+    $('#st-stars').textContent = `★ ${stars} / 9`; $('#st-ar-open').textContent = `${open3 ? 3 : open2 ? 2 : 1} of 3 open`;
+    const card3 = (el, n, id, open, lock) => { el.classList.toggle('locked', !open); el.classList.toggle('open', open); el.querySelector('small').textContent = open ? (sts[id]?.done ? `Arena ${n} · ${'★'.repeat(sts[id].stars)}` : `Arena ${n} · Ready`) : lock; };
+    card3($('#st-ar2'), 2, 'golden-horn', open2, '🔒 Win Kasımpaşa first'); card3($('#st-ar3'), 3, 'downtown', open3, '🔒 Win the Golden Horn first');
     try { const u = (await unitsOf(grade)).find(q => q.id === unitId); if (u) card.querySelector('b').textContent = u.title; } catch { /* offline: keep the number */ }
   };
   showLesson();
@@ -144,7 +145,7 @@ async function startGame(myTeam, kit, pace) {
   // ?look=v1 brings back the old diorama look
   const V2 = params.get('look') !== 'v1' && arena.world;
   // each stage at its own time of day; dusk = how far the lamps and windows are lit
-  const STAGE_LIGHT = { kasimpasa: ['afternoon', 0.15], 'golden-horn': ['golden', 0.4], boulevard: ['morning', 0], archery: ['noon', 0], kizilay: ['afternoon', 0.1], sururi: ['golden', 0.35], waterfront: ['sunset', 0.7], schoolyard: ['evening', 1] };
+  const STAGE_LIGHT = { kasimpasa: ['afternoon', 0.15], 'golden-horn': ['golden', 0.4], downtown: ['evening', 0.85], boulevard: ['morning', 0], archery: ['noon', 0], kizilay: ['afternoon', 0.1], sururi: ['golden', 0.35], waterfront: ['sunset', 0.7], schoolyard: ['evening', 1] };
   let stageLight = STAGE_LIGHT.boulevard;
   // what a stage build shows: a circle round the outpost, or a battlefield's field and the street frame round it
   const fieldBox = (z, pad = 0) => { const b = z.battlefield; return { x0: z.x - b.hw - pad, x1: z.x + b.hw + pad, z0: z.z - b.back - pad, z1: z.z + b.front + pad }; };

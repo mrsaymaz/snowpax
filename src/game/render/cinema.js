@@ -206,6 +206,24 @@ function skyline(g, L, hH, items = []) {
         const geo = new BufferGeometry(); geo.setAttribute('position', new Float32BufferAttribute(pts, 3)); g.add(new LineSegments(geo, new LineBasicMaterial({ color: haze('#e6e9f2', r, 0.8), transparent: true, opacity: 0.7 })));
       }
     },
+    // the Maiden's Tower: a little white tower on a rock in the water, lit at night
+    maiden({ a, r, s = 1 }) {
+      const x = PLACE.x + Math.sin(a) * r, z = PLACE.z - Math.cos(a) * r, T = root(x, -0.3, z, s), w = M('#f4f1ec', r, 0.4), lead = M('#6f748f', r, 0.4), rock = M('#8a8496', r, 0.4);
+      const rk = put(new SphereGeometry(5, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), rock, 0, 0, 0, T); rk.scale.set(1.4, 0.45, 1);
+      put(new BoxGeometry(8, 3, 5), w, -1.5, 3.2, 0, T); put(new CylinderGeometry(1.6, 1.8, 8, 14), w, 2.5, 5.5, 0, T); put(new CylinderGeometry(2.0, 2.0, 0.6, 14), w, 2.5, 9.8, 0, T); put(new ConeGeometry(1.8, 4, 14), lead, 2.5, 12.1, 0, T); put(new CylinderGeometry(0.08, 0.08, 1.8, 5), lead, 2.5, 14.8, 0, T);
+      for (let k = 0; k < 4; k++) put(new PlaneGeometry(0.7, 1.2), lit ? glow : B('#4a4a5e', r, 0.4), 2.5 + Math.sin(k * 1.57) * 1.62, 7, Math.cos(k * 1.57) * 1.62, T).rotation.y = k * 1.57;
+      if (lit) { const halo = new Sprite(new SpriteMaterial({ map: glowTex(), color: '#ffe0a8', transparent: true, opacity: 0.45, depthWrite: false, blending: AdditiveBlending, fog: false })); halo.position.set(2.5, 7, 0); halo.scale.setScalar(18); T.add(halo); }
+    },
+    // a great suspension bridge far off across the strait: two tall towers, the main cable's curve, lit at night
+    suspension({ r, a0 = -0.95, a1 = -0.4 }) {
+      const z = PLACE.z - r, x0 = PLACE.x + Math.tan(a0) * r, x1 = PLACE.x + Math.tan(a1) * r, len = x1 - x0, deckY = 14, grey = M('#d9dce6', r, 0.5);
+      put(new BoxGeometry(len, 1.4, 5), grey, (x0 + x1) / 2, deckY, z, g);
+      const tA = x0 + len * 0.2, tB = x0 + len * 0.8, top = deckY + 42; for (const tx of [tA, tB]) { put(new BoxGeometry(2.4, top, 2.4), grey, tx, top / 2, z, g); put(new BoxGeometry(2.6, 1.2, 4.8), grey, tx, top - 4, z, g); }
+      const pts = [], cab = u => { const xx = x0 + len * u; const y = u < 0.2 ? deckY + (top - deckY) * (u / 0.2) : u > 0.8 ? deckY + (top - deckY) * ((1 - u) / 0.2) : deckY + 3 + (top - deckY - 3) * Math.pow((u - 0.5) / 0.3, 2); return [xx, y]; };
+      for (let k = 0; k < 40; k++) { const [ax, ay] = cab(k / 40), [bx, by] = cab((k + 1) / 40); pts.push(ax, ay, z, bx, by, z); if (k % 2 === 0 && k / 40 > 0.2 && k / 40 < 0.8) pts.push(ax, ay, z, ax, deckY, z); }
+      const geo = new BufferGeometry(); geo.setAttribute('position', new Float32BufferAttribute(pts, 3)); g.add(new LineSegments(geo, new LineBasicMaterial({ color: lit ? '#c8a0ff' : haze('#e6e9f2', r, 0.6) })));
+      if (lit) for (let k = 0; k <= 30; k++) { const [bx2] = cab(k / 30); const b2 = new Mesh(new SphereGeometry(0.5, 6, 4), new MeshBasicMaterial({ color: ['#b48cff', '#7ad0ff', '#ffd27a'][k % 3] })); b2.position.set(bx2, deckY + 1, z + 2.6); g.add(b2); }
+    },
     // the red brick school with its domed tower on the hill at Fener: a castle in brick
     redschool({ a, r, s = 1 }) {
       const [x, y, z] = where(a, r), T = root(x, y - 0.6, z, s), brick = M('#b4473a', r, 0.4), trim = M('#efe2d0', r, 0.4), lead = M('#6f748f', r, 0.4), win = lit ? glow : B('#4a3a44', r, 0.4);
@@ -653,6 +671,116 @@ const miniaturk = vista({
   far: [{ kind: 'bridge', type: 'highway', r: 124, a0: -0.75, a1: 0.75 }, { kind: 'cypresses', a: -0.05, r: 165, n: 220, span: 0.7 }], // the Haliç highway bridge high over the water, the cypress hill above Eyüp
 });
 
+
+// ---------- Arena 3: Downtown, an evening loop through Beyoğlu ----------
+// Galata Tower (golden late afternoon): the tower above the rooftops, bakeries and dessert shops at
+// its foot, the queues at its door; across the water the old city's domes.
+const galataTower = vista({
+  hood: { landmark: 'galata-tower', seed: 111, flag: '#c8443c', trees: 'TvTx', plazaR: 5, tiles: [['l', 17, 19], ['l', 28, 19], ['l', 15, 11], ['l', 30, 11], ['b', 13, 18], ['b', 32, 18]], props: [
+    { type: 'stall', kind: 'simit', i: CX - 10, j: CZ + 2, w: 2, h: 1 }, { type: 'stall', kind: 'chestnut', i: CX + 7, j: CZ + 2, w: 2, h: 1 }] },
+  light: { sun: '#ffd8a0', intensity: 2.1, sky: '#f6e6d6', ground: '#a693bc', dir: [-0.7, 0.3, -0.6], top: '#6f8fd6', horizon: '#f8d9b8', far: '#b6a7c4', fog: '#f0d8c4', sunSize: 85, dusk: 0.3 },
+  shots: [
+    move(0, 2.6, [at(0.5, 1.4, 15), at(0, 3.6, 0)], [at(0.3, 2.2, 10), at(0, 4.4, -0.7)]), // up the lane, the eye climbing the tower
+    orbit(2.6, 5.0, { r: [10, 9], a: [0.8, -0.6], y: [2.5, 5.2], look: [at(0, 4.2, -0.7), at(0, 5.2, -0.7)] }), // round the tower and up to its cap
+    move(5.0, 7.2, [at(-3, 7, 9), at(0, 4, -1)], [at(-7, 15, 18), at(0, 2.5, -2)]), // over the rooftops
+  ],
+  wide: [at(-6, 11, 18), at(0, 3, -1)],
+  extra: life(k => {
+    k.bed(rel(-3.4, 4.0), 1.6, 0.7); k.bed(rel(3.4, 4.0), 1.6, 0.7); k.cat(up(rel(3.0, 4.0), 0.3), -0.5, '#e09a4a'); // close by the landmark, in view even on a phone
+    k.cafe(rel(-9.5, -1.0), '#c8443c'); k.cafe(rel(-12, 0.6), '#f2f2f2'); k.cafe(rel(10, -0.6), '#3f9b5a'); k.cafe(rel(12.5, 1.0), '#f2c9d2'); // the dessert shops' tables
+    k.lights([rel(-14, -3), rel(-10, -4.2), rel(-6.5, -3)], { y: 2.9 }); k.lights([rel(6.5, -3), rel(10, -4.2), rel(14, -3)], { y: 2.9 });
+    k.steam(up(rel(-9.5, 2.5), 1.3), 0.45); k.steam(up(rel(7.5, 2.5), 1.3), 0.45);
+    k.pigeons(rel(-6, 7), 7); k.cat(up(tw(13, 18), 0.55), 0.3, '#3b3b44'); k.flag(rel(-6.4, -3.2), '#c8443c', 3.6); k.flag(rel(6.4, -3.2), '#c8443c', 3.6);
+  }),
+  far: [{ kind: 'ridge', a: -0.12, r: 205, s: 1.5, n: 3, span: 0.6 }, { kind: 'towers', a: 0.85, r: 260, n: 5, span: 0.15 }], // across the Golden Horn: the old city's domes
+});
+// İstiklal Avenue (dusk, the festive lights on): the red tram on its rails, the Flower Passage and the
+// old school gate, strings of lights across the street; Galata Tower at the far end.
+const istiklal = vista({
+  hood: { landmark: 'istiklal', seed: 121, flag: '#c8302e', trees: 'TTvT', plazaR: 5, tiles: [['l', 17, 19], ['l', 28, 19], ...[24, 28].flatMap(j => [['b', 14, j], ['b', 32, j]]), ...[28, 31].flatMap(j => [['l', 15, j], ['l', 31, j]])], props: [
+    { type: 'stall', kind: 'corn', i: CX - 10, j: CZ + 2, w: 2, h: 1 }, { type: 'stall', kind: 'simit', i: CX + 7, j: CZ + 2, w: 2, h: 1 },
+    { type: 'plane-tree', i: CX - 12, j: CZ + 6, w: 2, h: 2 }, { type: 'plane-tree', i: CX + 10, j: CZ + 6, w: 2, h: 2 }] },
+  light: { sun: '#ffb98a', intensity: 1.7, sky: '#e8d0e0', ground: '#8f80b8', dir: [-0.6, 0.2, -0.75], top: '#5f62b8', horizon: '#f5bfae', far: '#9a8ab6', fog: '#e9c4c0', sunDisc: '#ffb070', sunSize: 80, dusk: 0.75 },
+  shots: [
+    move(0, 2.6, [at(-1.5, 1.5, 15), at(0, 1.8, 0.5)], [at(-1, 2.1, 9.5), at(0, 1.6, 0.5)]), // down the avenue to the tram
+    orbit(2.6, 5.0, { r: [9.5, 8.5], a: [-0.7, 0.7], y: [2.2, 3.4], look: [at(0, 1.6, 0), at(0, 2.2, -0.5)] }), // along the tram, the passage and the gate behind
+    move(5.0, 7.2, [at(3, 6, 9), at(0, 2, -1)], [at(7, 14, 18), at(0, 1.4, -3)]), // up over the lights
+  ],
+  wide: [at(5, 10, 16), at(0, 2, -1)],
+  extra: life(k => {
+    k.bed(rel(-3.4, 4.2), 1.6, 0.7); k.bed(rel(3.4, 4.2), 1.6, 0.7); k.cat(up(rel(3.0, 4.2), 0.3), -0.5, '#e09a4a');
+    for (const z of [-2, 2, 6, 10]) k.lights([rel(-9, z - 0.6), rel(-4.5, z + 0.3), rel(0, z - 0.2), rel(4.5, z + 0.3), rel(9, z - 0.6)], { y: 3.6, sag: 0.25 }); // the avenue's festive lights
+    k.cafe(rel(-11.5, 0.5), '#c8302e'); k.cafe(rel(11.5, 0.8), '#f2f2f2'); k.steam(up(rel(-9.5, 2.5), 1.3), 0.4); k.steam(up(rel(7.5, 2.5), 1.3), 0.4);
+    k.flag(rel(-6.5, -2.6), '#c8302e', 3.6); k.flag(rel(6.5, -2.6), '#c8302e', 3.6); k.cat(up(tw(14, 24), 0.55), 0.3, '#3b3b44'); k.pigeons(rel(-7, 8), 6);
+  }),
+  far: [{ kind: 'galata', a: 0.22, r: 160, s: 1.3 }, { kind: 'ridge', a: -0.35, r: 230, s: 1.2, n: 2, span: 0.3 }], // Galata Tower at the far end of the avenue
+});
+// Taksim Square (blue hour): the opera house's glass front with its red sphere, the tall hotel tower,
+// the park's snowy trees, a red and white city bus, pigeons on the square; the city's towers beyond.
+const taksim = vista({
+  hood: { landmark: 'taksim', seed: 131, flag: '#2d6fb5', trees: 'TTTv', plazaR: 6, tiles: [['l', 16, 20], ['l', 30, 20], ['b', 12, 18], ['b', 12, 22], ['b', 34, 18], ['l', 14, 11], ['l', 32, 11]], props: [
+    ...[[CX - 13, CZ + 3], [CX - 13, CZ - 2], [CX - 10, CZ + 7], [CX - 15, CZ + 7]].map(([i, j]) => ({ type: 'plane-tree', i, j, w: 2, h: 2 })), // the park
+    { type: 'stall', kind: 'simit', i: CX + 8, j: CZ + 3, w: 2, h: 1 }, { type: 'stall', kind: 'corn', i: CX + 8, j: CZ - 2, w: 2, h: 1 }] },
+  light: { sun: '#c8b8ff', intensity: 1.45, sky: '#c8c4ec', ground: '#6f6aa8', dir: [-0.5, 0.22, -0.8], top: '#3f4aa0', horizon: '#c9b0d8', far: '#8580b0', fog: '#bfb0d6', sunDisc: '#ffa898', sunSize: 70, dusk: 0.95 },
+  shots: [
+    move(0, 2.6, [at(0.5, 1.5, 16), at(0, 2.0, -0.5)], [at(0.3, 2.3, 10.5), at(0, 2.2, -1)]), // across the square to the opera house
+    orbit(2.6, 5.0, { r: [11, 9.5], a: [0.9, -0.6], y: [2.6, 4.2], look: [at(0, 2.0, -0.5), at(0.6, 3.0, -1)] }), // round the bus and up the hotel tower
+    move(5.0, 7.2, [at(-3, 6, 10), at(0, 2, -1)], [at(-8, 15, 19), at(0, 1.6, -3)]), // up over the square and the park
+  ],
+  wide: [at(-6, 11, 18), at(0, 2, -1)],
+  extra: life(k => {
+    k.bed(rel(-3.4, 4.6), 1.6, 0.7); k.bed(rel(3.4, 4.6), 1.6, 0.7); k.cat(up(rel(3.0, 4.6), 0.3), -0.5, '#f2ede4');
+    k.pigeons(rel(-2.5, 7.5), 14); k.pigeons(rel(4.5, 6), 9); // the square's pigeons
+    k.steam(up(rel(8.5, 3.5), 1.3), 0.4); k.steam(up(rel(8.5, -1.5), 1.3), 0.4);
+    k.lights([rel(-16, 1.5), rel(-12, 0), rel(-8.5, 1.5)], { y: 3.2 }); k.flag(rel(6.8, -3.4), '#2d6fb5', 4.2); k.flag(rel(-6.8, -3.4), '#2d6fb5', 4.2);
+    k.bed(rel(-9, 5.5), 2.4, 0.8, ['#ffffff', '#e2406a']); k.bed(rel(9, 6), 2.4, 0.8); k.cat(up(tw(12, 18), 0.55), 0.3, '#3b3b44');
+  }),
+  far: [{ kind: 'towers', a: 0.12, r: 225, n: 11, span: 0.45 }], // the city's tall towers to the north
+});
+// Cihangir (evening, the café lamps lit): pastel houses on the steep slope, the café tables under the big
+// plane tree, an antique shop, cats everywhere; below, the Bosphorus, the Maiden's Tower, the great bridge lit.
+const cihangir = vista({
+  hood: { landmark: 'cihangir', seed: 141, flag: '#e8a10a', sea: 9, trees: 'TvyT', plazaR: 5, tiles: [['l', 17, 19], ['l', 28, 19], ['b', 13, 17], ['b', 32, 17], ['b', 13, 21], ['l', 14, 12], ['l', 31, 12]], props: [
+    { type: 'stall', kind: 'cay', i: CX - 10, j: CZ + 2, w: 2, h: 1 }, { type: 'plane-tree', i: CX + 9, j: CZ + 5, w: 2, h: 2 }] },
+  light: { sun: '#b8a8f0', intensity: 1.35, sky: '#b8b4e4', ground: '#666098', dir: [0.5, 0.2, -0.8], top: '#363f92', horizon: '#b9a2cf', far: '#7c76a8', fog: '#b2a6cc', sunDisc: '#e8b0c8', sunSize: 60, dusk: 1.0 },
+  shots: [
+    move(0, 2.6, [at(-0.8, 1.3, 14), at(0, 1.4, -0.5)], [at(-0.4, 1.9, 8.5), at(0, 1.6, -0.5)]), // low among the café tables and the cats
+    orbit(2.6, 5.0, { r: [9, 8], a: [-0.8, 0.6], y: [2.0, 3.0], look: [at(0, 1.4, -0.5), at(0, 1.9, -0.8)] }), // round the square, the houses up the slope
+    move(5.0, 7.2, [at(2, 5, 7), at(0, 1.2, -6)], [at(5, 12, 15), at(0, 0.8, -22)]), // out over the roofs to the Bosphorus
+  ],
+  wide: [at(4, 9, 15), at(0, 1.5, -4)],
+  extra: life(k => {
+    k.bed(rel(-3.4, 4.0), 1.6, 0.7); k.bed(rel(3.4, 4.0), 1.6, 0.7); k.cat(up(rel(3.0, 4.0), 0.3), -0.5, '#e09a4a');
+    for (const [x, z, c, ry] of [[-6.2, 5.2, '#3b3b44', 0.6], [6.4, 5.6, '#f2ede4', -0.4], [-9.6, 2.4, '#e09a4a', 1.2], [9.2, 2.2, '#9a9aa6', -0.9], [-4.8, 7.5, '#e8c9a0', 0.2], [5.2, 8.2, '#e09a4a', -0.3]]) k.cat(up(rel(x, z), 0), ry, c); // Cihangir's famous cats
+    k.cat(up(tw(13, 17), 0.55), 0.3, '#3b3b44'); k.cat(up(tw(32, 17), 0.55), -0.3, '#f2ede4');
+    k.cafe(rel(-10, 0.2), '#e8a10a'); k.cafe(rel(-12.5, 1.6), '#c8443c'); k.cafe(rel(10.5, -0.4), '#3f9b5a'); k.steam(up(rel(-9.5, 2.5), 1.3), 0.4);
+    k.lights([rel(-14, -2), rel(-10, -3.2), rel(-6.5, -2)], { y: 2.8 }); k.lights([rel(6.5, -2), rel(10, -3.2), rel(14, -2)], { y: 2.8 });
+    k.quay(-19, -6.2, -6.6, { bollards: 2 }); k.quay(6.2, 19, -6.6, { bollards: 2 });
+  }),
+  far: [{ kind: 'maiden', a: -0.1, r: 112, s: 0.9 }, { kind: 'suspension', r: 175, a0: -0.95, a1: -0.45 }, { kind: 'ridge', a: 0.45, r: 175, s: 1.0, n: 2, span: 0.35 }], // the Bosphorus: the Maiden's Tower, the great bridge, the far shore
+});
+// Tophane (night by the water): the clock tower and the marble fountain on the promenade, the art museum
+// and a cruise ship at the quay; across the dark water the Maiden's Tower, the great bridge lit up.
+const tophane = vista({
+  hood: { landmark: 'tophane', seed: 151, flag: '#2d6fb5', sea: 10, trees: 'xTx', plazaR: 5, tiles: [...[5, 8, 11, 34, 37, 40].map(i => ['l', i, 10]), ...[6, 9, 12, 35, 38].map(i => ['b', i, 11]), ['l', 17, 19], ['l', 28, 19]], props: [
+    { type: 'ferry', i: CX - 12, j: 3, w: 5, h: 2, along: 'x' }, { type: 'pier', i: CX + 8, j: 5, w: 2, h: 3, along: 'z' }, { type: 'stall', kind: 'fish', i: CX - 10, j: CZ + 2, w: 2, h: 1 }] },
+  light: { sun: '#9aa8f0', intensity: 1.15, sky: '#9a9ad8', ground: '#55508c', dir: [0.4, 0.3, -0.8], top: '#262c74', horizon: '#8f88c0', far: '#6a669c', fog: '#8f88bc', sunDisc: '#f4f0ff', sunSize: 45, dusk: 1.0 },
+  shots: [
+    move(0, 2.6, [at(-8, 1.6, 13), at(0, 2.2, -0.5)], [at(-5, 2.4, 9), at(0.3, 2.6, -0.5)]), // along the promenade to the clock tower
+    orbit(2.6, 5.0, { r: [10, 9], a: [-0.6, 0.7], y: [2.4, 3.6], look: [at(0.3, 2.4, -0.5), at(0.6, 2.6, -0.5)] }), // round the clock tower and the fountain
+    move(5.0, 7.2, [at(2, 5, 8), at(0, 1.2, -10)], [at(6, 12, 16), at(0, 0.8, -26)]), // out over the water to the far shore's lights
+  ],
+  wide: [at(4, 10, 16), at(0, 1.5, -6)],
+  extra: life(k => {
+    k.bed(rel(-3.4, 4.0), 1.6, 0.7); k.bed(rel(3.4, 4.0), 1.6, 0.7); k.cat(up(rel(3.0, 4.0), 0.3), -0.5, '#e09a4a');
+    k.quay(-19, -6, -5.4, { rods: 5, bollards: 3 }); k.quay(6, 19, -5.4, { rods: 5, bollards: 3 }); // fishermen's rods along the quay
+    k.lights([rel(-18, -4.8), rel(-12, -4.8), rel(-6.5, -4.8)], { y: 2.4 }); k.lights([rel(6.5, -4.8), rel(12, -4.8), rel(18, -4.8)], { y: 2.4 });
+    k.cafe(rel(-11, 1.5), '#2d6fb5'); k.cafe(rel(11.5, 1.8), '#f2f2f2'); k.boat(rel(-14, -9.5), 0.5, '#c8443c'); k.boat(rel(14, -10), -0.4, '#3d6fb0');
+    k.flag(rel(-6, -3.4), '#2d6fb5', 3.6); k.flag(rel(6, -3.4), '#2d6fb5', 3.6); k.cat(up(tw(35, 11), 0.55), -0.3, '#3b3b44');
+  }),
+  far: [{ kind: 'ridge', a: -1.0, r: 52, s: 0.55, n: 1, span: 0 }, { kind: 'maiden', a: 0.2, r: 110, s: 0.9 }, { kind: 'suspension', r: 172, a0: -0.92, a1: -0.42 }, { kind: 'ridge', a: 0.62, r: 170, s: 1.2, n: 3, span: 0.4 }], // the mosque beside the square (scenery), the Maiden's Tower, the great bridge, the old city's domes to the right
+});
+
 // The scenes, by place; each one's welcome is read aloud with its name card.
 export const CINEMA = {
   boulevard: { title: 'Boulevard Park', welcome: 'Welcome to Boulevard Park!', build: boulevard },
@@ -665,6 +793,11 @@ export const CINEMA = {
   tersane: { title: 'Tersane İstanbul', welcome: 'Welcome to Tersane İstanbul!', build: tersane },
   aynalikavak: { title: 'Aynalıkavak Pavilion', welcome: 'Welcome to Aynalıkavak Pavilion!', build: aynalikavak },
   miniaturk: { title: 'Miniatürk', welcome: 'Welcome to Miniatürk!', build: miniaturk },
+  'galata-tower': { title: 'Galata Tower', welcome: 'Welcome to Galata Tower!', build: galataTower },
+  istiklal: { title: 'İstiklal Avenue', welcome: 'Welcome to İstiklal Avenue!', build: istiklal },
+  taksim: { title: 'Taksim Square', welcome: 'Welcome to Taksim Square!', build: taksim },
+  cihangir: { title: 'Cihangir', welcome: 'Welcome to Cihangir!', build: cihangir },
+  tophane: { title: 'Tophane', welcome: 'Welcome to Tophane!', build: tophane },
 };
 
 // the camera of a shot at time t: [position, look-at] in the scene's frame

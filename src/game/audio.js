@@ -119,7 +119,74 @@ const HORN_CH = [[62, 65, 69], [62, 65, 69], [62, 67, 70], [61, 64, 69], [62, 65
 // the arrival at the Golden Horn: a ferry's horn, then a stately harbour waltz on brass (D major), the great chain clinking
 const HORN_ARRIVE = [[0, 62, 6], [6, 66, 3], [9, 69, 3], [12, 74, 9], [21, 73, 3], [24, 71, 6], [30, 74, 3], [33, 71, 3], [36, 69, 9], [45, 66, 3], [48, 67, 3], [51, 69, 3], [54, 71, 3], [57, 73, 3], [60, 74, 12]];
 const HORN_ARRIVE_BASS = [50, 50, 43, 45, 43, 50], HORN_ARRIVE_CH = [[62, 66, 69], [62, 66, 69], [59, 62, 67], [61, 64, 69], [59, 62, 67], [62, 66, 69]];
+// ---------- Downtown (about 7 s each), an evening loop through Beyoğlu ----------
+// Galata Tower: a sweet bakery waltz on a music box over a plucked bass (F major, 3/4)
+const GALATA = [[0, 72, 3], [3, 76, 3], [6, 79, 3], [9, 77, 3], [12, 76, 6], [18, 74, 3], [21, 72, 3], [24, 74, 3], [27, 77, 3], [30, 81, 3], [33, 79, 3], [36, 77, 9], [45, 72, 3]];
+const GALATA_BASS = [41, 41, 46, 48], GALATA_CH = [[65, 69, 72], [65, 69, 72], [65, 70, 74], [64, 67, 72]];
+// İstiklal Avenue: the tram's bell, then a swing tune on a muted trumpet over a walking bass (B flat)
+const ISTIKLAL = [[4, 70, 2], [6, 74, 1], [7, 77, 3], [10, 75, 2], [12, 74, 4], [18, 72, 2], [20, 70, 2], [22, 72, 1], [23, 74, 3], [26, 77, 2], [28, 79, 4], [34, 77, 2], [36, 74, 2], [38, 72, 2], [40, 70, 8]];
+const WALK = [46, 50, 53, 55, 51, 55, 58, 57, 46, 50, 53, 50];
+// Taksim Square: a city bus's horn, then a soaring aria line over warm strings (C major)
+const TAKSIM = [[6, 72, 4], [10, 76, 2], [12, 79, 6], [18, 77, 2], [20, 76, 2], [22, 74, 2], [24, 76, 6], [30, 84, 4], [34, 83, 2], [36, 81, 2], [38, 79, 4], [42, 84, 6]];
+const TAKSIM_CH = [[0, [60, 64, 67]], [12, [57, 60, 64]], [24, [53, 57, 60]], [36, [55, 59, 62]]];
+// Cihangir: a lazy café bossa on a soft piano (A minor), brushes, and a cat's meow at the end
+const CIHANGIR = [[2, 76, 2], [5, 74, 1], [6, 72, 2], [9, 71, 3], [14, 72, 2], [17, 74, 1], [18, 76, 4], [26, 77, 2], [29, 76, 1], [30, 74, 2], [33, 72, 3], [38, 69, 6]];
+const CIHANGIR_CH = [[0, [57, 60, 64, 67]], [12, [62, 65, 69, 72]], [24, [55, 59, 62, 65]], [36, [57, 60, 64, 67]]];
+// Tophane: night by the water: the clock tower's chimes, lapping water, a slow clarinet tune (D minor)
+const TOPHANE_CHIME = [[0, 76], [4, 72], [8, 74], [12, 67]], TOPHANE = [[18, 69, 4], [22, 70, 2], [24, 72, 4], [28, 70, 2], [30, 69, 2], [32, 67, 4], [36, 65, 2], [38, 64, 2], [40, 62, 8]];
+// the Downtown sled ride: an upbeat swing with sleigh bells, a walking bass, a clarinet's tune (F major)
+const DT_RIDE = [[0, 72, 3], [3, 74, 1], [4, 77, 4], [8, 76, 2], [10, 74, 2], [12, 72, 4], [16, 69, 3], [19, 70, 1], [20, 72, 4], [24, 74, 2], [26, 72, 2], [28, 70, 4],
+  [32, 72, 3], [35, 74, 1], [36, 77, 4], [40, 79, 2], [42, 81, 2], [44, 79, 4], [48, 77, 3], [51, 76, 1], [52, 74, 4], [56, 72, 2], [58, 76, 2], [60, 77, 4]].flatMap(([a, n, l]) => [[a, n, l], [a + 64, n + (a >= 48 ? -2 : 0), l]]);
+const DT_WALK = [41, 45, 48, 50, 46, 50, 53, 52, 48, 52, 55, 53, 41, 45, 48, 45];
+// the arrival Downtown: the tram's bell twice, then a jaunty jazz fanfare (F major)
+const DT_ARRIVE = [[8, 65, 2], [10, 69, 2], [12, 72, 4], [16, 70, 2], [18, 69, 2], [20, 72, 4], [24, 74, 2], [26, 76, 2], [28, 77, 4], [32, 79, 2], [34, 77, 2], [36, 76, 2], [38, 74, 2], [40, 72, 4], [44, 76, 4], [48, 77, 12]];
 const TRACKS = {
+  'galata-tower': { bpm: 100, steps: 48, loop: false, step(k, t, sp, dest) {
+    const bar = Math.floor(k / 12) % 4, inBar = k % 12;
+    if (inBar === 0) synth(t, hz(GALATA_BASS[bar]), sp * 3, { gain: 0.1, attack: 0.004, release: 0.2, dest });
+    if (inBar === 4 || inBar === 8) for (const n of GALATA_CH[bar]) synth(t, hz(n), sp * 1.5, { gain: 0.016, attack: 0.004, release: 0.12, dest });
+    for (const [, n, len] of at(GALATA, k)) { bellAt(t, hz(n + 12), 0.05, 0.4 + len * 0.1, dest); bellAt(t, hz(n), 0.015, 0.5, dest); }
+  } },
+  istiklal: { bpm: 104, steps: 48, loop: false, step(k, t, sp, dest) {
+    if (k === 0 || k === 2) bellAt(t, hz(88), 0.06, 0.5, dest); // the tram's bell: ding-ding
+    if (k % 4 === 0 && k >= 4) synth(t, hz(WALK[(k / 4) % WALK.length]), sp * 3.4, { gain: 0.1, attack: 0.004, release: 0.12, dest });
+    if (k % 4 === 2 && k >= 4) hit(t, { f0: 6000, f1: 8000, dur: 0.07, gain: 0.03, type: 'highpass', dest }); // brushes on the offbeat
+    for (const [, n, len] of at(ISTIKLAL, k)) synth(t, hz(n), sp * len * 0.85, { type: 'sawtooth', gain: 0.04, attack: 0.03, release: 0.12, cutoff: 1300, dest });
+  } },
+  taksim: { bpm: 100, steps: 48, loop: false, step(k, t, sp, dest) {
+    if (k === 0) { synth(t, 220, 0.5, { type: 'square', gain: 0.03, attack: 0.02, release: 0.1, cutoff: 900, dest }); synth(t, 277, 0.5, { type: 'square', gain: 0.025, attack: 0.02, release: 0.1, cutoff: 900, dest }); } // the bus's horn
+    for (const [at0, ch] of TAKSIM_CH) if (at0 === k) for (const n of ch) synth(t, hz(n), sp * 12, { type: 'sawtooth', gain: 0.012, attack: 0.25, release: 0.5, cutoff: 1100, dest });
+    for (const [, n, len] of at(TAKSIM, k)) { synth(t, hz(n), sp * len * 0.95, { type: 'sine', gain: 0.06, attack: 0.08, release: 0.25, dest }); synth(t, hz(n) * 2.003, sp * len * 0.9, { type: 'sine', gain: 0.012, attack: 0.1, release: 0.2, dest }); }
+    if (k % 12 === 0) thump(t, 70, 0.1, dest);
+  } },
+  cihangir: { bpm: 96, steps: 48, loop: false, step(k, t, sp, dest) {
+    for (const [at0, ch] of CIHANGIR_CH) for (const off of [0, 3, 6, 10]) if (at0 + off === k) for (const n of ch) synth(t, hz(n), sp * 1.6, { gain: 0.014, attack: 0.005, release: 0.2, dest }); // bossa chords
+    if ([0, 3, 6, 8].includes(k % 12)) synth(t, hz([45, 50, 43, 45][Math.floor(k / 12) % 4] + (k % 12 === 6 ? 7 : 0)), sp * 2, { gain: 0.09, attack: 0.004, release: 0.15, dest });
+    if (k % 2 === 1) hit(t, { f0: 5000, f1: 7000, dur: 0.06, gain: 0.018, type: 'highpass', dest });
+    for (const [, n, len] of at(CIHANGIR, k)) { synth(t, hz(n), sp * len * 0.8, { gain: 0.05, attack: 0.004, release: 0.3, dest }); bellAt(t, hz(n + 12), 0.008, 0.3, dest); }
+    if (k === 46) { const ac = dest.context, o = ac.createOscillator(), e = ac.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(700, t); o.frequency.linearRampToValueAtTime(1000, t + 0.12); o.frequency.linearRampToValueAtTime(600, t + 0.4); e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(0.03, t + 0.05); e.gain.linearRampToValueAtTime(0, t + 0.42); o.connect(e); e.connect(dest); o.start(t); o.stop(t + 0.45); } // meow
+  } },
+  tophane: { bpm: 96, steps: 48, loop: false, step(k, t, sp, dest) {
+    for (const [at0, n] of TOPHANE_CHIME) if (at0 === k) bellAt(t, hz(n), 0.05, 1.2, dest); // the clock tower's chimes
+    if (k % 6 === 3) hit(t, { f0: 480, f1: 240, dur: 0.6, gain: 0.035, type: 'lowpass', dest }); // the water lapping
+    if (k === 16) for (const n of [50, 57, 62]) synth(t, hz(n), sp * 32, { gain: 0.016, attack: 0.6, release: 0.8, cutoff: 900, dest });
+    for (const [, n, len] of at(TOPHANE, k)) synth(t, hz(n), sp * len * 0.9, { type: 'square', gain: 0.03, attack: 0.06, release: 0.2, cutoff: 1000, dest });
+  } },
+  'sled-downtown': { bpm: 140, steps: 128, loop: true, step(k, t, sp, dest) {
+    if (k % 2 === 0) hit(t, { f0: 7000, f1: 9000, dur: 0.05, gain: k % 4 === 0 ? 0.045 : 0.025, type: 'highpass', dest }); // sleigh bells
+    if (k % 8 === 4) hit(t, { f0: 1800, f1: 1200, dur: 0.07, gain: 0.05, dest }); // a snap on two and four
+    if (k % 4 === 0) synth(t, hz(DT_WALK[(k / 4) % DT_WALK.length]), sp * 3.4, { gain: 0.1, attack: 0.004, release: 0.12, dest });
+    for (const [at0, n, len] of DT_RIDE) if (at0 === k) synth(t, hz(n), sp * len * 0.9, { type: 'square', gain: 0.035, attack: 0.02, release: 0.1, cutoff: 1900, dest });
+    if (k % 32 === 0) for (const n of [[65, 69, 72], [65, 70, 74], [64, 67, 72], [65, 69, 72]][(k / 32) % 4]) synth(t, hz(n), sp * 28, { gain: 0.016, attack: 0.1, release: 0.3, cutoff: 1600, dest });
+  } },
+  'arrive-downtown': { bpm: 132, steps: 64, loop: false, step(k, t, sp, dest) {
+    if (k === 0 || k === 2) bellAt(t, hz(88), 0.07, 0.6, dest); // the tram's bell
+    if (k >= 8 && k % 4 === 0) synth(t, hz(DT_WALK[(k / 4) % DT_WALK.length]), sp * 3.4, { gain: 0.11, attack: 0.004, release: 0.12, dest });
+    if (k >= 8 && k % 4 === 2) hit(t, { f0: 6000, f1: 8000, dur: 0.07, gain: 0.035, type: 'highpass', dest });
+    for (const [, n, len] of at(DT_ARRIVE, k)) { synth(t, hz(n), sp * len * 0.85, { type: 'sawtooth', gain: 0.04, attack: 0.03, release: 0.15, cutoff: 1500, dest }); synth(t, hz(n - 12), sp * len * 0.85, { type: 'triangle', gain: 0.03, attack: 0.02, release: 0.15, dest }); }
+    if (k === 48) bellAt(t, hz(89), 0.05, 1.2, dest);
+  } },
+
   'sled-golden-horn': { bpm: 100, steps: 96, loop: true, step(k, t, sp, dest) {
     const bar = Math.floor(k / 12) % 8, inBar = k % 12;
     if (k % 2 === 0) hit(t, { f0: 7000, f1: 9000, dur: 0.05, gain: inBar % 6 === 0 ? 0.05 : 0.028, type: 'highpass', dest }); // sleigh bells

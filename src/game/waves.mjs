@@ -27,6 +27,12 @@ export const WAVES = {
     { name: 'They strike back!', m: { lobber: 2, sledder: 2 }, kids: 1 },
     { name: 'The Final Showdown', m: { captain: 1, lobber: 2, shield: 2, sledder: 1 }, kids: 3, final: true },
   ],
+  // Downtown: sledders racing down the steep streets; the Final Showdown at Tophane by the water
+  downtown: [
+    { name: 'The rival team', m: { waddler: 1, sledder: 2 }, kids: 2 },
+    { name: 'They strike back!', m: { sledder: 2, lobber: 1, shield: 1 }, kids: 1 },
+    { name: 'The Final Showdown', m: { captain: 1, sledder: 2, shield: 1, lobber: 2 }, kids: 3, final: true },
+  ],
 };
 export const minionList = wave => Object.entries(wave.m).flatMap(([type, n]) => Array(n).fill(type));
 
