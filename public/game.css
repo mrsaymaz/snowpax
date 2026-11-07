@@ -850,3 +850,14 @@ body.intro #banner, body.intro #seizebtn, body.intro #feed, body.intro #hunt, bo
   .start2 .pace-btn[aria-pressed="true"]::after { content: ' ⇄'; opacity: 0.8; }
   .start2 .st-arena b { font-size: 10.5px; -webkit-line-clamp: 1; }
 }
+/* the Snow Shop's bar: the shop and its ❄ on top, the snowball style, then Fight! in the bottom left corner */
+#build .bd-head { flex-wrap: wrap; row-gap: 4px; margin-bottom: 6px; }
+#build .bd-foot { display: flex; justify-content: flex-start; margin-top: 8px; }
+#build .bd-foot .bd-go { min-width: 120px; }
+/* a short landscape screen: the shop's bar compact, in the bottom left corner, clear of your kid */
+@media (orientation: landscape) and (max-height: 500px) {
+  #build { left: calc(12px + env(safe-area-inset-left)); transform: none; width: min(400px, 48vw); padding: 8px 10px; }
+  #build .bd-hint { display: none; } #build .bd-head { margin-bottom: 4px; } #build .bd-head > b { font-size: 16px; }
+  #build .bd-kits > small { display: none; } #build .bd-kit { flex-direction: row; min-height: 34px; gap: 4px; font-size: 12px; } #build .bd-kit small { display: none; }
+  #build .bd-foot { margin-top: 6px; } #build .bd-go { min-height: 38px; padding: 4px 14px; }
+}

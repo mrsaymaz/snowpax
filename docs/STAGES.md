@@ -348,7 +348,7 @@ The sled ride and its places' scenes used to stutter on phones as a place came n
 ## The snowball style, in the Snow Shop
 
 The style (Quick Thrower, Lobber, Sprayer) is chosen in the Snow Shop, before and after each fight,
-not on the start screen: three slim buttons under the shop's bar. Picking one changes your kid's
+not on the start screen: three slim buttons in the shop's bar, with Fight! under them in the bottom left corner (on a short landscape screen the whole bar sits in the bottom left corner, clear of your kid). Picking one changes your kid's
 hat at once (beanie, earmuffs, cap) and plays a short show while the price tags step aside and
 the camera pulls back: the Quick Thrower throws three fast straight snowballs at a snowman, the
 Lobber lobs two high over a snow wall, the Sprayer throws three at once in a fan, twice. The choice
