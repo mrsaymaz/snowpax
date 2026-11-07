@@ -574,6 +574,7 @@ body.cinema #runhud::before, body.cinema #runhud::after { height: 9vh; }
 #runhud .rh-top { position: relative; }
 body.sledding::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0; transition: opacity 0.8s ease; background: radial-gradient(ellipse 75% 70% at 50% 50%, rgba(0,0,0,0) 55%, rgba(18, 14, 40, 0.42) 100%), linear-gradient(180deg, rgba(255, 220, 180, 0.06), rgba(40, 30, 80, 0.08)); }
 body.sledding.cinema::after { opacity: 1; }
+body.intro::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; background: radial-gradient(ellipse 75% 70% at 50% 50%, rgba(0,0,0,0) 55%, rgba(18, 14, 40, 0.4) 100%); } /* the arrival at the outpost, framed the same way */
 body.cinema .rh-btns, body.cinema .rh-spell, body.cinema .rh-top { opacity: 0; pointer-events: none; transition: opacity 0.4s; }
 .rh-cine { position: fixed; left: 50%; bottom: calc(9vh + 18px); transform: translateX(-50%); z-index: 2; text-align: center; color: #fff6dc; pointer-events: none; }
 .rh-cine[hidden] { display: none; }
