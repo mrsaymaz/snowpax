@@ -11,6 +11,14 @@ function pickVoice() {
 }
 if (synth) { pickVoice(); synth.addEventListener?.('voiceschanged', pickVoice); }
 
+// Words the voice gets wrong because they are spelled like another word (a homograph): spoken from
+// a respelling, written as they are. In the units, "lead" is always the "leed" of a leader (önderlik
+// etmek) or of a dog's lead (gezdirme kayışı), never the metal; "live" on its own is the verb (yaşamak).
+export function spoken(text) {
+  let t = String(text ?? '').replace(/\blead\b/gi, m => (m[0] === 'L' ? 'Leed' : 'leed')).replace(/\bleads\b/gi, m => (m[0] === 'L' ? 'Leeds' : 'leeds'));
+  if (/^\s*live\s*[.!?]?\s*$/i.test(t)) t = 'liv';
+  return t;
+}
 export const speech = {
   get available() { return !!(synth && voice); },
   get checked() { return ready; },
@@ -20,7 +28,7 @@ export const speech = {
     if (!synth || !voice) { onend?.(); return false; }
     try {
       synth.cancel();
-      const u = new SpeechSynthesisUtterance(text);
+      const u = new SpeechSynthesisUtterance(spoken(text));
       u.voice = voice; u.lang = voice.lang; u.rate = rate; u.pitch = 1.05;
       this.speaking = true;
       const done = () => { this.speaking = false; onend?.(); };

@@ -84,32 +84,42 @@ export function huntWords(unit) {
   });
 }
 
-// The word snowman hunts: each one picks a target word and distractors, missed words come back.
+// The word snowman hunts: each one picks a target word and distractors. The targets go round the
+// whole unit in a shuffled order before any word comes again (a bag); a missed word comes back once,
+// three hunts later, and then takes its turn like the others.
 export class WordHunt {
   constructor(unit, rng = Math.random, size = 3) {
-    this.words = huntWords(unit); this.rng = rng; this.size = size; this.recent = []; this.missed = new Map();
+    this.words = huntWords(unit); this.rng = rng; this.size = size; this.missed = new Map(); this.bag = []; this.retry = []; this.last = null;
     this.right = 0; this.total = 0; this.cur = null;
   }
   get ready() { return this.words.length >= this.size; }
+  shuffle(list) { const a = list.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
   // a new hunt: { target, words } — words has the target and size-1 others, shuffled
   next() {
     if (!this.ready) return null;
-    const weight = w => (this.missed.get(w.id) || 0) * 3 + (this.recent.includes(w.id) ? -5 : 0) + this.rng();
-    const target = this.words.slice().sort((a, b) => weight(b) - weight(a))[0];
-    const others = this.words.filter(w => w !== target).sort(() => this.rng() - 0.5).slice(0, this.size - 1);
-    const words = [target, ...others].sort(() => this.rng() - 0.5);
-    this.recent = [target.id, ...this.recent].slice(0, 4);
+    let target = null;
+    const due = this.retry.findIndex(r => r.at <= this.total && r.word.id !== this.last); // a missed word, back once
+    if (due >= 0) target = this.retry.splice(due, 1)[0].word;
+    else {
+      if (!this.bag.length) { this.bag = this.shuffle(this.words); if (this.bag.length > 1 && this.bag.at(-1).id === this.last) this.bag.unshift(this.bag.pop()); } // a new round of the bag, never the same word twice in a row
+      target = this.bag.pop();
+    }
+    this.bag = this.bag.filter(w => w.id !== target.id || w === target);
+    const others = this.shuffle(this.words.filter(w => w.id !== target.id)).slice(0, this.size - 1);
+    const words = this.shuffle([target, ...others]);
+    this.last = target.id;
     this.cur = { target, words, done: false, wrong: 0 }; this.total++;
     return this.cur;
   }
+  miss(word) { this.missed.set(word.id, (this.missed.get(word.id) || 0) + 1); if (!this.retry.some(r => r.word.id === word.id)) this.retry.push({ word, at: this.total + 3 }); }
   // a word snowman was frozen: 'right' (the hunt is won), 'wrong' (keep looking) or null
   frozen(word) {
     const h = this.cur; if (!h || h.done || !word) return null;
-    if (word.id === h.target.id) { h.done = true; if (!h.wrong) this.right++; else this.missed.set(h.target.id, (this.missed.get(h.target.id) || 0) + 1); return 'right'; }
+    if (word.id === h.target.id) { h.done = true; if (!h.wrong) this.right++; else this.miss(h.target); return 'right'; }
     h.wrong++; return 'wrong';
   }
   // time ran out
-  timeout() { const h = this.cur; if (!h || h.done) return null; h.done = true; this.missed.set(h.target.id, (this.missed.get(h.target.id) || 0) + 1); return h.target; }
+  timeout() { const h = this.cur; if (!h || h.done) return null; h.done = true; this.miss(h.target); return h.target; }
 }
 
 // Where a supply crate lands: an open spot in the middle of the field, away from the team.

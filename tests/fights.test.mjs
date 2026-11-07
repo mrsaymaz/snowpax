@@ -53,6 +53,15 @@ test('word snowmen: a target with distractors, right and wrong freezes, missed w
   const c = h.next(); assert.equal(h.frozen(c.target), 'right'); assert.equal(h.right, 1);
 });
 
+test('word snowmen: the targets go round the whole unit before any comes again; a missed word comes back once', () => {
+  const words = huntWords(unit), h = new WordHunt(unit, makeRng(4), 3), seen = [];
+  for (let k = 0; k < words.length; k++) { const x = h.next(); seen.push(x.target.id); h.frozen(x.target); }
+  assert.equal(new Set(seen).size, words.length, 'every word once before any repeats');
+  const m = h.next(); h.timeout(); const later = []; for (let k = 0; k < 8; k++) { const x = h.next(); later.push(x.target.id); h.frozen(x.target); }
+  assert.equal(later.filter(id => id === m.target.id).length, 1, 'the missed word comes back once, not again and again');
+  assert.ok(later.indexOf(m.target.id) >= 2, 'a few hunts later');
+});
+
 test('supply crates land on open ground in the field; walking onto one asks a question; a right answer refills the team', () => {
   const m = createMatch({ arena: buildTileArena(def), myTeam: 'hufflepuff', rivalTeam: 'gryffindor', rng: makeRng(5) });
   const z = m.sim.zones[0], rng = makeRng(9);
