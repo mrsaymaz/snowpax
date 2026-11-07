@@ -177,8 +177,14 @@ export class SledRun {
       const e = ramp * ramp * (3 - 2 * ramp); // straight at the start and the finish
       P.th[i] = e * (0.85 * Math.sin(i / 37 + r(1)) + 0.5 * Math.sin(i / 16 + r(2)) + 0.18 * Math.sin(i / 7.5 + r(3)));
       P.h[i] = e * flat * (1.5 * Math.sin(i / 43 + r(4)) + 0.7 * Math.sin(i / 17 + r(5)) + this.coaster(i)); // gentle rolls, and a roller-coaster dip and rise in each section
-      P.x[i] = x; P.z[i] = z; x += Math.sin(P.th[i]); z -= Math.cos(P.th[i]);
     }
+    // smoothed, so no bend is ever tighter than about 23 m: a sharp bend (the curves came back within
+    // 30 m after a view) folded the snowfield either side over the track and left the following camera
+    // off to one side, inside the snowbank. The views' stretches stay straight (the blur reaches 35 m,
+    // the flat run before a view is 30 m and the empty lanes after it 25 m more).
+    const blur = (a, S) => { const W = Math.ceil(S * 2.5), w = []; let tot = 0; for (let k = -W; k <= W; k++) { w.push(Math.exp(-k * k / (2 * S * S))); tot += w[w.length - 1]; } const src = a.slice(); for (let i = 0; i <= N; i++) { let t = 0; for (let k = -W; k <= W; k++) t += src[Math.max(0, Math.min(N, i + k))] * w[k + W]; a[i] = t / tot; } };
+    blur(P.th, 14); blur(P.h, 6);
+    for (let i = 0; i <= N; i++) { P.x[i] = x; P.z[i] = z; x += Math.sin(P.th[i]); z -= Math.cos(P.th[i]); }
     for (let i = 0; i <= N; i++) { const a = P.th[Math.min(N, i + 2)] - P.th[Math.max(0, i - 2)]; P.bank[i] = Math.max(-0.24, Math.min(0.24, a / 4 * 11)); } // outer edge higher in a turn
     { const raw = P.bank.slice(), W = 6; for (let i = 0; i <= N; i++) { let s = 0, n = 0; for (let k = -W; k <= W; k++) { const j = i + k; if (j < 0 || j > N) continue; const w = W + 1 - Math.abs(k); s += raw[j] * w; n += w; } P.bank[i] = s / n; } } // eased in and out of each turn
   }
@@ -436,7 +442,7 @@ export class SledRun {
   updateCinema(dt) {
     for (const q of this.slots) {
       if (!q.played && this.dist > q.b && this.cine?.q !== q) q.played = true; // already past it
-      if (q.scene && !q.played) q.scene.group.visible = this.dist > q.a - 40 && this.dist < q.b + 20; // only near its stretch (the sky would cover the ride)
+      if (q.scene) q.scene.group.visible = !q.played && this.dist > q.a - 28 && this.dist < q.b; // only while the track is flat round its stretch: its ground would cover the track where it dips again (and its sky the ride)
       if (q.scene && !q.played && !q.told && this.dist >= q.a - this.vmax * 2.6) { q.told = true; this.on.look?.(); } // empty lanes, and the sign: look to the left
       if (q.scene && !q.played && !this.cine && this.dist >= q.a + q.lead) { this.cine = { q, t: 0, ready: false }; this.lightFor(q.scene); this.on.cinema?.({ phase: 'start', id: q.id, title: q.title, task: q.task, part: q.part, welcome: CINEMA[q.id].welcome }); }
       if (q.played && q.scene && this.dist > q.b + 20) { this.scene.remove(q.scene.group); q.scene.dispose(); q.scene = null; }

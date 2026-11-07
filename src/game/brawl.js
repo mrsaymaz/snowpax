@@ -220,7 +220,7 @@ async function startGame(myTeam, kit, pace) {
   // ---------- the finale of the ride in: arriving at the carousel ----------
   // The camera comes in high over the real field, sweeps low round the carousel as it turns (its
   // landmarks pass the camera in task order, the rival team in front of it), then drops behind
-  // the team at the south end, where the stage begins. Letterbox bars, the name card, Mr.
+  // the team at the south end, where the stage begins. No bars (a vignette), the name card, Mr.
   // Saymaz's welcome, a cheeky fairground waltz, a cheer. Nothing moves in the fight meanwhile.
   let intro = null; const seenIntro = new Set();
   const introCard = (() => {

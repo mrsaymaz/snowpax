@@ -122,7 +122,7 @@ export class StageRunner {
     this.rideTune = hasMusic('sled-' + st.id) ? 'sled-' + st.id : 'sled'; music(this.rideTune); // the ride's tune (the arena's own, if it has one), all the way in
     this.ui.coach(this.ridesDone === 0 ? `Sled into ${st.title}! Swipe left and right to steer, up to jump, down to duck. Grab the snowballs, and catch the rare golden snowflakes: each one is a ❄ for the Snow Shop!` : `Sled into ${st.title}! Catch the golden snowflakes for the Snow Shop!`, 6);
   }
-  // a place on the way: letterbox bars, its name card, its welcome read aloud
+  // a place on the way: no bars, its name card (seen, not read aloud)
   cinema(e) {
     const h = $('#runhud'), card = h?.querySelector('.rh-cine'); if (!card) return;
     if (e.phase === 'start') {
