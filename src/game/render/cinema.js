@@ -14,7 +14,7 @@
 import {
   Group, Mesh, MeshBasicMaterial, MeshLambertMaterial, SphereGeometry, CircleGeometry, PlaneGeometry, BoxGeometry, ConeGeometry, CylinderGeometry,
   BufferGeometry, Float32BufferAttribute, Points, PointsMaterial, Sprite, SpriteMaterial, CanvasTexture, SRGBColorSpace, AdditiveBlending, BackSide,
-  DoubleSide, Color, Vector3, InstancedMesh, Object3D, TorusGeometry, LineSegments, LineBasicMaterial, Line,
+  DoubleSide, Color, Vector3, InstancedMesh, Object3D, TorusGeometry, LineSegments, LineBasicMaterial, Line, PointLight,
 } from 'three';
 import { buildTileArena } from '../tilemap.mjs';
 import { buildVillage } from './village.js';
@@ -527,6 +527,10 @@ function polish(g, L, hH, world, hood) {
     const sx = PLACE.x + dir.x * 40, sz = PLACE.z + dir.z * 40;
     for (let k = 0; k < 5; k++) { const m = new Mesh(new PlaneGeometry(3 + R() * 4, 60), new MeshBasicMaterial({ map: shaft, color: warm, transparent: true, opacity: 0.12 + R() * 0.08, depthWrite: false, blending: AdditiveBlending, side: DoubleSide, fog: false })); m.position.set(sx + (R() - 0.5) * 30, 18, sz + (R() - 0.5) * 10); m.rotation.z = Math.atan2(-dir.x, dir.y) * 0.9 + (R() - 0.5) * 0.15; m.lookAt(m.position.x, m.position.y, m.position.z + 1); m.rotation.z += -dir.x * 0.6; m.renderOrder = 2; g.add(m); ticks.push(t => { m.material.opacity = (0.1 + 0.06 * Math.sin(t * 0.8 + k)); }); }
   }
+  // the landmark lit up: floodlights at dusk (Istanbul lights its monuments), a warm bounce by day
+  { const fl = new PointLight(dusk > 0.3 ? '#ffd29a' : warm, dusk > 0.3 ? 30 + dusk * 30 : 10, 14, 1.4); fl.position.set(PLACE.x, 1.2, PLACE.z + 4.5); g.add(fl);
+    if (dusk > 0.3) { const up = new PointLight('#ffe2b0', 18 * dusk, 12, 1.6); up.position.set(PLACE.x, 0.4, PLACE.z + 2.2); g.add(up);
+      const halo = new Sprite(new SpriteMaterial({ map: glowTex(), color: '#ffd9a0', transparent: true, opacity: 0.22 * dusk, depthWrite: false, blending: AdditiveBlending })); halo.position.set(PLACE.x, 2.6, PLACE.z); halo.scale.setScalar(9); g.add(halo); } }
   return t => { for (const f of ticks) f(t); };
 }
 
@@ -674,7 +678,7 @@ const pier = vista({
 // Karaköy Pier (a clear blue morning, mist on the water): the bridge with its row of
 // fishermen's rods, the pier hall, ferries in the ice, the far shore.
 const karakoy = vista({
-  hood: { landmark: 'karakoy', seed: 61, flag: '#2d6fb5', sea: 11, trees: 'xTx', plazaR: 5, tiles: [...[5, 8, 11, 14, 32, 35, 38, 41].map(i => ['l', i, 11]), ...[6, 9, 12, 33, 36, 39].map(i => ['b', i, 12]), ...[15, 19, 23].flatMap(j => [['T', 6, j], ['T', 39, j]]), ['n', 12, 17], ['l', 17, 19], ['l', 28, 19]], props: [
+  hood: { landmark: 'karakoy', seed: 61, flag: '#2d6fb5', sea: 11, trees: 'xTx', urban: true, plazaR: 5, tiles: [...[5, 8, 11, 14, 32, 35, 38, 41].map(i => ['l', i, 11]), ...[6, 9, 12, 33, 36, 39].map(i => ['b', i, 12]), ...[15, 19, 23].flatMap(j => [['T', 6, j], ['T', 39, j]]), ['n', 12, 17], ['l', 17, 19], ['l', 28, 19]], props: [
     { type: 'ferry', i: CX - 12, j: 3, w: 5, h: 2, along: 'x' }, { type: 'ferry', i: CX + 7, j: 6, w: 5, h: 2, along: 'x' }, { type: 'pier', i: CX + 7, j: 9, w: 2, h: 3, along: 'z' },
     { type: 'stall', kind: 'fish', i: CX - 10, j: CZ + 2, w: 2, h: 1 }, { type: 'stall', kind: 'simit', i: CX + 7, j: CZ + 2, w: 2, h: 1 }] },
   light: { sun: '#fff1d6', intensity: 2.0, sky: '#e2ecff', ground: '#9a94c6', dir: [0.5, 0.5, -0.7], top: '#5a8ede', horizon: '#dbe8fb', far: '#a3b3d8', fog: '#d8e5f8' },
@@ -687,6 +691,7 @@ const karakoy = vista({
   extra: life(k => {
     k.bed(rel(-3.4, 4.0), 1.6, 0.7); k.bed(rel(3.4, 4.0), 1.6, 0.7); k.cat(up(rel(3.0, 4.0), 0.3), -0.5, '#e09a4a'); // close by the landmark, in view even on a phone
     k.quay(-19, -6.5, -4.4, { rods: 6, bollards: 3 }); k.quay(6.5, 19, -4.4, { rods: 6, bollards: 3 }); // the quay: rods out over the ice, buckets, bollards
+    k.row(rel(-30, 9), rel(-12, 9), [0, -1], { h: [3.6, 4.6], lit: 0.4 }); k.row(rel(12, 9), rel(30, 9), [0, -1], { h: [3.6, 4.6], lit: 0.4 }); // Karaköy's old buildings behind the quay
     k.lights([rel(-17.5, -3.6), rel(-14.5, -3.6), rel(-11.5, -3.6), rel(-8.5, -3.6)]); k.lights([rel(9.5, -3.6), rel(12.5, -3.6), rel(15.5, -3.6), rel(18.5, -3.6)]);
     k.cafe(rel(-10.5, 1.5), '#2d6fb5'); k.cafe(rel(-13.5, 2.5), '#f2f2f2'); k.cafe(rel(11, 1.8), '#e8a10a');
     k.cat(up(tw(9, 12), 0.55), 0.3, '#e09a4a'); k.cat(up(rel(15.2, -3.9), 0.53), -0.4, '#3b3b44');
@@ -697,7 +702,7 @@ const karakoy = vista({
 // Bankers Street (bright noon): the street of grand old banks, the great stone bank building at
 // its heart with its columns and bronze door, lamps, a simit and a tea stall, plane trees.
 const bankalar = vista({
-  hood: { landmark: 'bankalar', seed: 71, flag: '#7a1f1f', trees: 'TvTT', plazaR: 5, tiles: [...[25, 29].flatMap(j => [['l', 16, j], ['l', 30, j]]), ...[19, 23, 27].flatMap(j => [['T', 12, j], ['T', 34, j]]), ...[21, 25].flatMap(j => [['b', 13, j], ['b', 33, j]]), ['l', 17, 19], ['l', 28, 19]], props: [
+  hood: { landmark: 'bankalar', seed: 71, flag: '#7a1f1f', trees: 'TvTT', urban: true, plazaR: 5, tiles: [...[25, 29].flatMap(j => [['l', 16, j], ['l', 30, j]]), ...[19, 23, 27].flatMap(j => [['T', 12, j], ['T', 34, j]]), ...[21, 25].flatMap(j => [['b', 13, j], ['b', 33, j]]), ['l', 17, 19], ['l', 28, 19]], props: [
     { type: 'plane-tree', i: CX - 9, j: CZ + 5, w: 2, h: 2 }, { type: 'plane-tree', i: CX + 7, j: CZ + 5, w: 2, h: 2 },
     { type: 'stall', kind: 'simit', i: CX - 6, j: CZ + 4, w: 2, h: 1 }, { type: 'stall', kind: 'cay', i: CX + 4, j: CZ + 4, w: 2, h: 1 }] },
   light: { sun: '#fffaf0', intensity: 2.25, sky: '#eef0fb', ground: '#a49dc8', dir: [-0.3, 0.75, -0.55], top: '#6f9ae0', horizon: '#e7eefb', far: '#b0b8d8', fog: '#e6ecf8' },
@@ -709,6 +714,7 @@ const bankalar = vista({
   wide: [at(-6, 11, 18), at(0, 2.5, 0)],
   extra: life(k => {
     k.bed(rel(-3.4, 4.0), 1.6, 0.7); k.bed(rel(3.4, 4.0), 1.6, 0.7); k.cat(up(rel(3.0, 4.0), 0.3), -0.5, '#e09a4a'); // close by the landmark, in view even on a phone
+    k.row(rel(-26, -7.6), rel(-13, -7.6), [0, 1], { h: [3.8, 4.8], lit: 0.5 }); k.row(rel(13, -7.6), rel(26, -7.6), [0, 1], { h: [3.8, 4.8], lit: 0.5 }); // the street's other old buildings, shoulder to shoulder
     k.bank(rel(-10.4, -4.2), { w: 5, h: 5.8, col: '#efe0c4' }); k.bank(rel(10.4, -4.2), { w: 5, h: 5.4, col: '#ead7c0' }); // the street of grand old banks
     k.bank(rel(-16.2, -4.8), { w: 5, h: 6.4, col: '#e6d2b8' }); k.bank(rel(16.2, -4.8), { w: 5, h: 6.8, col: '#f0e4d0' });
     k.stairs(rel(6.6, -4.6)); // the curving stairs up the hill beside the bank
@@ -785,7 +791,7 @@ const miniaturk = vista({
     k.lights([rel(-14, 1.5), rel(-10, 1.5), rel(-6, 1.5)], { y: 2.5 }); k.lights([rel(6, 1.5), rel(10, 1.5), rel(14, 1.5)], { y: 2.5 });
     k.cat(up(tw(12, 19), 0.55), 0.3, '#e09a4a'); k.cat(up(rel(8.5, 3.6), 0), -0.6, '#f2ede4');
   }),
-  far: [{ kind: 'bridge', type: 'highway', r: 124, a0: -0.75, a1: 0.75 }, { kind: 'cypresses', a: -0.05, r: 165, n: 220, span: 0.7 }], // the Haliç highway bridge high over the water, the cypress hill above Eyüp
+  far: [{ kind: 'bridge', type: 'highway', r: 175, a0: -0.55, a1: 0.25 }, { kind: 'cypresses', a: -0.05, r: 165, n: 220, span: 0.7 }], // the Haliç highway bridge high over the water, the cypress hill above Eyüp
 });
 
 
