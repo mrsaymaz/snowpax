@@ -153,7 +153,7 @@ export class WorldTasks {
     // On a small screen labels pinned to nearby things would overlap: push them apart, keep them
     // below the task card and above the caption, and shrink them a little when the screen is crowded.
     const head = document.querySelector('#taskcard'), hr = head && !head.hidden ? head.getBoundingClientRect() : null;
-    const top = Math.max(6, hr && hr.height ? hr.bottom + 6 : 6), cap = this.caption.hidden ? null : this.caption.getBoundingClientRect(), bottom = (cap && cap.height ? cap.top : H) - 6;
+    const top = Math.max(6, hr && hr.height ? hr.bottom + 6 : 6), cap = this.caption.hidden ? null : this.caption.getBoundingClientRect(), foot = document.querySelector('#build:not([hidden])')?.getBoundingClientRect(), bottom = Math.min(cap && cap.height ? cap.top : H, foot && foot.height ? foot.top : H) - 6; // above the caption and the Snow Shop's bar
     const area = items.reduce((a, it) => a + it.w * it.h, 0), sc = Math.max(0.72, Math.min(1, Math.sqrt(0.3 * W * Math.max(100, bottom - top) / Math.max(1, area))));
     for (const it of items) { it.w *= sc; it.h *= sc; it.s = sc; }
     // the things to keep clear, as fixed boxes on screen (a little smaller than their outline)

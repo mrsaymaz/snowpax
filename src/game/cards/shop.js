@@ -37,12 +37,14 @@ export function shopStation(s, { color = '#f5b616' } = {}) {
 // the shop itself: your kid in the middle; a price tag beside each part a boost changes
 const SPOTS = { super: [-0.95, 2.0, 0.1], coat: [0.98, 1.38, 0.1], gloves: [-0.98, 0.55, 0.1], quick: [0.98, 0.55, 0.1] };
 export function shopScene(s, { info, buy, color }) {
-  const T = tall(), K = s.set.K, A = s.set.A, kid = A?.kid;
-  if (T) s.frame([0, 1.35, 7.0], [0, 1.12, 2.4], 34); else s.frame([0, 1.4, 6.9], [0, 1.15, 2.4], 40);
+  const T = tall(), K = s.set.K, A = s.set.A; let kid = A?.kid;
+  const home = () => { if (T) s.frame([0, 1.35, 7.0], [0, 1.12, 2.4], 34); else s.frame([0, 1.4, 6.9], [0, 1.15, 2.4], 40); };
+  home();
   const owned = inf => new Set([...inf.boosts, ...inf.next]);
   if (kid) setGear(kid, owned(info), { color });
   const tags = Object.keys(SHOP.boosts).map(id => ({ id, el: s.label('', { cls: 'shop-tag', obj: kid || s.persist, at: SPOTS[id], onTap: () => buy(id), persistent: true }) }));
-  s.onTick(() => { if (kid) tickGear(kid, performance.now() / 1000); });
+  let aim = null; // while a style is shown: the way the kid faces (after the actor's own moves)
+  s.onTick(() => { if (kid) tickGear(kid, performance.now() / 1000); if (aim != null && kid) kid.rotation.y = aim; });
   const render = inf => {
     for (const { id, el } of tags) {
       const b = SHOP.boosts[id], has = (b.keep ? inf.boosts : inf.next).has(id), can = !has && inf.flakes >= b.cost;
@@ -51,7 +53,34 @@ export function shopScene(s, { info, buy, color }) {
     }
   };
   render(info);
+  // a snowball style chosen: your kid gets its hat and shows how it throws, at a snowman off to the
+  // side (the camera pulls back to see it all), with the price tags out of the way meanwhile
+  let showing = 0;
+  const snowball = () => { const m = new Mesh(new SphereGeometry(0.11, 12, 8), L('#ffffff')); m.castShadow = true; s.step.add(m); return m; };
+  const snowman = (x, z) => { const g = new Group(); const W = L('#f6faff'); for (const [r, y] of [[0.42, 0.42], [0.3, 1.02], [0.21, 1.46]]) { const b = new Mesh(new SphereGeometry(r, 16, 12), W); b.position.y = y; b.castShadow = true; g.add(b); }
+    const nose = new Mesh(new CylinderGeometry(0.0, 0.05, 0.22, 8), L('#f08a24')); nose.rotation.z = Math.PI / 2; nose.position.set(-0.24, 1.47, 0); g.add(nose);
+    for (const dz of [-0.08, 0.08]) { const e = new Mesh(new SphereGeometry(0.03, 6, 4), L('#1c2340')); e.position.set(-0.18, 1.53, dz); g.add(e); }
+    g.position.set(x, 0, z); s.step.add(g); return g; };
+  const wall = (x, z) => { const g = new Group(); for (let k = 0; k < 3; k++) { const b = new Mesh(new BoxGeometry(0.42, 0.62, 0.5), L('#eef4ff')); b.position.set(0, 0.31, (k - 1) * 0.52); b.castShadow = b.receiveShadow = true; g.add(b); } g.position.set(x, 0, z); s.step.add(g); return g; };
+  const at = (fn, ms, n) => setTimeout(() => { if (n === showing && s.persist.parent) fn(); }, ms);
+  const style = id => {
+    if (!A) return; const n = ++showing;
+    kid = A.setKit(id); if (kid) setGear(kid, owned(info), { color });
+    for (const { el } of tags) el.classList.add('gone');
+    for (const c of [...s.step.children]) s.step.remove(c); // the last show's snowman and wall
+    const kx = 0, kz = 2.4, hand = () => A.hand();
+    if (T) s.frame([1.1, 1.9, 7.8], [1.1, 0.95, 2.4], 40); else s.frame([1.1, 1.8, 7.4], [1.1, 0.95, 2.4], 40); // pulled back: the kid and the snowman in view
+    const sm = snowman(kx + 2.5, kz), hit = (p, big = false) => { K.burst(p, ['#ffffff', '#e8f4ff', color], big ? 30 : 16, big ? 1.5 : 1.0); s.wobble(sm); s.sound?.('hit'); };
+    aim = Math.PI / 2; // turn to the snowman
+    const toss = (to, { T: tt = 0.3, lift = 0.15, at: ms = 0, big = false } = {}) => at(() => { A.throw(); const b = snowball(), h = hand(); b.position.copy(h); s.fly(b, to, { T: tt, lift, done: () => { s.step.remove(b); hit(new Vector3(...to), big); } }); }, ms, n);
+    if (id === 'thrower') { for (let k = 0; k < 3; k++) toss([kx + 2.35, 1.05 + k * 0.08, kz], { T: 0.22, lift: 0.08, at: 350 + k * 330 }); }
+    else if (id === 'lobber') { wall(kx + 1.35, kz); toss([kx + 2.4, 1.15, kz], { T: 0.85, lift: 2.0, at: 450, big: true }); toss([kx + 2.45, 0.9, kz + 0.1], { T: 0.85, lift: 2.2, at: 1350, big: true }); }
+    else { for (const w of [0, 1]) for (const dz of [-0.55, 0, 0.55]) toss([kx + 2.2, 0.95, kz + dz], { T: 0.3, lift: 0.12, at: 400 + w * 800 }); }
+    at(() => { aim = null; A.cheer(); home(); }, 2500, n);
+    at(() => { for (const { el } of tags) el.classList.remove('gone'); for (const c of [...s.step.children]) s.step.remove(c); }, 3100, n);
+  };
   return {
+    style,
     refresh(inf, boughtId) {
       render(inf); if (!kid || !boughtId) return;
       setGear(kid, owned(inf), { color }); // you see it on your kid at once

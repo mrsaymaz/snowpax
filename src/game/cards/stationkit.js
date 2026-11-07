@@ -125,17 +125,21 @@ export function row(ws, gap) { const tot = ws.reduce((a, b) => a + b, 0) + gap *
 // the student's own kid in the station: throws, cheers, shrugs (the player's look, team and kit)
 export function actor(s, P, { at = [-3.4, 0, 3.4], face = Math.PI - 0.6, scale = 0.82 } = {}) {
   const c = s.player; if (!c) return null;
-  const kid = bakeKid(buildKid({ team: c.team, kit: c.kit, ...(c.look || {}) }));
-  kid.scale.setScalar(scale); kid.position.set(...at); kid.rotation.y = face; kid.traverse(o => { if (o.isMesh) o.castShadow = true; }); P.add(kid);
+  const make = kit => { const k = bakeKid(buildKid({ team: c.team, kit, ...(c.look || {}) })); k.scale.setScalar(scale); k.position.set(...at); k.rotation.y = face; k.traverse(o => { if (o.isMesh) o.castShadow = true; }); P.add(k); return k; };
+  let kid = make(c.kit);
   const shadow = new Mesh(new CylinderGeometry(0.5, 0.5, 0.01, 20), new MeshBasicMaterial({ color: '#4a6182', transparent: true, opacity: 0.22, depthWrite: false })); shadow.position.set(at[0], at[1] + 0.01, at[2]); P.add(shadow);
-  const [armL, armR] = kid.userData.arms, y0 = at[1];
+  let [armL, armR] = kid.userData.arms; const y0 = at[1];
   let t = 0, act = null, moodT = 0;
   const run = (name, T, f) => { act = { name, T, t: 0, f }; };
   const mood = (m, sec) => { setKidMood(kid, m); moodT = sec; }; // a face for a moment, then back to happy
   const look = at[0] < 0 ? 0.5 : -0.5; // facing the camera (a little toward the middle), so the face shows
   const turn = (k, amt = 1) => { const e = k < 0.22 ? k / 0.22 : k > 0.78 ? (1 - k) / 0.22 : 1, u = e * e * (3 - 2 * e); kid.rotation.y = face + (look - face) * u * amt; };
-  return {
+  const A = {
     kid,
+    // a new snowball style: the same kid with the style's hat (the Snow Shop)
+    setKit(kit) { const old = kid; kid = make(kit); kid.rotation.y = old.rotation.y; P.remove(old); old.traverse(o => { if (o.isMesh) o.geometry?.dispose?.(); }); [armL, armR] = kid.userData.arms; A.kid = kid; act = null; return kid; },
+    // turn to face a direction (radians), or back to the camera with null
+    face(ry) { kid.rotation.y = ry == null ? face : ry; },
     hand() { return armR.localToWorld(new Vector3(0, -0.42, 0)).sub(s.group.position); }, // where things leave from
     throw() { s.sound?.('swish'); if (s.reduceMotion) return; run('throw', 0.36, k => { armR.rotation.x = -2.8 * Math.sin(k * Math.PI); }); },
     cheer(long = false) { mood('joy', long ? 2.2 : 1.2); if (s.reduceMotion) return; run('cheer', long ? 2.0 : 1.1, k => { turn(k); const u = Math.sin(Math.min(1, k * 1.3) * Math.PI); armL.rotation.x = armR.rotation.x = -2.6 * u; kid.position.y = y0 + Math.abs(Math.sin(k * Math.PI * (long ? 4 : 2))) * 0.28; }); },
@@ -146,4 +150,5 @@ export function actor(s, P, { at = [-3.4, 0, 3.4], face = Math.PI - 0.6, scale =
       else if (!s.reduceMotion) kid.position.y = y0 + Math.abs(Math.sin(t * 2.2)) * 0.03;
     },
   };
+  return A;
 }

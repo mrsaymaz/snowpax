@@ -53,10 +53,8 @@ const KIT_TEXT = { thrower: 'Fast, straight throws', lobber: 'Throws over walls'
 function startScreen() {
   let team = save.team || null, kit = save.kit || 'thrower', pace = save.pace || 'relaxed', gender = save.look?.gender || (Math.random() < 0.5 ? 'girl' : 'boy');
   $('#teams').innerHTML = TEAM_IDS.map(id => `<button type="button" class="pick team-btn" data-team="${id}" style="--c:${CONFIG.teams[id].color}">${emblemSVG(id, 48)}<b>${CONFIG.teams[id].name}</b></button>`).join('');
-  $('#kits').innerHTML = Object.entries(KITS).map(([id, k]) => `<button type="button" class="pick kit-btn" data-kit="${id}"><span class="ico">${KIT_ICON[id]}</span><b>${k.name}</b><small>${KIT_TEXT[id]}</small></button>`).join('');
   const refresh = () => {
     document.querySelectorAll('.team-btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.team === team)));
-    document.querySelectorAll('.kit-btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kit === kit)));
     document.querySelectorAll('.pace-btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pace === pace)));
     document.querySelectorAll('.who-btn').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.who === gender)));
     $('#play').disabled = !team; $('#play').textContent = team ? 'PLAY ▶' : 'Pick your team';
@@ -73,8 +71,8 @@ function startScreen() {
     card.querySelector('i').textContent = grade; card.querySelector('small').textContent = `Grade ${grade} · Unit ${n}`;
     const sts = save.units?.[unitId]?.arenas?.[0]?.stages || {}, stars = ['kasimpasa', 'golden-horn', 'downtown'].reduce((n, id) => n + (sts[id]?.stars || 0), 0), open2 = !!sts.kasimpasa?.done, open3 = open2 && !!sts['golden-horn']?.done;
     $('#st-stars').textContent = `★ ${stars} / 9`; $('#st-ar-open').textContent = `${open3 ? 3 : open2 ? 2 : 1} of 3 open`;
-    const card3 = (el, n, id, open, lock) => { el.classList.toggle('locked', !open); el.classList.toggle('open', open); el.querySelector('small').textContent = open ? (sts[id]?.done ? `Arena ${n} · ${'★'.repeat(sts[id].stars)}` : `Arena ${n} · Ready`) : lock; };
-    card3($('#st-ar2'), 2, 'golden-horn', open2, '🔒 Win Kasımpaşa first'); card3($('#st-ar3'), 3, 'downtown', open3, '🔒 Win the Golden Horn first');
+    const card3 = (el, n, id, open, lock) => { el.classList.toggle('locked', !open); el.classList.toggle('open', open); el.querySelector('small').textContent = open ? (sts[id]?.done ? '★'.repeat(sts[id].stars) : 'Ready') : lock; };
+    card3($('#st-ar1'), 1, 'kasimpasa', true, ''); card3($('#st-ar2'), 2, 'golden-horn', open2, '🔒 Win Kasımpaşa first'); card3($('#st-ar3'), 3, 'downtown', open3, '🔒 Win the Golden Horn first');
     try { const u = (await unitsOf(grade)).find(q => q.id === unitId); if (u) card.querySelector('b').textContent = u.title; } catch { /* offline: keep the number */ }
   };
   showLesson();
@@ -82,8 +80,7 @@ function startScreen() {
   const soundIcon = () => { $('#st-sound').textContent = save.settings.sound ? '🔊' : '🔈'; $('#st-sound').setAttribute('aria-label', save.settings.sound ? 'Sound on' : 'Sound off'); };
   soundIcon(); $('#st-sound').onclick = () => { save.settings.sound = !save.settings.sound; setSound(save.settings.sound); writeSave(save); soundIcon(); };
   $('#teams').onclick = e => { const b = e.target.closest('.team-btn'); if (b) { team = b.dataset.team; refresh(); } };
-  $('#kits').onclick = e => { const b = e.target.closest('.kit-btn'); if (b) { kit = b.dataset.kit; refresh(); } };
-  document.querySelectorAll('.pace-btn').forEach(b => { b.onclick = () => { pace = b.dataset.pace; refresh(); }; });
+  document.querySelectorAll('.pace-btn').forEach(b => { b.onclick = () => { const other = [...document.querySelectorAll('.pace-btn')].find(x => x !== b); pace = b.dataset.pace === pace && other && !other.offsetParent ? other.dataset.pace : b.dataset.pace; refresh(); }; }); // a narrow screen shows one pace button: a tap switches it
   document.querySelectorAll('.who-btn').forEach(b => { b.onclick = () => { gender = b.dataset.who; refresh(); }; });
   $('#play').onclick = async () => {
     unlockAudio(); save.team = team; save.kit = kit; save.pace = pace; save.unitId = unitId; if (save.look?.gender !== gender) save.look = { gender }; writeSave(save);
@@ -390,6 +387,12 @@ async function startGame(myTeam, kit, pace) {
     const k = new Kid(c, { isPlayer: false }); kids.set(id, k); scene.add(k.root); k.root.scale.setScalar(0.01); k.popT = 0;
     fx.emit(c.x, 0.9, c.z, reduceMotion ? 20 : 60, '#ffffff', 5, 1.0, 1.2); fx.emit(c.x, 1.2, c.z, 24, myCol, 4, 0.8);
   };
+  // a new snowball style (the Snow Shop): the player throws its way from now on, in its hat
+  const setKit = id => {
+    if (player.kit === id) return; player.kit = id; save.kit = id; writeSave(save);
+    const old = kids.get(player.id); if (old) { scene.remove(old.root); old.dispose?.(); }
+    const k = new Kid(player, { isPlayer: true }); kids.set(player.id, k); scene.add(k.root);
+  };
   const dropGoneKids = () => { for (const [id, k] of kids) if (!sim.chars.some(c => c.id === id)) { scene.remove(k.root); k.dispose?.(); kids.delete(id); } };
   // the build moment: the Snow Shop opens (a 3D stall, cards/shop.js) with a slim bar for the
   // ❄ snowflakes, the time and Fight!
@@ -397,10 +400,14 @@ async function startGame(myTeam, kit, pace) {
     let info = null, open = false, shop = null;
     const el = $('#build');
     const cheapest = Math.min(...Object.values(SHOP.boosts).map(b => b.cost));
+    // the snowball style is chosen here (before and after each fight), not on the start screen
+    const kitRow = el.querySelector('.bd-kit-row');
+    const kits = () => { kitRow.innerHTML = Object.entries(KITS).map(([id, k]) => `<button type="button" class="bd-kit" data-kit="${id}" aria-pressed="${id === player.kit}"><span class="ico" aria-hidden="true">${KIT_ICON[id]}</span><b>${k.name}</b><small>${KIT_TEXT[id]}</small></button>`).join(''); };
+    kitRow.addEventListener('click', e => { const b = e.target.closest('.bd-kit'); if (!b || !KITS[b.dataset.kit]) return; play('tap'); setKit(b.dataset.kit); kits(); shop?.style(b.dataset.kit); });
     const render = () => { el.querySelector('.bd-stars').textContent = `❄ ${info.flakes}`; el.querySelector('.bd-hint').textContent = info.flakes >= cheapest ? 'Tap a boost to buy it' : info.boosts.size >= Object.keys(SHOP.boosts).length ? 'You have every boost!' : `A boost costs ❄ ${cheapest}`; };
     el.addEventListener('click', e => { if (e.target.closest('.bd-go')) stages?.endBuild(); });
     return {
-      open(i) { info = i; open = true; el.hidden = false; render(); document.body.classList.add('building'); const s = worldTasks?.open('shop'); shop = s ? shopScene(s, { info: i, buy: id => stages?.buyBoost(id), color: myCol }) : null; },
+      open(i) { info = i; open = true; el.hidden = false; render(); kits(); document.body.classList.add('building'); const s = worldTasks?.open('shop'); shop = s ? shopScene(s, { info: i, buy: id => stages?.buyBoost(id), color: myCol }) : null; },
       refresh(i, bought) { info = i; if (!open) return; render(); shop?.refresh(i, bought); },
       close() { if (!open) return; open = false; el.hidden = true; document.body.classList.remove('building'); if (shop) worldTasks?.close(); shop = null; },
       tick() { if (open && stages?.plan) el.querySelector('.bd-time').textContent = `${Math.max(0, Math.ceil(stages.plan.build - stages.tBuild))}s`; },
