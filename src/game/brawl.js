@@ -41,6 +41,7 @@ import { SHOP, ROLES } from './fights.mjs';
 import { buildKid, bakeKid } from './render/kids2.js';
 import { KID_SCALE } from './render/kids.js';
 import { makeGuide, guideSteps } from './guide.js';
+import { ImpactFx } from './render/impact.js';
 
 const $ = s => document.querySelector(s);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -192,6 +193,8 @@ async function startGame(myTeam, kit, pace) {
   const post = V2 && LEVELS[level].name !== 'low' ? makePost(renderer, LEVELS[level].name) : null; // glow + colour grade
   const draw = (sc, cam) => (post ? post.render(sc, cam) : renderer.render(sc, cam));
   const fx = new BrawlFx(scene, $('#fx-layer'), camera);
+  const impact = new ImpactFx(scene, { groundAt: (x, z) => groundH(x, z), reduceMotion }); // splats on the snow, shattering freezes
+  let hitStop = 0, punch = 0; // a split-second hold on a hit or a freeze you are part of; the camera's little push in on a freeze you make
 
   // steep follow camera looking north
   // about 50° down: kids show their faces, the arena reads like a stage
@@ -525,7 +528,8 @@ async function startGame(myTeam, kit, pace) {
   function frame(now) {
     const rdt = Math.min(0.05, (now - last) / 1000); last = now; // real time
     tScale += ((worldTasks?.active ? 0.25 : 1) - tScale) * Math.min(1, rdt * 3); // a 3D task: the fight goes on in slow motion
-    const dt = rdt * tScale;
+    let dt = rdt * tScale;
+    if (hitStop > 0) { hitStop -= rdt; dt = 0; } // the hit lands: everything holds for a moment
     requestAnimationFrame(frame); quality.tick(dt);
     LOOK.time.value += dt;
     if (paused || guide.holding) { const wts = worldTasks?.session, inSt = !paused && wts && stages?.mode !== 'sled' && now >= wts.showAt; draw(stages?.mode === 'sled' ? stages.sled.scene : inSt ? wts.scene : scene, stages?.mode === 'sled' ? stages.sled.camera : inSt ? wts.camera : camera); return; } // paused, or Mr. Saymaz is talking: everything holds still
@@ -563,7 +567,8 @@ async function startGame(myTeam, kit, pace) {
     // events → effects, sounds, HUD
     if (flow && live) flow.update(rdt); // card timers run in real time
     for (const e of sim.drainEvents()) {
-      fx.focusId = player.id; fx.onEvent(e, sim); flow?.onEvent(e); stages?.onEvent(e);
+      fx.focusId = player.id; fx.onEvent(e, sim); impact.onEvent(e);
+      if ((e.type === 'hit' || e.type === 'freeze') && (e.by === player.id || e.id === player.id)) { hitStop = Math.max(hitStop, e.type === 'freeze' ? 0.11 : 0.045); if (e.type === 'freeze' && e.by === player.id && !reduceMotion) { punch = 1; shake = Math.max(shake, 0.12); } } flow?.onEvent(e); stages?.onEvent(e);
       if (e.type === 'recruitWait') { const p = sim.pickups.find(q => q.id === e.pickup); if (p) addWaiting({ ...p, pickup: p.id }); }
       if (e.type === 'recruitGone') dropWaiting(e.pickup);
       if (e.type === 'spawnKid') spawnKidView(e.id);
@@ -637,12 +642,13 @@ async function startGame(myTeam, kit, pace) {
     for (const k of kids.values()) if (k.popT !== undefined && k.popT < 1) { k.popT = Math.min(1, k.popT + dt * 2.5); const q = k.popT, o = q < 1 ? 1 + Math.sin(q * Math.PI) * 0.3 : 1; k.root.scale.setScalar(Math.max(0.01, q * o)); }
     for (const v of snowmen.values()) { v.update(dt, groundH(v.c.x, v.c.z)); v.root.visible = sim.canSee(player, v.c) || v.c.frozen > 0; }
     sim.drifts.forEach((d, i) => { const t = 1 - d.cd / 6; if (d.lt !== t) { d.lt = t; world.updateDrift(i, Math.max(0.2, t)); } });
-    fx.update(pose ? 0 : dt, sim);
+    fx.update(pose ? 0 : dt, sim); impact.update(pose ? 0 : dt);
+    punch = Math.max(0, punch - rdt * 2.6);
     for (const zz of sim.zones) { const key = `${zz.progress.toFixed(3)}|${zz.contested}`; if (key !== zoneKeys[zz.id] || zz.contested) { zoneKeys[zz.id] = key; world.setZone(zz.progress, myCol, rivCol, zz.contested, now / 1000, zz.id); } }
     const z = sim.nearestZone(player.x, player.z);
 
     // camera (a battlefield pulls back a little and looks a little ahead, up the field)
-    const onField = !!(stages?.mode === 'outpost' && stages.zone?.battlefield && !player.planted); fieldZoom += ((onField ? 1.1 : 1) - fieldZoom) * Math.min(1, dt * 2.5); const zf = zoom * fieldZoom;
+    const onField = !!(stages?.mode === 'outpost' && stages.zone?.battlefield && !player.planted); fieldZoom += ((onField ? 1.1 : 1) - fieldZoom) * Math.min(1, dt * 2.5); const zf = zoom * fieldZoom * (1 - 0.07 * Math.sin(Math.min(1, punch) * Math.PI / 2) * punch); // a freeze you make: the camera leans in a little
     const tH = Math.tan(camera.fov * Math.PI / 360), upright = camera.aspect < 1, halfW0 = tH * off.length() * zf * camera.aspect;
     // reading a card: keep the student and the fight beside it (left half), or above it in portrait, where the card is at the bottom
     camShift += ((player.planted && !worldTasks?.active ? (upright ? tH * off.length() * zf * 0.55 : halfW0 * 0.5) : 0) - camShift) * Math.min(1, dt * 4);

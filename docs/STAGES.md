@@ -397,3 +397,26 @@ Mr. Saymaz's coach strip stays quiet while he is talking. Automated test browser
   icon (180 px), 192 and 512 px icons and a maskable 512 px one (the picture at 82% on its own
   purple, so round masks keep the snowball) in `manifest.webmanifest` (name, colours, standalone);
   the browser tab uses a close crop of his face (16, 32 px), which still reads when tiny.
+
+## Your own kid stands out
+
+Teammates and rivals show their side by their team colour; the student's own kid has its own marks:
+- **A little bigger** (×1.12), with the same hit area (that lives in the simulation).
+- **Violet**, which no team wears: a big violet pom-pom (a violet band and earmuffs for the
+  Lobber, a violet pom-pom on the cap for the Sprayer), a violet scarf and tie, seen from the high
+  camera whichever way the kid faces. The Lobber's scarf is apricot now, so violet is the student's alone.
+- **A bold gold ring** with a navy edge round the feet, breathing a little, and a gold arrowhead
+  on it pointing the way the kid faces. Only the student's kid has a ring.
+- **Seen through walls**: wherever a wall, a tree or a roof stands in front of the kid, a light
+  silhouette in the team's colour shows through (drawn against the world only, before the kid, so
+  the kid's own arms never show through it).
+
+## Hits that land
+
+- **Hit-stop**: when the student hits someone or is hit, everything holds for a moment (45 ms; a
+  freeze 110 ms).
+- **Splats** on the snow where snowballs land (bigger for lobs and the super), fading after 5–7 s.
+- **A freeze shatters**: a burst of icy-blue shards that spin and bounce on the snow, a frosty ring
+  rolling out, and splats round it; a freeze the student makes leans the camera in a little.
+- **A hit wobbles** the kid it lands on, on top of the squash and flash.
+- With reduce motion: fewer shards, no ring, no camera lean and no wobble.

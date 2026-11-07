@@ -6,7 +6,7 @@
 // bakeKid() merges a model into a few draw calls for the game (body, face, badge, each arm and leg).
 import {
   Group, Mesh, MeshStandardMaterial, MeshPhysicalMaterial, MeshLambertMaterial, MeshBasicMaterial, SphereGeometry, CapsuleGeometry, CylinderGeometry,
-  TorusGeometry, BoxGeometry, CircleGeometry, CanvasTexture, SRGBColorSpace, Color, Matrix4, BufferAttribute,
+  TorusGeometry, BoxGeometry, CircleGeometry, CanvasTexture, SRGBColorSpace, Color, Matrix4, BufferAttribute, Shape, ExtrudeGeometry,
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { CONFIG } from '../../config.js';
@@ -53,12 +53,13 @@ const emblemTex = team => canvas('emb' + team, 128, 128, (g, W) => { g.fillStyle
 // a neighbourhood child not on a team yet: a plain everyday coat, no badge (team 'neutral')
 export const NEUTRAL = { color: '#c9bba4', dark: '#8c7d68' };
 // colors: { color, dark } for townsfolk in their own coats (no team badge; the sled ride's scenes)
-export function buildKid({ design = 'puffer', team = 'hufflepuff', kit = 'thrower', gender = 'boy', style = null, skin = 0, hair = 0, mood = 'happy', colors = null } = {}) {
+// hero: the student's own kid: a violet scarf, pom-pom (or earmuffs) and tie; no team is violet, so nobody else wears it
+export function buildKid({ design = 'puffer', team = 'hufflepuff', kit = 'thrower', gender = 'boy', style = null, skin = 0, hair = 0, mood = 'happy', colors = null, hero = false } = {}) {
   const girl = gender === 'girl'; style = style || (girl ? 'pigtails' : 'short');
   const T = colors || CONFIG.teams[team] || NEUTRAL, root = new Group(), col = T.color, dark = T.dark, skinCol = SKINS[skin % SKINS.length], hairCol = HAIR[hair % HAIR.length];
   const fab = c => design === 'vinyl' ? new MeshPhysicalMaterial({ color: c, roughness: 0.32, clearcoat: 0.8, clearcoatRoughness: 0.2 }) : design === 'plush' ? new MeshLambertMaterial({ color: '#ffffff', map: knitTex(c) }) : new MeshStandardMaterial({ color: c, roughness: 0.72, metalness: 0 });
   const skinM = design === 'vinyl' ? new MeshPhysicalMaterial({ color: skinCol, roughness: 0.38, clearcoat: 0.6 }) : design === 'plush' ? new MeshLambertMaterial({ color: skinCol }) : new MeshStandardMaterial({ color: skinCol, roughness: 0.6 });
-  const M = { team: fab(col), dark: fab(dark), white: fab('#f6f4ef'), boot: fab(design === 'plush' ? '#8a5a3c' : '#5a3a2a'), pants: fab('#34405e'), hair: fab(hairCol), scarf: fab(kit === 'lobber' ? '#ffd166' : kit === 'sprayer' ? '#7bdff2' : '#f4f1ea') };
+  const M = { team: fab(col), dark: fab(dark), white: fab('#f6f4ef'), boot: fab(design === 'plush' ? '#8a5a3c' : '#5a3a2a'), pants: fab('#34405e'), hair: fab(hairCol), gold: fab('#9b5cff'), scarf: fab(hero ? '#9b5cff' : kit === 'lobber' ? '#ff9f5a' : kit === 'sprayer' ? '#7bdff2' : '#f4f1ea') }; // violet is the student's alone
   const add = (geo, m, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = sx, sz = sx, parent = root) => { const o = new Mesh(geo, m); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); o.scale.set(sx, sy, sz); o.castShadow = true; parent.add(o); return o; };
   const S = (r, a = 24, b = 16) => new SphereGeometry(r, a, b);
   const hy = design === 'vinyl' ? 1.38 : design === 'puffer' ? 1.44 : 1.4, hr = design === 'vinyl' ? 0.56 : design === 'plush' ? 0.48 : 0.53;
@@ -110,7 +111,7 @@ export function buildKid({ design = 'puffer', team = 'hufflepuff', kit = 'throwe
   add(new SphereGeometry(hr * 1.035, 28, 12, 0, Math.PI * 2, 0, 1.1), M.hair, 0, hy, -0.01, 0, 0, 0, 1.04, 1, 1); // hair on top
   // hair down the back and sides: to the nape for boys, past the ears for girls
   add(new SphereGeometry(hr * (girl ? 1.06 : 1.04), 24, 16, Math.PI * 1.5 - 1.85, 3.7, 0.5, girl ? 1.75 : 1.2), M.hair, 0, hy, -0.01, 0, 0, 0, 1.04, 1, 1);
-  const tie = fab(kit === 'lobber' ? '#ffd166' : kit === 'sprayer' ? '#7bdff2' : col);
+  const tie = fab(hero ? '#9b5cff' : kit === 'lobber' ? '#ff9f5a' : kit === 'sprayer' ? '#7bdff2' : col);
   if (style === 'pigtails') for (const s of [-1, 1]) {           // two bunches behind the ears
     add(S(0.06, 10, 8), tie, s * hr * 0.98, hy - 0.08, -hr * 0.4);
     add(S(0.15, 16, 12), M.hair, s * hr * 1.1, hy - 0.24, -hr * 0.42, 0, 0, s * 0.35, 0.8, 1.25, 0.85);
@@ -131,12 +132,12 @@ export function buildKid({ design = 'puffer', team = 'hufflepuff', kit = 'throwe
   const dome = (m, sy = 1.08) => add(new SphereGeometry(hr * 1.07, 28, 12, 0, Math.PI * 2, 0, 1.12), m, 0, hy + 0.02, 0, 0, 0, 0, 1.04, sy, 1.04);
   const nBefore = root.children.length;
   if (kit === 'lobber') {                                       // earmuffs: a band over the top, cups on the ears
-    add(new TorusGeometry(hr * 1.1, 0.045, 8, 28, Math.PI), M.dark, 0, hy - 0.02, 0);
-    for (const s of [-1, 1]) { add(new CylinderGeometry(0.17, 0.17, 0.12, 20), M.dark, s * hr * 1.06, hy - 0.04, 0, 0, 0, Math.PI / 2); add(S(0.16, 14, 10), design === 'vinyl' ? M.team : M.white, s * hr * 1.14, hy - 0.04, 0, 0, 0, 0, 0.5, 1, 1); }
+    add(new TorusGeometry(hr * 1.1, hero ? 0.06 : 0.045, 8, 28, Math.PI), hero ? M.gold : M.dark, 0, hy - 0.02, 0); // the student's own: a violet band and muffs
+    for (const s of [-1, 1]) { add(new CylinderGeometry(0.17, 0.17, 0.12, 20), hero ? M.gold : M.dark, s * hr * 1.06, hy - 0.04, 0, 0, 0, Math.PI / 2); add(S(0.16, 14, 10), hero ? M.gold : design === 'vinyl' ? M.team : M.white, s * hr * 1.14, hy - 0.04, 0, 0, 0, 0, 0.5, 1, 1); }
   } else if (kit === 'sprayer') {                               // cap with goggles pushed up on it
     dome(M.team, 1.0);
     add(new CylinderGeometry(hr * 0.72, hr * 0.78, 0.05, 24, 1, false, -1.3, 2.6), M.dark, 0, capY, hr * 0.38, 0.12, 0, 0); // visor
-    if (design === 'puffer') add(S(0.08, 10, 8), M.white, 0, hy + hr * 1.1, 0);
+    if (design === 'puffer' || hero) add(S(hero ? 0.15 : 0.08, 12, 8), hero ? M.gold : M.white, 0, hy + hr * 1.1, 0);
     const a = 0.72, gy = hy + 0.02 + hr * 1.07 * Math.sin(a), gz = hr * 1.07 * Math.cos(a) * 1.04;
     add(new TorusGeometry(hr * 1.07 * Math.cos(a) * 1.05, 0.03, 6, 32), fab('#3d4a6b'), 0, gy, 0, Math.PI / 2);
     const lens = new MeshStandardMaterial({ color: '#ffb347', roughness: 0.15, emissive: new Color('#a85a00'), emissiveIntensity: 0.35 });
@@ -145,7 +146,7 @@ export function buildKid({ design = 'puffer', team = 'hufflepuff', kit = 'throwe
     dome(design === 'plush' ? fab(col) : M.team, design === 'vinyl' ? 1.12 : 1.22);
     if (design === 'puffer') for (const y of [0.16, 0.3]) add(new TorusGeometry(capR * (1 - y * 0.9), 0.02, 6, 28), M.white, 0, capY + y, 0, Math.PI / 2);
     add(new TorusGeometry(capR + 0.03, 0.075, 10, 28), M.dark, 0, capY + 0.03, 0, Math.PI / 2, 0, 0, 1.04, 1, 1);
-    add(S(design === 'vinyl' ? 0.18 : 0.15, 16, 12), M.white, 0, hy + hr * (design === 'vinyl' ? 1.2 : 1.3) + 0.1, 0); // pom-pom
+    add(S((design === 'vinyl' ? 0.18 : 0.15) * (hero ? 1.35 : 1), 16, 12), hero ? M.gold : M.white, 0, hy + hr * (design === 'vinyl' ? 1.2 : 1.3) + 0.1, 0); // pom-pom (big and violet on the student's own kid: seen from the high camera whichever way they face)
     if (design === 'puffer') for (const s of [-1, 1]) { add(new BoxGeometry(0.1, 0.24, 0.16), M.team, s * hr * 1.0, hy - 0.08, -0.02, 0, 0, s * 0.12); add(S(0.05, 8, 6), M.white, s * hr * 1.0, hy - 0.26, -0.02); } // ear flaps
   }
   // hats are pushed back on the head so the eyes stay clear from the high game camera

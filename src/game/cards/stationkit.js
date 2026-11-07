@@ -125,7 +125,7 @@ export function row(ws, gap) { const tot = ws.reduce((a, b) => a + b, 0) + gap *
 // the student's own kid in the station: throws, cheers, shrugs (the player's look, team and kit)
 export function actor(s, P, { at = [-3.4, 0, 3.4], face = Math.PI - 0.6, scale = 0.82 } = {}) {
   const c = s.player; if (!c) return null;
-  const make = kit => { const k = bakeKid(buildKid({ team: c.team, kit, ...(c.look || {}) })); k.scale.setScalar(scale); k.position.set(...at); k.rotation.y = face; k.traverse(o => { if (o.isMesh) o.castShadow = true; }); P.add(k); return k; };
+  const make = kit => { const k = bakeKid(buildKid({ team: c.team, kit, ...(c.look || {}), hero: true })); k.scale.setScalar(scale); k.position.set(...at); k.rotation.y = face; k.traverse(o => { if (o.isMesh) o.castShadow = true; }); P.add(k); return k; };
   let kid = make(c.kit);
   const shadow = new Mesh(new CylinderGeometry(0.5, 0.5, 0.01, 20), new MeshBasicMaterial({ color: '#4a6182', transparent: true, opacity: 0.22, depthWrite: false })); shadow.position.set(at[0], at[1] + 0.01, at[2]); P.add(shadow);
   let [armL, armR] = kid.userData.arms; const y0 = at[1];

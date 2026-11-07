@@ -152,7 +152,7 @@ export class SledRun {
     this.geo = {}; this.pool = new Map(); this.items = []; this.props = [];
     // the student on a sled
     this.fakeC = { id: 1, team, kit, look, x: 0, z: 0, face: Math.PI, moving: 6, sled: true, frozen: 0, thaw: 0, flash: 0, hidden: false, revealT: 0, shield: 0, warmth: 100, maxWarmth: 100, ammo: 3, super: 0, captain: false, side: 'home', role: 'player' };
-    this.kid = new Kid(this.fakeC, { isPlayer: true }); this.kid.bar.visible = false; this.kid.ring.visible = false; if (this.kid.innerRing) this.kid.innerRing.visible = false; scene.add(this.kid.root);
+    this.kid = new Kid(this.fakeC, { isPlayer: true }); this.kid.bar.visible = false; this.kid.ring.visible = false; this.kid.showRing = false; if (this.kid.innerRing) this.kid.innerRing.visible = false; scene.add(this.kid.root);
     // sparkle particles for pickups and crashes
     this.sparks = []; const sg = new SphereGeometry(0.06, 5, 4);
     this.sparkMesh = new InstancedMesh(sg, new MeshBasicMaterial({ color: '#ffffff' }), 120); this.sparkMesh.count = 0; scene.add(this.sparkMesh);

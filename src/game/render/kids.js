@@ -2,7 +2,7 @@
 // per kit: beanie = Quick Thrower, earmuffs = Lobber, cap = Sprayer) merged into a few meshes,
 // plus the frozen snowman, team ring, a warmth bar with number and team emblem, and your own
 // snowball bar under yours.
-import {
+import { GreaterDepth,
   Group, Mesh, MeshLambertMaterial, MeshBasicMaterial, SphereGeometry, CapsuleGeometry, CylinderGeometry, ConeGeometry, TorusGeometry,
   CircleGeometry, RingGeometry, BoxGeometry, CanvasTexture, SRGBColorSpace, Sprite, SpriteMaterial, BackSide, Color, BufferAttribute,
 } from 'three';
@@ -56,10 +56,10 @@ export class Kid {
     const M = hex => { const m = new MeshLambertMaterial({ color: hex, transparent: true }); this.mats.push(m); return m; };
     const ink = M('#1d2733');
     const root = this.root = new Group();
-    const s = c.captain ? 1.35 : 1;
+    const s = c.captain ? 1.35 : isPlayer ? 1.12 : 1; // the student's kid a little bigger (the hit area stays the same: it is in the simulation)
     // the kid model: its look comes from the seat (girls and boys on every team); old saves get one
     const look = c.look || makeLook(c.id % 2 ? 'girl' : 'boy', () => ((c.id * 0.6180339) % 1));
-    const kid = this.kid = bakeKid(buildKid({ team: c.team, kit: c.kit, ...look })); root.add(kid);
+    const kid = this.kid = bakeKid(buildKid({ team: c.team, kit: c.kit, ...look, hero: isPlayer })); root.add(kid);
     kid.scale.setScalar(KID_SCALE * s); // about one tile wide and 1.75 tall, in proportion to the battlefield (was 1.1)
     this.arms = kid.userData.arms; this.legs = kid.userData.legs;
     this.vc = kid.userData.material; this.mats.push(this.vc);
@@ -75,8 +75,24 @@ export class Kid {
     for (const x of [-0.11, 0.11]) add(G.eyeP, ink, x, 1.72, 0.28, sm);
     // shadow + ring
     const shadow = new Mesh(G.shadow, new MeshBasicMaterial({ color: '#4a6182', transparent: true, opacity: 0.28, depthWrite: false })); shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.03; root.add(shadow);
-    this.ring = new Mesh(G.ring, new MeshBasicMaterial({ color: isPlayer ? '#ffffff' : this.team.color, transparent: true, opacity: 0.95, depthWrite: false, depthTest: false })); this.ring.renderOrder = 6; // shows even when wading in deep snow this.ring.rotation.x = -Math.PI / 2; this.ring.position.y = 0.04; root.add(this.ring);
-    if (isPlayer) { const inner = new Mesh(new RingGeometry(0.32, 0.4, 32), new MeshBasicMaterial({ color: this.team.color, transparent: true, depthWrite: false, depthTest: false })); inner.renderOrder = 6; inner.rotation.x = -Math.PI / 2; inner.position.y = 0.045; root.add(inner); this.innerRing = inner; }
+    this.ring = new Mesh(G.ring, new MeshBasicMaterial({ color: isPlayer ? '#ffffff' : this.team.color, transparent: true, opacity: 0.95, depthWrite: false, depthTest: false })); this.ring.renderOrder = 6; /* shows even when wading in deep snow */ this.ring.rotation.x = -Math.PI / 2; this.ring.position.y = 0.04; if (isPlayer) root.add(this.ring); // only the student's own kid has a ring (sides show by colour)
+    if (isPlayer) {
+      // the student's ring: gold, breathing a little, with a pointer the way they face
+      this.ring.geometry = new RingGeometry(0.4, 0.56, 40); this.ring.material.color.set('#ffd23f'); this.ring.material.opacity = 1; this.ring.scale.setScalar(1.18); // a bold gold band
+      const edge = this.ringEdge = new Mesh(new RingGeometry(0.35, 0.61, 40), new MeshBasicMaterial({ color: '#1c2340', transparent: true, opacity: 0.85, depthWrite: false, depthTest: false })); // with a navy edge, so it reads on bright snow
+      edge.rotation.x = -Math.PI / 2; edge.position.y = 0.035; edge.renderOrder = 5; root.add(edge);
+      const aim = this.aim = new Group(); aim.position.y = 0.05; root.add(aim);
+      const tri = new Mesh(new ConeGeometry(0.17, 0.32, 3), new MeshBasicMaterial({ color: '#ffd23f', transparent: true, depthWrite: false, depthTest: false }));
+      tri.rotation.x = Math.PI / 2; tri.scale.set(1, 1, 0.2); tri.position.z = 0.9; tri.renderOrder = 7; aim.add(tri); // a flat arrowhead at the ring's edge
+      const triE = new Mesh(new ConeGeometry(0.24, 0.44, 3), new MeshBasicMaterial({ color: '#1c2340', transparent: true, opacity: 0.85, depthWrite: false, depthTest: false }));
+      triE.rotation.x = Math.PI / 2; triE.scale.set(1, 1, 0.2); triE.position.z = 0.9; triE.renderOrder = 5; aim.add(triE);
+      // seen through walls, trees and roofs: a light silhouette wherever something stands in front of the kid
+      // (drawn before the kid, against the world only, so the kid's own arms never show through it)
+      const xc = new Color(this.team.color).lerp(new Color('#ffffff'), 0.45);
+      const xray = this.xray = new MeshBasicMaterial({ color: xc, depthFunc: GreaterDepth, depthWrite: false });
+      const parts = []; kid.traverse(o => { if (o.isMesh) parts.push(o); });
+      for (const o of parts) { const x = new Mesh(o.geometry, xray); x.renderOrder = 1; x.castShadow = false; o.add(x); o.renderOrder = 2; }
+    }
     // bars
     this.bc = document.createElement('canvas'); this.bc.width = 160; this.bc.height = isPlayer ? 56 : 40;
     this.bt = new CanvasTexture(this.bc); this.bt.colorSpace = SRGBColorSpace;
@@ -124,7 +140,7 @@ export class Kid {
     this.bt.needsUpdate = true;
   }
 
-  onEvent(type) { if (type === 'throw' || type === 'super') this.throwT = 0.28; if (type === 'shake') this.shakeT = 0.7; }
+  onEvent(type) { if (type === 'throw' || type === 'super') this.throwT = 0.28; if (type === 'shake') this.shakeT = 0.7; if (type === 'hit') this.hitT = 0.32; }
 
   update(dt, { visible = true, reduceMotion = false, groundY = 0 } = {}) {
     if (this.c.gear !== this.gearRef) { this.gearRef = this.c.gear; setGear(this.kid, this.c.gear || [], { color: this.team?.dark }); } // what the student bought in the Snow Shop
@@ -151,12 +167,14 @@ export class Kid {
     this.kid.scale.y = this.kid.scale.x * squash;
     this.vc.emissive.setScalar(c.flash > 0 ? 0.75 : 0);
     if (thaw && this.shakeT < 0.35 && !reduceMotion) this.kid.rotation.y = c.face + (1 - this.shakeT / 0.35) * Math.PI * 2;
+    this.hitT = Math.max(0, (this.hitT || 0) - dt); this.kid.rotation.z = reduceMotion ? 0 : Math.sin(this.hitT * 34) * 0.22 * (this.hitT / 0.32); // hit: a quick wobble
     // hidden in a hedge: you see yourself (and your team) faded
     const fade = c.hidden && c.revealT <= 0 ? 0.45 : 1;
     for (const m of this.mats) m.opacity = fade;
     // spawn shield: soft blink
     this.kid.visible = this.kid.visible && !(c.shield > 0 && Math.floor(c.shield * 10) % 2 === 1);
     this.drawBars(); this.bar.visible = !frozen && visible;
-    if (this.innerRing) this.innerRing.rotation.z += dt * 1.5;
+    this.ring.visible = this.showRing !== false && visible; // (the arrival hides it for its shots; it comes back after)
+    if (this.aim) { this.aim.rotation.y = c.face; this.aim.visible = this.ring.visible && !frozen; const b = reduceMotion ? 0 : Math.sin(performance.now() / 260) * 0.04; this.ring.scale.setScalar(1.18 + b); this.ringEdge.scale.setScalar(1.18 + b); this.ringEdge.visible = this.ring.visible; }
   }
 }
