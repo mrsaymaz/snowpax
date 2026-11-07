@@ -4,11 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="google" content="notranslate">
-<meta name="theme-color" content="#2f8fe8">
+<meta name="theme-color" content="#3a1d8c">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SnowPax">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="SnowPax by Mr. Saymaz: a snowball-fight English game in snowy Istanbul.">
 <title>SnowPax</title>
-<link rel="icon" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" as="image" href="img/logo.webp">
 <link rel="stylesheet" href="game.css">
 </head>
 <body class="notranslate">
@@ -18,10 +25,9 @@
 
 <section id="start" class="screen start2">
   <header class="st-top">
-    <canvas id="st-logo" role="img" aria-label="SnowPax, by Mr. Saymaz"></canvas>
     <div class="st-icons"><button type="button" id="st-sound" class="st-ico" aria-label="Sound on">🔊</button></div>
   </header>
-  <div class="st-hero"><canvas id="st-hero" aria-hidden="true"></canvas>
+  <div class="st-hero"><h1 class="st-logo"><img id="st-logo" src="img/logo.webp" alt="SnowPax by Mr. Saymaz" width="1400" height="454" draggable="false"></h1>
     <div class="st-tag"><b>Snow day.</b><b class="gold">Take Kasımpaşa back!</b><small>Every right answer is a snowflake for the Snow Shop.</small></div></div>
   <div class="st-panel"><i class="st-cap" aria-hidden="true"></i><div class="st-scroll">
     <div class="st-head"><div><small>Your next snow day</small><h2>Ready for a snowball fight?</h2></div><span class="st-chip" id="st-stars">★ 0 / 3</span></div>

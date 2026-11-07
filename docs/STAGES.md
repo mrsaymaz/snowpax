@@ -386,3 +386,14 @@ He never stands on the button he points at: for a button at the bottom left he s
 right, for a wide row at the bottom he stands on top of it, and the card moves out of the way.
 Mr. Saymaz's coach strip stays quiet while he is talking. Automated test browsers skip the guides
 (they cannot press Next) unless the address has `?guides=on`.
+
+## The logo and the icons
+
+- **Logo** (`public/img/logo.webp`, from the artwork Mr. Saymaz chose: him with a snowball beside
+  SNOWPAX and "by Mr. Saymaz"): cut out of its white background (the navy outline makes a clean
+  edge), shown at the top of the start screen in place of the 3D kid, with a little drop-in and a
+  slow float (still with reduce motion).
+- **Icons** (`public/icons/`, from his portrait with a snowball on purple): the iPhone home-screen
+  icon (180 px), 192 and 512 px icons and a maskable 512 px one (the picture at 82% on its own
+  purple, so round masks keep the snowball) in `manifest.webmanifest` (name, colours, standalone);
+  the browser tab uses a close crop of his face (16, 32 px), which still reads when tiny.

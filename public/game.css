@@ -950,3 +950,21 @@ body.guiding #coach { display: none !important; }
 .guide.spot-wide .gd-man { bottom: var(--lift, 0px); height: min(30vh, 320px); }
 #pause-menu { z-index: 60; } /* above a task scene's labels */
 body.guiding #wt-layer { opacity: 0.35; } /* a task scene's words step back while Mr. Saymaz talks */
+/* ---------- the start screen's top: the SnowPax logo (Mr. Saymaz with a snowball), no 3D kid ---------- */
+#start.start2 { grid-template-rows: minmax(96px, 1fr) auto; grid-template-areas: 'hero' 'panel'; }
+.start2 .st-top { position: absolute; top: 0; right: 0; left: auto; z-index: 3; }
+.start2 .st-hero { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: calc(8px + env(safe-area-inset-top)) 12px 18px; min-height: 0; }
+.start2 .st-logo { margin: 0; flex: 0 1 auto; min-height: 0; max-height: 100%; display: flex; justify-content: center; width: 100%; }
+.start2 .st-logo img { display: block; width: auto; height: auto; max-width: min(100%, 620px); max-height: 100%; object-fit: contain; filter: drop-shadow(0 8px 16px rgba(12, 10, 50, 0.45)); animation: logo-in 0.7s cubic-bezier(.2,1.3,.4,1) both, logo-float 5s 0.7s ease-in-out infinite; transform-origin: 50% 70%; }
+@keyframes logo-in { from { transform: translateY(-24px) scale(0.86); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes logo-float { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-4px) rotate(-0.6deg); } }
+@media (orientation: portrait) { .start2 .st-hero { padding-right: 58px; padding-left: 10px; } .start2 .st-logo img { max-width: 100%; } } /* clear of the sound button */
+@media (orientation: landscape) {
+  #start.start2 { grid-template-rows: 1fr; grid-template-areas: 'panel hero'; }
+  .start2 .st-panel { margin-top: calc(14px + env(safe-area-inset-top)); }
+  .start2 .st-hero { padding: 64px 22px 22px 18px; justify-content: center; gap: 14px; }
+  .start2 .st-tag { position: static; text-align: center; max-width: none; }
+}
+@media (orientation: landscape) and (max-height: 520px) { .start2 .st-hero { padding: 54px 14px 10px; } .start2 .st-panel { margin-top: 8px; max-height: calc(100dvh - 16px); } }
+@media (prefers-reduced-motion: reduce) { .start2 .st-logo img { animation: none; } }
+@media (orientation: portrait) and (min-height: 700px) { .start2 .st-hero { padding: calc(58px + env(safe-area-inset-top)) 10px 14px; } } /* a tall phone: the logo the full width, under the sound button */

@@ -23,7 +23,7 @@ import { unlockAudio, play, setSound, music, stopMusic, measureTrack } from './a
 import { speech } from './speech.js';
 import { karakoyStation, bankalarStation, tersaneStation, aynalikavakStation, miniaturkStation } from './cards/golden.js';
 import { galataStation, istiklalStation, taksimStation, cihangirStation, tophaneStation } from './cards/downtown.js';
-import { drawLogo, Hero, lessonPicker, unitsOf } from './startui.js';
+import { lessonPicker, unitsOf } from './startui.js';
 import { OutpostFlow, assignFlakeWords } from './outpostflow.js';
 import { ensureUnit, startRun } from '../rules/progress.mjs';
 import { StageRunner } from './stagerun.js';
@@ -66,8 +66,7 @@ function startScreen() {
     hero?.set({ team, gender, kit, look: save.look });
   };
   // the logo, your kid turning in the snow (dressed as you choose), the lesson, the stars, sound
-  drawLogo($('#st-logo'), { height: innerHeight < 450 ? 40 : innerWidth < 380 || innerHeight < 700 ? 48 : 60 });
-  let hero = null; try { if (!params.has('autostart')) hero = new Hero($('#st-hero')); } catch (err) { console.warn('hero', err); }
+  let hero = null; // the logo (Mr. Saymaz with SnowPax) has the top of the screen now, not a 3D kid
   let unitId = params.get('unit') || save.unitId || 'g5u1';
   const showLesson = async () => {
     const grade = +(/^g(\d)/.exec(unitId)?.[1] || 5), n = +(/u(\d+)$/.exec(unitId)?.[1] || 1), card = $('#st-lesson');
