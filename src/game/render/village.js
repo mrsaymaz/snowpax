@@ -650,6 +650,7 @@ export function buildVillage(arena, { rivalTeam = 'gryffindor', homeTeam = 'huff
     group,
     life,
     carousel,
+    lamps: lights, // where the warm lamps are (the sled ride's views pool their light on the snow)
     updateDrift(k, t) { setDrift(k, t); drift.instanceMatrix.needsUpdate = true; },
     // who holds an outpost: lanterns, chimney smoke nearby and the snow glow take their colour
     setOwner(id, color) {

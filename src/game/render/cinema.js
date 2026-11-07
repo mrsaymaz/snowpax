@@ -145,7 +145,7 @@ function townscape(g, L, { seed = 3, sea = false, urban = false }) {
   kinds.forEach(([gm, cc], k) => { const L2 = lists[k]; if (!L2.length) return; const im = new InstancedMesh(gm, new MeshLambertMaterial({ color: '#ffffff' }), L2.length); L2.forEach((q, n) => { o.position.set(q.x, q.y - 0.2, q.z); o.rotation.set(0, R() * 6, 0); o.scale.set(q.s, q.s * (k === 1 ? 1.4 : 1), q.s); o.updateMatrix(); im.setMatrixAt(n, o.matrix); im.setColorAt(n, new Color(cc).lerp(hor, far(q.r))); }); im.instanceColor.needsUpdate = true; g.add(im); });
   { const trunk = new CylinderGeometry(0.13, 0.18, 1.5, 6); trunk.translate(0, 0.75, 0); const L2 = lists[2], im = new InstancedMesh(trunk, new MeshLambertMaterial({ color: '#7a5a46' }), Math.max(1, L2.length)); L2.forEach((q, n) => { o.position.set(q.x, q.y - 0.2, q.z); o.rotation.set(0, 0, 0); o.scale.setScalar(q.s); o.updateMatrix(); im.setMatrixAt(n, o.matrix); }); im.count = L2.length; g.add(im); } // the round trees' trunks
   { const capG = new ConeGeometry(0.62, 0.9, 7); capG.translate(0, 2.55, 0); const L2 = lists[0], im = new InstancedMesh(capG, new MeshLambertMaterial({ color: '#f6f8ff' }), Math.max(1, L2.length)); L2.forEach((q, n) => { o.position.set(q.x, q.y - 0.2, q.z); o.rotation.set(0, 0, 0); o.scale.setScalar(q.s); o.updateMatrix(); im.setMatrixAt(n, o.matrix); }); im.count = L2.length; g.add(im); } // snow on the pines
-  return hH;
+  hH.homes = homes; return hH;
 }
 // ---------- the real skyline, a little larger than life ----------
 // Each place looks out at what is really there from it, placed by its true bearing and made a bit
@@ -302,7 +302,7 @@ function snowfall(g, n = 900) {
 const tw = (i, j) => [PLACE.x + i + 0.5 - CX, PLACE.z + j + 0.5 - CZ]; // a tile's middle
 const rel = (x, z) => [PLACE.x + x, PLACE.z + z];
 const up = ([x, z], y = 0) => [x, y, z]; // a point at height y
-function lifeKit(g) {
+function lifeKit(g, light = {}) {
   const ticks = [], mats = {}, Lm = c => mats[c] || (mats[c] = new MeshLambertMaterial({ color: c })), Bm = c => mats['b' + c] || (mats['b' + c] = new MeshBasicMaterial({ color: c }));
   const snow = Lm('#f6f8ff'), iron = Lm('#2f3550'), wood = Lm('#8a5a3c');
   const add = (gm, m, x, y, z, ry = 0, root = g) => { const o = new Mesh(gm, m); o.position.set(x, y, z); o.rotation.y = ry; o.castShadow = true; o.receiveShadow = true; root.add(o); return o; };
@@ -329,7 +329,7 @@ function lifeKit(g) {
       const bulbs = [], gm = new SphereGeometry(0.07, 6, 4), wire = [];
       for (let k = 0; k < points.length - 1; k++) {
         const [x0, z0] = points[k], [x1, z1] = points[k + 1], n = Math.max(4, Math.round(Math.hypot(x1 - x0, z1 - z0) / 0.6));
-        for (let u = 0; u <= n; u++) { const f = u / n, px = x0 + (x1 - x0) * f, pz = z0 + (z1 - z0) * f, py = y - Math.sin(f * Math.PI) * sag; wire.push(px, py, pz); if (u < n) { const b = new Mesh(gm, new MeshBasicMaterial({ color: cols[(k + u) % cols.length] })); b.position.set(px, py - 0.06, pz); g.add(b); bulbs.push(b); } }
+        for (let u = 0; u <= n; u++) { const f = u / n, px = x0 + (x1 - x0) * f, pz = z0 + (z1 - z0) * f, py = y - Math.sin(f * Math.PI) * sag; wire.push(px, py, pz); if (u < n) { const b = new Mesh(gm, new MeshBasicMaterial({ color: cols[(k + u) % cols.length] })); b.position.set(px, py - 0.06, pz); g.add(b); bulbs.push(b); if ((light.dusk || 0) > 0.3 && u % 2 === 0) { const h = new Sprite(new SpriteMaterial({ map: glowTex(), color: cols[(k + u) % cols.length], transparent: true, opacity: 0.35 * light.dusk, depthWrite: false, blending: AdditiveBlending })); h.position.copy(b.position); h.scale.setScalar(0.7); g.add(h); } } }
       }
       const geo = new BufferGeometry(); geo.setAttribute('position', new Float32BufferAttribute(wire, 3)); const line = new Line(geo, new LineBasicMaterial({ color: '#3a3346' })); g.add(line);
       ticks.push(tt => bulbs.forEach((b, k) => b.scale.setScalar(0.85 + 0.3 * Math.max(0, Math.sin(tt * 3 + k * 1.7)))));
@@ -481,7 +481,49 @@ function lifeKit(g) {
   return kit;
 }
 // a scene's street life: build it, and step its little animations
-const life = build => g => { const k = lifeKit(g); build(k); return (t) => { for (const f of k.ticks) f(t); }; };
+const life = build => (g, light) => { const k = lifeKit(g, light); build(k); return (t) => { for (const f of k.ticks) f(t); }; };
+
+// ---------- the cinematic layer, the same for every view ----------
+// What makes a still a picture: warm pools of lamplight on the snow, stars over the evening views,
+// chimney smoke drifting up from the town, soft drifts banked round the square, glitter in the
+// foreground snow, and at golden hour a few soft shafts of light from the low sun.
+function polish(g, L, hH, world, hood) {
+  const ticks = [], R = rng((hood.seed || 1) + 77), dusk = L.dusk || 0, warm = new Color(L.sun).lerp(new Color('#ffcf8a'), 0.6);
+  // pools of lamplight on the snow
+  if (dusk > 0.15) {
+    const pool = tex(64, 64, (x, S) => { const gr = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2); gr.addColorStop(0, 'rgba(255,214,150,0.9)'); gr.addColorStop(0.5, 'rgba(255,190,120,0.35)'); gr.addColorStop(1, 'rgba(255,180,110,0)'); x.fillStyle = gr; x.fillRect(0, 0, S, S); });
+    const m = new MeshBasicMaterial({ map: pool, transparent: true, opacity: Math.min(0.9, 0.35 + dusk * 0.6), depthWrite: false, blending: AdditiveBlending });
+    const wp = new Vector3(); world.group.updateMatrix();
+    for (const [x, y, z] of (world.lamps || []).slice(0, 40)) { wp.set(x, 0, z).applyMatrix4(world.group.matrix); const d = new Mesh(new PlaneGeometry(4.2, 4.2), m); d.rotation.x = -Math.PI / 2; d.position.set(wp.x, 0.07, wp.z); g.add(d); }
+  }
+  // stars over the evening and night views
+  if (dusk > 0.6) {
+    const n = 500, p = new Float32Array(n * 3); for (let k = 0; k < n; k++) { const a = R() * Math.PI * 2, e = 0.25 + R() * 1.2, r = 300; p[k * 3] = PLACE.x + Math.cos(a) * Math.cos(e) * r; p[k * 3 + 1] = Math.sin(e) * r - 10; p[k * 3 + 2] = PLACE.z + Math.sin(a) * Math.cos(e) * r; }
+    const geo = new BufferGeometry(); geo.setAttribute('position', new Float32BufferAttribute(p, 3));
+    const st = new Points(geo, new PointsMaterial({ color: '#fff8ec', size: 1.6, sizeAttenuation: false, transparent: true, opacity: (dusk - 0.5) * 1.4, depthWrite: false, fog: false })); st.renderOrder = -9; g.add(st);
+    ticks.push(t => { st.material.opacity = (dusk - 0.5) * 1.3 * (0.85 + 0.15 * Math.sin(t * 2.3)); });
+  }
+  // chimney smoke drifting up from houses round about
+  { const homes = (hH.homes || []).filter(q => q.r > 32 && q.r < 90 && q.z < PLACE.z + 2).sort(() => R() - 0.5).slice(0, 9), puff = glowTex(), list = [];
+    for (const q of homes) for (let k = 0; k < 6; k++) { const sp = new Sprite(new SpriteMaterial({ map: puff, color: new Color('#e9e6f2').lerp(new Color(L.fog || L.horizon), 0.3), transparent: true, opacity: 0, depthWrite: false })); g.add(sp); list.push({ sp, x: q.x + (R() - 0.5) * q.w * 0.5, y: q.y + q.h + 0.8, z: q.z, ph: k / 6 + R() * 0.1 }); }
+    ticks.push(t => { for (const u of list) { const f = (t * 0.12 + u.ph) % 1; u.sp.position.set(u.x + f * 3.5, u.y + f * 7, u.z - f * 1.2); u.sp.scale.setScalar(1.4 + f * 4); u.sp.material.opacity = 0.42 * Math.sin(f * Math.PI); } }); }
+  // soft drifts banked round the square, the front left open for the camera
+  { const snowM = new MeshLambertMaterial({ color: '#f4f6fe' }), r0 = (hood.plazaR || 5) + 1.2;
+    for (let k = 0; k < 26; k++) { const side = k % 3, u = (R() - 0.5) * 2 * r0; let x, z; if (side === 0) { x = -r0 - R() * 0.6; z = u; } else if (side === 1) { x = r0 + R() * 0.6; z = u; } else { x = u; z = -r0 - R() * 0.6; } if (hood.sea && z < -r0 + 0.5) continue;
+      const m = new Mesh(new SphereGeometry(0.6 + R() * 0.7, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), snowM); m.scale.set(1.6, 0.42 + R() * 0.2, 1); m.position.set(PLACE.x + x, 0, PLACE.z + z); m.rotation.y = R() * 3; m.receiveShadow = true; g.add(m); } }
+  // glitter in the foreground snow
+  { const n = 260, p = new Float32Array(n * 3); for (let k = 0; k < n; k++) { p[k * 3] = PLACE.x + (R() - 0.5) * 26; p[k * 3 + 1] = 0.08; p[k * 3 + 2] = PLACE.z + 6 + R() * 18; }
+    const geo = new BufferGeometry(); geo.setAttribute('position', new Float32BufferAttribute(p, 3)); const sp = new Points(geo, new PointsMaterial({ color: '#ffffff', size: 0.07, map: glowTex(), transparent: true, depthWrite: false, blending: AdditiveBlending })); g.add(sp);
+    ticks.push(t => { sp.material.opacity = 0.55 + 0.35 * Math.sin(t * 5); }); }
+  // soft shafts of light from a low sun
+  const dir = new Vector3(...L.dir).normalize();
+  if (dir.y < 0.4 && dusk < 0.85) {
+    const shaft = tex(64, 256, (x, w, h) => { const gr = x.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,240,210,0)'); gr.addColorStop(0.35, 'rgba(255,230,190,0.55)'); gr.addColorStop(1, 'rgba(255,220,180,0)'); x.fillStyle = gr; x.fillRect(0, 0, w, h); const hg = x.createLinearGradient(0, 0, w, 0); hg.addColorStop(0, 'rgba(0,0,0,1)'); hg.addColorStop(0.5, 'rgba(0,0,0,0)'); hg.addColorStop(1, 'rgba(0,0,0,1)'); x.globalCompositeOperation = 'destination-out'; x.fillStyle = hg; x.fillRect(0, 0, w, h); });
+    const sx = PLACE.x + dir.x * 40, sz = PLACE.z + dir.z * 40;
+    for (let k = 0; k < 5; k++) { const m = new Mesh(new PlaneGeometry(3 + R() * 4, 60), new MeshBasicMaterial({ map: shaft, color: warm, transparent: true, opacity: 0.12 + R() * 0.08, depthWrite: false, blending: AdditiveBlending, side: DoubleSide, fog: false })); m.position.set(sx + (R() - 0.5) * 30, 18, sz + (R() - 0.5) * 10); m.rotation.z = Math.atan2(-dir.x, dir.y) * 0.9 + (R() - 0.5) * 0.15; m.lookAt(m.position.x, m.position.y, m.position.z + 1); m.rotation.z += -dir.x * 0.6; m.renderOrder = 2; g.add(m); ticks.push(t => { m.material.opacity = (0.1 + 0.06 * Math.sin(t * 0.8 + k)); }); }
+  }
+  return t => { for (const f of ticks) f(t); };
+}
 
 // ---------- a scene: the neighbourhood, the layer over it, the light and the shots ----------
 function vista({ hood, light, shots, wide, far = [], extra = null }) {
@@ -489,12 +531,12 @@ function vista({ hood, light, shots, wide, far = [], extra = null }) {
     const g = new Group(), world = neighbourhood(hood); g.add(world.group);
     world.group.traverse(o => { if (o.isMesh && !o.material?.transparent) o.castShadow = o.receiveShadow = true; });
     sky(g, { ...light, seed: hood.seed }); const hH = townscape(g, light, { seed: hood.seed, sea: !!hood.sea, urban: !!hood.urban }); skyline(g, light, hH, far);
-    const flyGulls = gulls(g), snowing = snowfall(g), more = extra?.(g) || null;
+    const flyGulls = gulls(g), snowing = snowfall(g), more = extra?.(g, light) || null, shine = polish(g, light, hH, world, hood);
     world.setDusk?.(light.dusk || 0);
     const focus = new Vector3();
     return {
       group: g, duration: SCENE_SECONDS, shots, wide, light,
-      tick(t, dt) { focus.set(PLACE.x, 0, PLACE.z).applyMatrix4(g.matrixWorld); world.tick?.(dt, focus, false, camera); flyGulls(t); snowing(dt); more?.(t, dt); },
+      tick(t, dt) { focus.set(PLACE.x, 0, PLACE.z).applyMatrix4(g.matrixWorld); world.tick?.(dt, focus, false, camera); flyGulls(t); snowing(dt); more?.(t, dt); shine(t); },
       dispose() { g.traverse(o => { if (o.isMesh || o.isSprite || o.isPoints) o.geometry?.dispose?.(); }); }, // geometry only: the village's materials are shared with the game's
     };
   };
@@ -882,6 +924,10 @@ export const CINEMA = {
 
 // the camera of a shot at time t: [position, look-at] in the scene's frame
 export function shotAt(scene, t) {
+  const [p, l] = shotAt0(scene, t), w = [Math.sin(t * 0.7) * 0.06 + Math.sin(t * 1.9) * 0.02, Math.sin(t * 0.9 + 1) * 0.04, Math.sin(t * 0.6 + 2) * 0.05]; // a gentle handheld drift
+  return [[p[0] + w[0], p[1] + w[1], p[2] + w[2]], l];
+}
+function shotAt0(scene, t) {
   const s = scene.shots.find(q => t >= q.t0 && t < q.t1) || scene.shots[scene.shots.length - 1];
   const k = ease(Math.max(0, Math.min(1, (t - s.t0) / (s.t1 - s.t0))));
   if (s.orbit) {
